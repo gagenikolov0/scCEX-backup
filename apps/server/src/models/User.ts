@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface UserDocument extends Document {
   email: string;
   passwordHash: string;
-  depositAddressId?: mongoose.Types.ObjectId | null;
+  addressGroupId?: mongoose.Types.ObjectId | null;
   balances: {
     USDT: string; // decimal stored as string
     USDC: string; // decimal stored as string
@@ -17,7 +17,7 @@ const UserSchema = new Schema<UserDocument>(
   {
     email: { type: String, required: true, unique: true, index: true },
     passwordHash: { type: String, required: true },
-    depositAddressId: { type: Schema.Types.ObjectId, ref: "DepositAddress", default: null },
+    addressGroupId: { type: Schema.Types.ObjectId, ref: "AddressGroup", default: null },
     balances: {
       USDT: { type: String, default: "0" },
       USDC: { type: String, default: "0" },

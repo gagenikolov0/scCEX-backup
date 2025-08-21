@@ -4,7 +4,6 @@ export interface DepositAddressDocument extends Document {
     asset: "USDT" | "USDC";
     chain: string;
     assignedTo?: mongoose.Types.ObjectId | null;
-    assignedAt?: Date | null;
     createdAt: Date;
     updatedAt: Date;
 }

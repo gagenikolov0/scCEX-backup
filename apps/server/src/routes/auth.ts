@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { User } from "../models/User";
-import { DepositAddress } from "../models/DepositAddress";
+import { AddressGroup } from "../models/AddressGroup";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 
 const router = Router();
@@ -26,15 +26,13 @@ router.post("/register", async (req: Request, res: Response) => {
   const user = await User.create({ email, passwordHash });
 
   // Assign a free deposit address if available, link to user
-  const freeAddress = await DepositAddress.findOne({ assignedTo: null }).lean();
-  if (freeAddress) {
-    await Promise.all([
-      User.updateOne({ _id: user._id }, { $set: { depositAddressId: freeAddress._id } }),
-      DepositAddress.updateOne(
-        { _id: freeAddress._id },
-        { $set: { assignedTo: user._id, assignedAt: new Date() } }
-      ),
-    ]);
+  const freeGroup = await AddressGroup.findOneAndUpdate(
+    { assignedTo: null },
+    { $set: { assignedTo: user._id } },
+    { sort: { _id: 1 }, returnDocument: 'after' }
+  ).lean();
+  if (freeGroup) {
+    await User.updateOne({ _id: user._id }, { $set: { addressGroupId: freeGroup._id } });
   }
 
   const access = signAccessToken({ sub: String(user._id), ver: user.refreshTokenVersion });

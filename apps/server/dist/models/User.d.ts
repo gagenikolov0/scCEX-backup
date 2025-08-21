@@ -2,7 +2,7 @@ import mongoose, { Document, Model } from "mongoose";
 export interface UserDocument extends Document {
     email: string;
     passwordHash: string;
-    depositAddressId?: mongoose.Types.ObjectId | null;
+    addressGroupId?: mongoose.Types.ObjectId | null;
     balances: {
         USDT: string;
         USDC: string;

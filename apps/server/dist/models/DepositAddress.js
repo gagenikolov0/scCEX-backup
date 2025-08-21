@@ -40,8 +40,7 @@ const DepositAddressSchema = new mongoose_1.Schema({
     asset: { type: String, enum: ["USDT", "USDC"], required: true },
     chain: { type: String, required: true },
     assignedTo: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", default: null },
-    assignedAt: { type: Date, default: null },
-}, { timestamps: true, collection: "deposit_addresses" });
+}, { timestamps: { createdAt: true, updatedAt: false }, collection: "deposit_addresses" });
 exports.DepositAddress = mongoose_1.default.models.DepositAddress ||
     mongoose_1.default.model("DepositAddress", DepositAddressSchema);
 //# sourceMappingURL=DepositAddress.js.map

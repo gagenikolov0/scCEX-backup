@@ -33,17 +33,16 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.User = void 0;
+exports.AddressGroup = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const UserSchema = new mongoose_1.Schema({
-    email: { type: String, required: true, unique: true, index: true },
-    passwordHash: { type: String, required: true },
-    addressGroupId: { type: mongoose_1.Schema.Types.ObjectId, ref: "AddressGroup", default: null },
-    balances: {
-        USDT: { type: String, default: "0" },
-        USDC: { type: String, default: "0" },
-    },
-    refreshTokenVersion: { type: Number, default: 0 },
-}, { timestamps: true });
-exports.User = mongoose_1.default.models.User || mongoose_1.default.model("User", UserSchema);
-//# sourceMappingURL=User.js.map
+const AddressGroupSchema = new mongoose_1.Schema({
+    ethAddress: { type: String, default: null },
+    tronAddress: { type: String, default: null },
+    bscAddress: { type: String, default: null },
+    solAddress: { type: String, default: null },
+    xrpAddress: { type: String, default: null },
+    assignedTo: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", default: null },
+}, { timestamps: { createdAt: true, updatedAt: false }, collection: "address_groups" });
+exports.AddressGroup = mongoose_1.default.models.AddressGroup ||
+    mongoose_1.default.model("AddressGroup", AddressGroupSchema);
+//# sourceMappingURL=AddressGroup.js.map

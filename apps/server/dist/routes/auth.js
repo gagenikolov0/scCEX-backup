@@ -7,7 +7,7 @@ const express_1 = require("express");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const zod_1 = require("zod");
 const User_1 = require("../models/User");
-const DepositAddress_1 = require("../models/DepositAddress");
+const AddressGroup_1 = require("../models/AddressGroup");
 const jwt_1 = require("../utils/jwt");
 const router = (0, express_1.Router)();
 const registerSchema = zod_1.z.object({
@@ -26,12 +26,9 @@ router.post("/register", async (req, res) => {
     // Create user first
     const user = await User_1.User.create({ email, passwordHash });
     // Assign a free deposit address if available, link to user
-    const freeAddress = await DepositAddress_1.DepositAddress.findOne({ assignedTo: null }).lean();
-    if (freeAddress) {
-        await Promise.all([
-            User_1.User.updateOne({ _id: user._id }, { $set: { depositAddressId: freeAddress._id } }),
-            DepositAddress_1.DepositAddress.updateOne({ _id: freeAddress._id }, { $set: { assignedTo: user._id, assignedAt: new Date() } }),
-        ]);
+    const freeGroup = await AddressGroup_1.AddressGroup.findOneAndUpdate({ assignedTo: null }, { $set: { assignedTo: user._id } }, { sort: { _id: 1 }, returnDocument: 'after' }).lean();
+    if (freeGroup) {
+        await User_1.User.updateOne({ _id: user._id }, { $set: { addressGroupId: freeGroup._id } });
     }
     const access = (0, jwt_1.signAccessToken)({ sub: String(user._id), ver: user.refreshTokenVersion });
     const refresh = (0, jwt_1.signRefreshToken)({ sub: String(user._id), ver: user.refreshTokenVersion });

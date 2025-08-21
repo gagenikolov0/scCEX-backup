@@ -3,35 +3,42 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
 const User_1 = require("../models/User");
-const DepositAddress_1 = require("../models/DepositAddress");
+const AddressGroup_1 = require("../models/AddressGroup");
 const router = (0, express_1.Router)();
 router.get("/me", auth_1.requireAuth, async (req, res) => {
     const user = await User_1.User.findById(req.user.id).lean();
     if (!user)
         return res.status(404).json({ error: "User not found" });
-    let key = null;
-    if (user.depositAddressId) {
-        const k = await DepositAddress_1.DepositAddress.findById(user.depositAddressId).lean();
-        if (k)
-            key = { address: k.address, asset: k.asset, chain: k.chain };
-    }
+    const group = user.addressGroupId ? await AddressGroup_1.AddressGroup.findById(user.addressGroupId).lean() : null;
     return res.json({
         id: String(user._id),
         email: user.email,
         balances: user.balances,
-        key,
+        addressGroup: group ? {
+            ethAddress: group.ethAddress ?? null,
+            tronAddress: group.tronAddress ?? null,
+            bscAddress: group.bscAddress ?? null,
+            solAddress: group.solAddress ?? null,
+            xrpAddress: group.xrpAddress ?? null,
+        } : null,
     });
 });
 router.get("/deposit-address", auth_1.requireAuth, async (req, res) => {
     const user = await User_1.User.findById(req.user.id).lean();
     if (!user)
         return res.status(404).json({ error: "User not found" });
-    if (!user.depositAddressId)
-        return res.status(404).json({ error: "No deposit address assigned" });
-    const k = await DepositAddress_1.DepositAddress.findById(user.depositAddressId).lean();
-    if (!k)
-        return res.status(404).json({ error: "Key not found" });
-    return res.json({ address: k.address, asset: k.asset, chain: k.chain });
+    if (!user.addressGroupId)
+        return res.status(404).json({ error: "No address group assigned" });
+    const group = await AddressGroup_1.AddressGroup.findById(user.addressGroupId).lean();
+    if (!group)
+        return res.status(404).json({ error: "Group not found" });
+    return res.json({
+        ethAddress: group.ethAddress ?? null,
+        tronAddress: group.tronAddress ?? null,
+        bscAddress: group.bscAddress ?? null,
+        solAddress: group.solAddress ?? null,
+        xrpAddress: group.xrpAddress ?? null,
+    });
 });
 exports.default = router;
 //# sourceMappingURL=user.js.map
