@@ -2,6 +2,7 @@ import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader } 
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
+import OrderBook from '../components/OrderBook'
 import { API_BASE } from '../config/api'
 
 export default function Futures() {
@@ -179,20 +180,16 @@ export default function Futures() {
         <Grid.Col span={{ base: 12, lg: 4 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Order Book</div>
-            <div className="p-3 h-[200px] overflow-auto text-sm">
-              <div className="grid grid-cols-3 gap-y-1">
-                <div className="text-red-600">50,000</div><div>12.4</div><div>623k</div>
-                <div className="text-red-600">49,900</div><div>3.7</div><div>185k</div>
-                <div className="text-green-600">49,800</div><div>8.1</div><div>403k</div>
-              </div>
+            <div className="p-0 h-[360px] overflow-auto text-sm">
+              <OrderBook symbol={`${token}${quote}`} market="futures" depth={50} />
             </div>
           </Card>
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Recent Trades</div>
             <div className="p-3 h-[160px] overflow-auto text-sm">
               <div className="grid grid-cols-3 gap-y-1">
-                <div className="text-green-600">49,820</div><div>0.12</div><div>12:01:03</div>
-                <div className="text-red-600">49,810</div><div>0.08</div><div>12:00:57</div>
+                <div className="text-green-600">e.g. 49,820</div><div>0.12</div><div>12:01:03</div>
+                <div className="text-red-600">e.g. 49,810</div><div>0.08</div><div>12:00:57</div>
               </div>
             </div>
           </Card>

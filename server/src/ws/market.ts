@@ -12,6 +12,8 @@ export function attachMarketWSS(server: HttpServer) {
   const futuresTicksWss = new WebSocketServer({ noServer: true })
   const spotStatsWss = new WebSocketServer({ noServer: true })
   const futuresStatsWss = new WebSocketServer({ noServer: true })
+  const spotDepthWss = new WebSocketServer({ noServer: true })
+  const futuresDepthWss = new WebSocketServer({ noServer: true })
 
   // Spot per-symbol ticks stream (subscribe to symbol) with shared timers per symbol
   const spotSymbolSubscribers = new Map<string, Set<WebSocket>>()
@@ -313,6 +315,140 @@ export function attachMarketWSS(server: HttpServer) {
       }
     })
   })
+
+  // Spot orderbook depth per symbol (shared timers per key symbol:depth)
+  const spotDepthSubs = new Map<string, Set<WebSocket>>()
+  const spotDepthTimers = new Map<string, NodeJS.Timeout>()
+  const startSpotDepth = async (symbol: string, depth: number) => {
+    const key = `${symbol}:${depth}`
+    if (spotDepthTimers.has(key)) return
+    const tick = async () => {
+      try {
+        const url = `https://api.mexc.com/api/v3/depth?symbol=${encodeURIComponent(symbol)}&limit=${encodeURIComponent(String(depth))}`
+        const r = await fetch(url)
+        if (!r.ok) return
+        const j = await r.json() as any
+        const bids = Array.isArray(j?.bids) ? j.bids.slice(0, depth).map((x: any) => [Number(x[0] ?? x.price ?? x[1]), Number(x[1] ?? x.qty ?? x[2])]) : []
+        const asks = Array.isArray(j?.asks) ? j.asks.slice(0, depth).map((x: any) => [Number(x[0] ?? x.price ?? x[1]), Number(x[1] ?? x.qty ?? x[2])]) : []
+        const payload = JSON.stringify({ type: 'depth', symbol, depth, bids, asks, t: Date.now() })
+        const subs = spotDepthSubs.get(key)
+        if (!subs || subs.size === 0) return
+        for (const c of subs) { try { c.send(payload) } catch {} }
+      } catch {}
+    }
+    spotDepthTimers.set(key, setInterval(tick, 1000))
+    await tick()
+  }
+  const stopSpotDepth = (symbol: string, depth: number) => {
+    const key = `${symbol}:${depth}`
+    const t = spotDepthTimers.get(key)
+    if (t) clearInterval(t)
+    spotDepthTimers.delete(key)
+  }
+  spotDepthWss.on('connection', (ws: WebSocket) => {
+    ws.on('message', (raw: Buffer) => {
+      try {
+        const msg = JSON.parse(String(raw)) as any
+        if (msg?.type === 'sub' && msg?.symbol) {
+          const sym = String(msg.symbol).toUpperCase()
+          const depth = Number(msg.depth) > 0 ? Number(msg.depth) : 50
+          const key = `${sym}:${depth}`
+          let set = spotDepthSubs.get(key)
+          if (!set) { set = new Set(); spotDepthSubs.set(key, set) }
+          set.add(ws)
+          startSpotDepth(sym, depth)
+        } else if (msg?.type === 'unsub') {
+          for (const [k, set] of spotDepthSubs) {
+            if (set.delete(ws) && set.size === 0) {
+              spotDepthSubs.delete(k)
+              const [sym, d] = (k || '').split(':'); stopSpotDepth(sym || '', Number(d || 0))
+            }
+          }
+        }
+      } catch {}
+    })
+    ws.on('close', () => {
+      for (const [k, set] of spotDepthSubs) {
+        if (set.delete(ws) && set.size === 0) {
+          spotDepthSubs.delete(k)
+          const [sym, d] = (k || '').split(':'); stopSpotDepth(sym || '', Number(d || 0))
+        }
+      }
+    })
+  })
+
+  // Futures orderbook depth per symbol (shared timers per key symbol:depth)
+  const futDepthSubs = new Map<string, Set<WebSocket>>()
+  const futDepthTimers = new Map<string, NodeJS.Timeout>()
+  const startFutDepth = async (symbol: string, depth: number) => {
+    const key = `${symbol}:${depth}`
+    if (futDepthTimers.has(key)) return
+    const tick = async () => {
+      try {
+        const tryUrls = [
+          `https://contract.mexc.com/api/v1/contract/depth?symbol=${encodeURIComponent(symbol)}&depth=${encodeURIComponent(String(depth))}`,
+          `https://contract.mexc.com/api/v1/contract/depth?symbol=${encodeURIComponent(symbol)}&size=${encodeURIComponent(String(depth))}`,
+          `https://contract.mexc.com/api/v1/contract/depth/${encodeURIComponent(symbol)}?depth=${encodeURIComponent(String(depth))}`,
+          `https://contract.mexc.com/api/v1/contract/depth/${encodeURIComponent(symbol)}?size=${encodeURIComponent(String(depth))}`,
+        ]
+        let data: any = null
+        for (const u of tryUrls) {
+          try {
+            const r = await fetch(u)
+            if (r.ok) { data = await r.json(); break }
+          } catch {}
+        }
+        const d = data?.data ?? data
+        const bids = Array.isArray(d?.bids) ? d.bids.slice(0, depth).map((x: any[]) => [Number(x[0]), Number(x[1])]) : []
+        const asks = Array.isArray(d?.asks) ? d.asks.slice(0, depth).map((x: any[]) => [Number(x[0]), Number(x[1])]) : []
+        const payload = JSON.stringify({ type: 'depth', symbol, depth, bids, asks, t: Date.now() })
+        const subs = futDepthSubs.get(key)
+        if (!subs || subs.size === 0) return
+        for (const c of subs) { try { c.send(payload) } catch {} }
+      } catch {}
+    }
+    futDepthTimers.set(key, setInterval(tick, 1000))
+    await tick()
+  }
+  const stopFutDepth = (symbol: string, depth: number) => {
+    const key = `${symbol}:${depth}`
+    const t = futDepthTimers.get(key)
+    if (t) clearInterval(t)
+    futDepthTimers.delete(key)
+  }
+  futuresDepthWss.on('connection', (ws: WebSocket) => {
+    ws.on('message', (raw: Buffer) => {
+      try {
+        const msg = JSON.parse(String(raw)) as any
+        if (msg?.type === 'sub' && msg?.symbol) {
+          const sym = String(msg.symbol).toUpperCase().includes('_')
+            ? String(msg.symbol).toUpperCase()
+            : String(msg.symbol).toUpperCase().replace(/(USDT|USDC)$/,'_$1')
+          const depth = Number(msg.depth) > 0 ? Number(msg.depth) : 50
+          const key = `${sym}:${depth}`
+          let set = futDepthSubs.get(key)
+          if (!set) { set = new Set(); futDepthSubs.set(key, set) }
+          set.add(ws)
+          startFutDepth(sym, depth)
+        } else if (msg?.type === 'unsub') {
+          for (const [k, set] of futDepthSubs) {
+            if (set.delete(ws) && set.size === 0) {
+              futDepthSubs.delete(k)
+              const [sym, d] = (k || '').split(':'); stopFutDepth(sym || '', Number(d || 0))
+            }
+          }
+        }
+      } catch {}
+    })
+    ws.on('close', () => {
+      for (const [k, set] of futDepthSubs) {
+        if (set.delete(ws) && set.size === 0) {
+          futDepthSubs.delete(k)
+          const [sym, d] = (k || '').split(':'); stopFutDepth(sym || '', Number(d || 0))
+        }
+      }
+    })
+  })
   // Single upgrade handler to route by pathname
   server.on('upgrade', (req: IncomingMessage, socket, head) => {
     const rawUrl = req.url || ''
@@ -345,6 +481,14 @@ export function attachMarketWSS(server: HttpServer) {
     } else if (pathname.startsWith('/ws/futures-24h')) {
       futuresStatsWss.handleUpgrade(req, socket, head, (ws) => {
         futuresStatsWss.emit('connection', ws, req)
+      })
+    } else if (pathname.startsWith('/ws/spot-depth')) {
+      spotDepthWss.handleUpgrade(req, socket, head, (ws) => {
+        spotDepthWss.emit('connection', ws, req)
+      })
+    } else if (pathname.startsWith('/ws/futures-depth')) {
+      futuresDepthWss.handleUpgrade(req, socket, head, (ws) => {
+        futuresDepthWss.emit('connection', ws, req)
       })
     } else {
       try { console.warn('[ws] unknown path, destroying socket:', rawUrl) } catch {}
