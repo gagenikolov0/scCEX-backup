@@ -29,15 +29,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: 'POST',
         credentials: 'include',
       })
-      if (!res.ok) return
+      if (!res.ok) {
+        // If refresh is invalid/expired, force logout state
+        if (res.status === 401 || res.status === 403) persist(null)
+        return
+      }
       const j = await res.json()
       if (j?.accessToken) persist(j.accessToken)
     } catch {}
   }, [persist])
 
+  const verify = useCallback(async () => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE}/api/user/me`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        // If user deleted or token invalid, clear immediately
+        if (res.status === 401 || res.status === 404) persist(null)
+      }
+    } catch {
+      // network errors: do nothing; keep current state
+    }
+  }, [persist])
+
   useEffect(() => {
     (async () => {
-      if (!accessToken) await refresh()
+      // Always attempt refresh first; then verify if we have a token
+      await refresh()
+      await verify()
       setIsReady(true)
     })()
   }, [])
@@ -45,14 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Background silent refresh cadence (every 10 minutes) and on tab focus
   useEffect(() => {
     if (!accessToken) return
-    const id = setInterval(() => { refresh() }, 10 * 60 * 1000)
-    const onFocus = () => { refresh() }
+    const id = setInterval(() => { refresh().then(verify) }, 10 * 60 * 1000)
+    const onFocus = () => { refresh().then(verify) }
     window.addEventListener('focus', onFocus)
     return () => {
       clearInterval(id)
       window.removeEventListener('focus', onFocus)
     }
-  }, [accessToken, refresh])
+  }, [accessToken, refresh, verify])
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {

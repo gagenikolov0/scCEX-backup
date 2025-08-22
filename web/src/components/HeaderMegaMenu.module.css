@@ -56,6 +56,13 @@
   border-radius: 6px;
   line-height: 1;
   cursor: pointer;
+  text-decoration: none;
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+  font-weight: 500;
+  font-size: var(--mantine-font-size-sm);
+}
+.trigger:visited {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
 }
 .trigger:hover {
   background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
@@ -65,9 +72,24 @@
 .pill {
   border-radius: 9999px;
   padding: 6px 12px;
+  text-decoration: none;
+  color: inherit;
 }
+.pill:visited { color: inherit; }
 .pillActive {
   background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+/* Home icon sizing and trigger spacing */
+.homeTrigger {
+  padding: 6px 10px;
+  border-radius: 9999px;
+}
+.homeIcon {
+  width: 100px;
+  height: 24px;
+  display: block;
+  object-fit: contain;
 }
 
 

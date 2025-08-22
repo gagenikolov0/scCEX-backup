@@ -91,6 +91,27 @@ router.get('/spot/intervals', async (req: Request, res: Response) => {
   }
 })
 
+// Spot: 24h ticker stats for a symbol
+router.get('/spot/24h', async (req: Request, res: Response) => {
+  try {
+    const symbol = String(req.query.symbol || '')
+    if (!symbol) return res.status(400).json({ error: 'symbol is required' })
+    const key = `spot:24h:${symbol}`
+    const data = await fromCache(key, 2000, async () => {
+      const url = `https://api.mexc.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`
+      const upstream = await fetch(url)
+      if (!upstream.ok) {
+        const text = await upstream.text().catch(() => '')
+        throw new Error(JSON.stringify({ status: upstream.status, body: text }))
+      }
+      return upstream.json()
+    })
+    return res.json(data)
+  } catch (e: any) {
+    return res.status(502).json({ error: 'Upstream error', detail: e?.message ?? null })
+  }
+})
+
 export default router
 
 // Futures: tickers (all contracts)
@@ -186,6 +207,31 @@ router.get('/futures/intervals', async (req: Request, res: Response) => {
       return results
     })
     return res.json({ symbol: sym, intervals: data })
+  } catch (e: any) {
+    return res.status(502).json({ error: 'Upstream error', detail: e?.message ?? null })
+  }
+})
+
+// Futures: 24h ticker stats for a symbol
+router.get('/futures/24h', async (req: Request, res: Response) => {
+  try {
+    let symbol = String(req.query.symbol || '')
+    if (!symbol) return res.status(400).json({ error: 'symbol is required' })
+    const sym = symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1')
+    const key = `futures:24h:${sym}`
+    const data = await fromCache(key, 2000, async () => {
+      // contract ticker list returns 24h fields per symbol; fetch all and pick one (MEXC lacks single-symbol 24h endpoint for futures)
+      const upstream = await fetch('https://contract.mexc.com/api/v1/contract/ticker')
+      if (!upstream.ok) {
+        const text = await upstream.text().catch(() => '')
+        throw new Error(JSON.stringify({ status: upstream.status, body: text }))
+      }
+      const j = await upstream.json()
+      const arr = Array.isArray(j?.data) ? j.data : []
+      const row = arr.find((r: any) => r?.symbol === sym) || null
+      return row || {}
+    })
+    return res.json(data)
   } catch (e: any) {
     return res.status(502).json({ error: 'Upstream error', detail: e?.message ?? null })
   }

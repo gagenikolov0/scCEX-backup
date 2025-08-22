@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -42,8 +42,12 @@ export default function Spot() {
     return arr.slice(0, 500)
   }, [tokenOptions, pairQuery])
 
-  const [availableIntervals, setAvailableIntervals] = useState<Array<'1m'|'5m'|'1h'|'1d'>>(['1m','5m','1h','1d'])
-  const [interval, setInterval] = useState<'1m'|'5m'|'1h'|'1d'>('1m')
+  const allIntervals = ['1m','5m','15m','30m','1h','2h','4h','6h','1d','2d','1w'] as const
+  type Interval = typeof allIntervals[number]
+  const [availableIntervals, setAvailableIntervals] = useState<Interval[]>(['1m','5m','1h','1d'])
+  const [interval, setInterval] = useState<Interval>('1m')
+  const [stats, setStats] = useState<any | null>(null)
+  const [loadingStats, setLoadingStats] = useState(false)
 
   // Fetch available intervals for selected symbol
   useEffect(() => {
@@ -54,8 +58,8 @@ export default function Spot() {
         const res = await fetch(`${API_BASE}/api/markets/spot/intervals?symbol=${sym}`)
         const j = await res.json().catch(() => ({}))
         if (cancelled) return
-        const ivs = Array.isArray(j?.intervals) ? j.intervals.filter((iv: string) => ['1m','5m','1h','1d'].includes(iv)) : ['1m','5m','1h','1d']
-        setAvailableIntervals(ivs as any)
+        const ivs = Array.isArray(j?.intervals) ? j.intervals.filter((iv: string) => (allIntervals as readonly string[]).includes(iv)) : ['1m','5m','1h','1d']
+        setAvailableIntervals(ivs as Interval[])
         if (!ivs.includes(interval)) setInterval((ivs[0] as any) ?? '1m')
       } catch {
         if (cancelled) return
@@ -63,6 +67,41 @@ export default function Spot() {
       }
     })()
     return () => { cancelled = true }
+  }, [token, quote])
+
+  // Subscribe to 24h stats via WS for selected spot pair
+  useEffect(() => {
+    setLoadingStats(true)
+    const wsBase = API_BASE.replace(/^http/, 'ws')
+    const sym = `${token}${quote}`
+    let stopped = false
+    let ws: WebSocket | null = null
+    try {
+      ws = new WebSocket(`${wsBase}/ws/spot-24h`)
+      ws.onopen = () => {
+        try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym })) } catch {}
+      }
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data as string)
+          if (msg?.type === 'stats' && msg?.symbol === sym) {
+            setStats(msg.data)
+            setLoadingStats(false)
+          }
+        } catch {}
+      }
+      ws.onclose = () => { if (!stopped) setLoadingStats(false) }
+      ws.onerror = () => { if (!stopped) setLoadingStats(false) }
+    } catch {
+      setLoadingStats(false)
+    }
+    return () => {
+      stopped = true
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try { ws.send(JSON.stringify({ type: 'unsub', symbol: sym })) } catch {}
+        try { ws.close() } catch {}
+      }
+    }
   }, [token, quote])
 
   return (
@@ -104,6 +143,20 @@ export default function Spot() {
             ))}
           </Menu.Dropdown>
         </Menu>
+        <Group gap="md" className="ml-1" wrap="nowrap">
+          {loadingStats ? <Loader size="xs" /> : (
+            <>
+              <Text size="sm">Price: {stats?.lastPrice ?? '-'}</Text>
+              <Text size="sm" c={(Number(stats?.priceChangePercent) || 0) >= 0 ? 'teal' : 'red'}>
+                24h: {stats?.priceChangePercent != null ? `${Number(stats.priceChangePercent).toFixed(2)}%` : '-'}
+              </Text>
+              <Text size="sm">High: {stats?.highPrice ?? '-'}</Text>
+              <Text size="sm">Low: {stats?.lowPrice ?? '-'}</Text>
+              <Text size="sm">Vol: {stats?.volume ?? '-'}</Text>
+              <Text size="sm">QuoteVol: {stats?.quoteVolume ?? '-'}</Text>
+            </>
+          )}
+        </Group>
       </div>
 
       <Grid gutter="md">

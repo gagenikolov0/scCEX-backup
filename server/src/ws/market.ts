@@ -10,6 +10,8 @@ export function attachMarketWSS(server: HttpServer) {
   const tickersWss = new WebSocketServer({ noServer: true })
   const futuresTickersWss = new WebSocketServer({ noServer: true })
   const futuresTicksWss = new WebSocketServer({ noServer: true })
+  const spotStatsWss = new WebSocketServer({ noServer: true })
+  const futuresStatsWss = new WebSocketServer({ noServer: true })
 
   // Spot per-symbol ticks stream (subscribe to symbol) with shared timers per symbol
   const spotSymbolSubscribers = new Map<string, Set<WebSocket>>()
@@ -187,6 +189,130 @@ export function attachMarketWSS(server: HttpServer) {
       }
     })
   })
+  
+  // Spot 24h stats per-symbol (shared timers)
+  const spotStatsSubs = new Map<string, Set<WebSocket>>()
+  const spotStatsTimers = new Map<string, NodeJS.Timeout>()
+  const startSpotStats = async (symbol: string) => {
+    if (spotStatsTimers.has(symbol)) return
+    const tick = async () => {
+      try {
+        const url = `https://api.mexc.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`
+        const r = await fetch(url)
+        if (!r.ok) return
+        const raw = await r.json()
+        const data = {
+          lastPrice: raw?.lastPrice ?? raw?.last ?? raw?.price ?? null,
+          priceChangePercent: raw?.priceChangePercent ?? raw?.changeRate ?? null,
+          highPrice: raw?.highPrice ?? raw?.high ?? null,
+          lowPrice: raw?.lowPrice ?? raw?.low ?? null,
+          volume: raw?.volume ?? raw?.vol ?? null,
+          quoteVolume: raw?.quoteVolume ?? raw?.quoteVol ?? null,
+        }
+        const payload = JSON.stringify({ type: 'stats', symbol, data, t: Date.now() })
+        const subs = spotStatsSubs.get(symbol)
+        if (!subs || subs.size === 0) return
+        for (const c of subs) { try { c.send(payload) } catch {} }
+      } catch {}
+    }
+    spotStatsTimers.set(symbol, setInterval(tick, 5000))
+    await tick()
+  }
+  const stopSpotStats = (symbol: string) => {
+    const t = spotStatsTimers.get(symbol)
+    if (t) clearInterval(t)
+    spotStatsTimers.delete(symbol)
+  }
+  spotStatsWss.on('connection', (ws: WebSocket) => {
+    ws.on('message', (raw: Buffer) => {
+      try {
+        const msg = JSON.parse(String(raw)) as any
+        if (msg?.type === 'sub' && msg?.symbol) {
+          const sym = String(msg.symbol).toUpperCase()
+          let set = spotStatsSubs.get(sym)
+          if (!set) { set = new Set(); spotStatsSubs.set(sym, set) }
+          set.add(ws)
+          startSpotStats(sym)
+        } else if (msg?.type === 'unsub') {
+          for (const [sym, set] of spotStatsSubs) {
+            if (set.delete(ws) && set.size === 0) { spotStatsSubs.delete(sym); stopSpotStats(sym) }
+          }
+        }
+      } catch {}
+    })
+    ws.on('close', () => {
+      for (const [sym, set] of spotStatsSubs) {
+        if (set.delete(ws) && set.size === 0) { spotStatsSubs.delete(sym); stopSpotStats(sym) }
+      }
+    })
+  })
+
+  // Futures 24h stats per-symbol (shared timers)
+  const futStatsSubs = new Map<string, Set<WebSocket>>()
+  const futStatsTimers = new Map<string, NodeJS.Timeout>()
+  const startFutStats = async (symbol: string) => {
+    if (futStatsTimers.has(symbol)) return
+    const tick = async () => {
+      try {
+        const r = await fetch('https://contract.mexc.com/api/v1/contract/ticker')
+        if (!r.ok) return
+        const j = await r.json()
+        const arr = Array.isArray(j?.data) ? j.data : []
+        const row = arr.find((x: any) => x?.symbol === symbol)
+        if (!row) return
+        // Normalize futures 24h stats with broad fallbacks
+        const rawRise = row?.riseFallRate
+        const riseFallRate = typeof rawRise === 'number'
+          ? (Math.abs(rawRise) <= 1 ? rawRise * 100 : rawRise)
+          : (typeof rawRise === 'string' ? (Math.abs(parseFloat(rawRise)) <= 1 ? parseFloat(rawRise) * 100 : parseFloat(rawRise)) : null)
+        const data = {
+          lastPrice: row?.lastPrice ?? row?.last ?? null,
+          riseFallRate,
+          highPrice: row?.highPrice ?? row?.highestPrice ?? row?.high24Price ?? row?.high24h ?? row?.maxPrice ?? row?.max24h ?? row?.priceHigh ?? null,
+          lowPrice: row?.lowPrice ?? row?.lowestPrice ?? row?.lower24Price ?? row?.low24h ?? row?.minPrice ?? row?.min24h ?? row?.priceLow ?? null,
+          volume: row?.volume ?? row?.volume24 ?? row?.vol24 ?? row?.vol ?? row?.baseVolume ?? null,
+          quoteVolume: row?.quoteVolume ?? row?.amount ?? row?.amount24 ?? row?.turnover ?? row?.turnover24 ?? row?.turnoverUsd ?? null,
+          fundingRate: row?.fundingRate ?? null,
+        }
+        const payload = JSON.stringify({ type: 'stats', symbol, data, t: Date.now() })
+        const subs = futStatsSubs.get(symbol)
+        if (!subs || subs.size === 0) return
+        for (const c of subs) { try { c.send(payload) } catch {} }
+      } catch {}
+    }
+    futStatsTimers.set(symbol, setInterval(tick, 5000))
+    await tick()
+  }
+  const stopFutStats = (symbol: string) => {
+    const t = futStatsTimers.get(symbol)
+    if (t) clearInterval(t)
+    futStatsTimers.delete(symbol)
+  }
+  futuresStatsWss.on('connection', (ws: WebSocket) => {
+    ws.on('message', (raw: Buffer) => {
+      try {
+        const msg = JSON.parse(String(raw)) as any
+        if (msg?.type === 'sub' && msg?.symbol) {
+          const sym = String(msg.symbol).toUpperCase().includes('_')
+            ? String(msg.symbol).toUpperCase()
+            : String(msg.symbol).toUpperCase().replace(/(USDT|USDC)$/,'_$1')
+          let set = futStatsSubs.get(sym)
+          if (!set) { set = new Set(); futStatsSubs.set(sym, set) }
+          set.add(ws)
+          startFutStats(sym)
+        } else if (msg?.type === 'unsub') {
+          for (const [sym, set] of futStatsSubs) {
+            if (set.delete(ws) && set.size === 0) { futStatsSubs.delete(sym); stopFutStats(sym) }
+          }
+        }
+      } catch {}
+    })
+    ws.on('close', () => {
+      for (const [sym, set] of futStatsSubs) {
+        if (set.delete(ws) && set.size === 0) { futStatsSubs.delete(sym); stopFutStats(sym) }
+      }
+    })
+  })
   // Single upgrade handler to route by pathname
   server.on('upgrade', (req: IncomingMessage, socket, head) => {
     const rawUrl = req.url || ''
@@ -211,6 +337,14 @@ export function attachMarketWSS(server: HttpServer) {
     } else if (pathname.startsWith('/ws/futures-ticks')) {
       futuresTicksWss.handleUpgrade(req, socket, head, (ws) => {
         futuresTicksWss.emit('connection', ws, req)
+      })
+    } else if (pathname.startsWith('/ws/spot-24h')) {
+      spotStatsWss.handleUpgrade(req, socket, head, (ws) => {
+        spotStatsWss.emit('connection', ws, req)
+      })
+    } else if (pathname.startsWith('/ws/futures-24h')) {
+      futuresStatsWss.handleUpgrade(req, socket, head, (ws) => {
+        futuresStatsWss.emit('connection', ws, req)
       })
     } else {
       try { console.warn('[ws] unknown path, destroying socket:', rawUrl) } catch {}

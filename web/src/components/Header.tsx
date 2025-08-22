@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { IconChevronDown, IconHome2 } from '@tabler/icons-react'
+import { IconHome2, IconUser } from '@tabler/icons-react'
 import {
   Anchor,
   Box,
@@ -11,8 +11,10 @@ import {
   Group,
   HoverCard,
   ScrollArea,
+  ActionIcon,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
+import { useEffect, useState } from 'react'
 import classes from './HeaderMegaMenu.module.css'
 import { useAuth } from '../auth/AuthContext'
 
@@ -22,13 +24,27 @@ export default function Header() {
   const [futuresOpen, { toggle: toggleFutures }] = useDisclosure(false)
   const [spotOpen, { toggle: toggleSpot }] = useDisclosure(false)
 
+  // Home icon: prefer custom /icon.png from public, fallback to Tabler icon
+  function HomeIcon() {
+    const [loaded, setLoaded] = useState(false)
+    useEffect(() => {
+      const img = new Image()
+      img.onload = () => setLoaded(true)
+      img.onerror = () => setLoaded(false)
+      img.src = '/icon.png'
+    }, [])
+    return loaded
+      ? <img src="/icon.png" alt="Home" className={classes.homeIcon} />
+      : <IconHome2 className={classes.homeIcon} size={24} />
+  }
+
   return (
     <header className={classes.header}>
       <Group justify="space-between" h="100%">
         {/* Left: Home icon and menus (desktop only) */}
         <Group h="100%" gap={0} visibleFrom="sm">
-          <Anchor component={Link} to="/" className={classes.trigger} aria-label="Home">
-            <IconHome2 size={18} />
+          <Anchor component={Link} to="/" className={`${classes.trigger} ${classes.homeTrigger}`} aria-label="Home">
+            <HomeIcon />
           </Anchor>
 
           <NavLink to="/markets" className={({ isActive }) => `${classes.trigger} ${classes.pill} ${isActive ? classes.pillActive : ''}`} aria-label="Markets">
@@ -43,7 +59,6 @@ export default function Header() {
                 <span className={classes.trigger}>
                   <Center inline>
                     <Box component="span" mr={5}>Futures</Box>
-                    <IconChevronDown size={16} />
                   </Center>
                 </span>
               </HoverCard.Target>
@@ -61,7 +76,6 @@ export default function Header() {
                 <span className={classes.trigger}>
                   <Center inline>
                     <Box component="span" mr={5}>Spot</Box>
-                    <IconChevronDown size={16} />
                   </Center>
                 </span>
               </HoverCard.Target>
@@ -79,8 +93,10 @@ export default function Header() {
         <Group visibleFrom="sm">
           {isAuthed ? (
             <>
-              <Button variant="default" component={Link} to="/wallet">Wallet</Button>
-              <Button variant="default" component={Link} to="/settings">Settings</Button>
+              <NavLink to="/wallet" className={({ isActive }) => `${classes.trigger} ${classes.pill} ${isActive ? classes.pillActive : ''}`}>Wallet</NavLink>
+              <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
+                <IconUser size={18} />
+              </ActionIcon>
             </>
           ) : (
             <>
