@@ -1,20 +1,38 @@
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useMemo } from 'react'
 import { Login, Register } from './routes/Auth'
 import Home from './routes/Home'
+import { AuthProvider, useAuth } from './auth/AuthContext'
+import AppShell from './components/AppShell'
+import Trade from './routes/Trade'
+import Deposit from './routes/Deposit'
+import Wallet from './routes/Wallet'
+import Settings from './routes/Settings'
 
 function App() {
-  const isAuthed = useMemo(() => !!localStorage.getItem('accessToken'), [])
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/" element={isAuthed ? <Home /> : <Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppShell>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<Protected><Home /></Protected>} />
+            <Route path="/trade" element={<Protected><Trade /></Protected>} />
+            <Route path="/wallet" element={<Protected><Wallet /></Protected>} />
+            <Route path="/deposit" element={<Protected><Deposit /></Protected>} />
+            <Route path="/settings" element={<Protected><Settings /></Protected>} />
+          </Routes>
+        </AppShell>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
 export default App
+
+function Protected({ children }: { children: React.ReactNode }) {
+  const { isReady, isAuthed } = useAuth()
+  if (!isReady) return null
+  return isAuthed ? <>{children}</> : <Navigate to="/login" replace />
+}

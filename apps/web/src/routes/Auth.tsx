@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
+import { Button, TextInput, Paper } from '@mantine/core'
 
 const schema = z.object({
   email: z.string().email(),
@@ -10,10 +12,9 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
-
 export function Login() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema)
   })
@@ -21,48 +22,41 @@ export function Login() {
 
   const onSubmit = async (data: FormValues) => {
     setServerError(null)
-    const res = await fetch(`${API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(data),
-    })
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setServerError(j.error ?? 'Login failed')
-      return
+    try {
+      await login(data.email, data.password)
+      navigate('/')
+    } catch (e: any) {
+      setServerError(e.message ?? 'Login failed')
     }
-    const j = await res.json()
-    localStorage.setItem('accessToken', j.accessToken)
-    navigate('/')
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-sm p-6 rounded-lg border">
+      <Paper shadow="sm" radius="md" withBorder className="w-full max-w-sm p-6">
         <h1 className="text-xl font-semibold mb-4">Login</h1>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div>
-            <input {...register('email')} placeholder="Email" className="w-full border rounded px-3 py-2" />
+            <TextInput {...register('email')} placeholder="Email" />
             {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
           </div>
           <div>
-            <input type="password" {...register('password')} placeholder="Password" className="w-full border rounded px-3 py-2" />
+            <TextInput type="password" {...register('password')} placeholder="Password" />
             {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
           </div>
           {serverError && <p className="text-sm text-red-600">{serverError}</p>}
-          <button disabled={isSubmitting} className="w-full bg-black text-white rounded px-3 py-2">
+          <Button type="submit" disabled={isSubmitting} fullWidth size="md" color="dark">
             {isSubmitting ? 'Signing in...' : 'Sign in'}
-          </button>
+          </Button>
         </form>
         <p className="text-sm mt-3">No account? <Link to="/register" className="text-blue-600">Register</Link></p>
-      </div>
+      </Paper>
     </div>
   )
 }
 
 export function Register() {
   const navigate = useNavigate()
+  const { register: registerApi } = useAuth()
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema)
   })
@@ -70,42 +64,34 @@ export function Register() {
 
   const onSubmit = async (data: FormValues) => {
     setServerError(null)
-    const res = await fetch(`${API_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(data),
-    })
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setServerError(j.error ?? 'Register failed')
-      return
+    try {
+      await registerApi(data.email, data.password)
+      navigate('/')
+    } catch (e: any) {
+      setServerError(e.message ?? 'Register failed')
     }
-    const j = await res.json()
-    localStorage.setItem('accessToken', j.accessToken)
-    navigate('/')
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-sm p-6 rounded-lg border">
+      <Paper shadow="sm" radius="md" withBorder className="w-full max-w-sm p-6">
         <h1 className="text-xl font-semibold mb-4">Create account</h1>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div>
-            <input {...register('email')} placeholder="Email" className="w-full border rounded px-3 py-2" />
+            <TextInput {...register('email')} placeholder="Email" />
             {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
           </div>
           <div>
-            <input type="password" {...register('password')} placeholder="Password" className="w-full border rounded px-3 py-2" />
+            <TextInput type="password" {...register('password')} placeholder="Password" />
             {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
           </div>
           {serverError && <p className="text-sm text-red-600">{serverError}</p>}
-          <button disabled={isSubmitting} className="w-full bg-black text-white rounded px-3 py-2">
+          <Button type="submit" disabled={isSubmitting} fullWidth size="md" color="dark">
             {isSubmitting ? 'Creating...' : 'Create account'}
-          </button>
+          </Button>
         </form>
         <p className="text-sm mt-3">Have an account? <Link to="/login" className="text-blue-600">Login</Link></p>
-      </div>
+      </Paper>
     </div>
   )
 }
