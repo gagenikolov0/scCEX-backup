@@ -16,7 +16,7 @@ interface Order {
   side: 'buy' | 'sell'
   quantity: string
   price: string
-  status: 'filled' | 'rejected'
+  status: 'filled' | 'rejected' | 'pending'
   createdAt: string
 }
 
@@ -60,6 +60,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       
       if (response.ok) {
         const data = await response.json()
+        
         setSpotAvailable({
           USDT: data.balances?.spotAvailableUSDT || '0',
           USDC: data.balances?.spotAvailableUSDC || '0'

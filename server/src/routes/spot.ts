@@ -19,15 +19,19 @@ async function fetchSpotPrice(symbol: string): Promise<number> {
   return p;
 }
 
-// POST /api/spot/orders - place market order (buy/sell by base quantity)
-// Body: { symbol: "BTCUSDT", side: "buy"|"sell", quantity: string }
+// POST /api/spot/orders - place market or limit order
+// Body: { symbol: "BTCUSDT", side: "buy"|"sell", quantity: string, price?: string, orderType: "market"|"limit" }
 router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
-  const { symbol, side, quantity } = req.body || {};
+  const { symbol, side, quantity, price: limitPrice, orderType = "market" } = req.body || {};
   const sym = typeof symbol === "string" ? symbol.toUpperCase() : "";
   const sd = side === "buy" || side === "sell" ? side : null;
   const qtyStr = typeof quantity === "string" ? quantity : String(quantity ?? "");
+  const isLimit = orderType === "limit";
+  
   if (!sym || !sd) return res.status(400).json({ error: "Invalid input" });
   if (!/^\d+(?:\.\d+)?$/.test(qtyStr)) return res.status(400).json({ error: "Invalid quantity" });
+  if (isLimit && (!limitPrice || !/^\d+(?:\.\d+)?$/.test(limitPrice))) return res.status(400).json({ error: "Invalid limit price" });
+  
   // Derive base and quote
   const quote = sym.endsWith("USDT") ? "USDT" : sym.endsWith("USDC") ? "USDC" : null;
   if (!quote) return res.status(400).json({ error: "Unsupported quote" });
@@ -36,7 +40,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const price = await fetchSpotPrice(sym);
+    const currentPrice = await fetchSpotPrice(sym);
     const user = await User.findById(req.user!.id).session(session);
     if (!user) {
       await session.abortTransaction();
@@ -44,14 +48,61 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
     }
 
     const qtyBase = mongoose.Types.Decimal128.fromString(qtyStr);
+    const price = isLimit ? parseFloat(limitPrice) : currentPrice;
     const quoteAmtNum = parseFloat(qtyStr) * price;
     const quoteAmt = mongoose.Types.Decimal128.fromString(String(quoteAmtNum));
     const priceDec = mongoose.Types.Decimal128.fromString(String(price));
 
-    // Get quote balance from SpotPosition instead of old hardcoded fields
+    // Get quote balance from SpotPosition
     const quotePosition = await SpotPosition.findOne({ userId: String(user._id), asset: quote }).session(session);
     const avail = quotePosition?.available?.toString() || "0";
 
+    // For limit orders, check if they can execute immediately
+    if (isLimit) {
+      // Check if the order can execute immediately
+      const canExecute = sd === "buy" ? 
+        currentPrice <= price : // Buy order: execute when current price <= limit price
+        currentPrice >= price;  // Sell order: execute when current price >= limit price
+      
+      if (canExecute) {
+        // Execute immediately as a market order
+        // (existing market order logic will handle this)
+      } else {
+        // Check if user has enough balance for this pending order
+        if (parseFloat(avail) < quoteAmtNum) {
+          await session.abortTransaction()
+          return res.status(400).json({ error: "Insufficient balance" })
+        }
+
+        // Create pending order
+        const created = await new SpotOrder({
+          userId: user._id,
+          symbol: sym,
+          baseAsset: base,
+          quoteAsset: quote,
+          side: sd,
+          quantityBase: qtyBase,
+          priceQuote: priceDec,
+          quoteAmount: quoteAmt,
+          status: "pending",
+        }).save({ session });
+
+        await session.commitTransaction();
+        
+        return res.status(201).json({
+          id: created._id,
+          symbol: sym,
+          side: sd,
+          quantity: qtyStr,
+          price: String(price),
+          quoteAmount: String(quoteAmtNum),
+          status: "pending",
+          createdAt: created.createdAt,
+        });
+      }
+    }
+
+    // Market order execution (existing logic)
     if (sd === "buy") {
       // Spend quote; increase base position
       const quoteAmtNum = parseFloat(qtyStr) * price;  // This is correct - USDT cost
@@ -211,10 +262,39 @@ router.get("/positions", requireAuth, async (req: AuthRequest, res: Response) =>
   return res.json(
     rows.map((r) => ({
       asset: r.asset,
-      available: r.available?.toString?.() ?? "0",
+      available: r.available?.toString() ?? "0",
       updatedAt: r.updatedAt,
     }))
   );
+});
+
+// DELETE /api/spot/orders/:id - cancel pending order
+router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  const orderId = req.params.id;
+  if (!orderId) return res.status(400).json({ error: "Order ID required" });
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
+  try {
+    const order = await SpotOrder.findOne({ _id: orderId, userId: req.user!.id }).session(session);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.status !== "pending") return res.status(400).json({ error: "Only pending orders can be cancelled" });
+
+    // Update order status to rejected
+    await SpotOrder.updateOne({ _id: orderId }, { status: "rejected" }, { session });
+    
+    // Note: Balance is already available since limit orders don't actually move money
+    // The money was never deducted, just "reserved" in the calculation
+    
+    await session.commitTransaction();
+    return res.json({ success: true });
+  } catch (error) {
+    await session.abortTransaction();
+    return res.status(500).json({ error: "Cancel failed" });
+  } finally {
+    session.endSession();
+  }
 });
 
 export default router;

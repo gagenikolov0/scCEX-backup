@@ -18,13 +18,15 @@ export default function Spot() {
   const [token, setToken] = useState(initialBase)
   const [pairQuery, setPairQuery] = useState('')
   const [qty, setQty] = useState('')
+  const [price, setPrice] = useState('')
+  const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
   const [placing, setPlacing] = useState<null | 'buy' | 'sell'>(null)
   const [transferOpen, setTransferOpen] = useState(false)
   const [stats, setStats] = useState<any | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
 
   const { spotTickers: tickers } = useMarket()
-  const { positions, orders, spotAvailable, refreshOrders } = useAccount()
+  const { positions, orders, spotAvailable, refreshOrders, refreshBalances } = useAccount()
 
   useEffect(() => setToken(initialBase), [initialBase])
 
@@ -69,34 +71,66 @@ export default function Spot() {
 
   const placeOrder = async (side: 'buy'|'sell') => {
     if (!qty || Number(qty) <= 0 || !localStorage.getItem('accessToken')) return
+    if (orderType === 'limit' && (!price || Number(price) <= 0)) return
     setPlacing(side)
     try {
       const res = await fetch(`${API_BASE}/api/spot/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
         credentials: 'include',
-        body: JSON.stringify({ symbol: `${token}${quote}`, side, quantity: qty }),
+        body: JSON.stringify({ 
+          symbol: `${token}${quote}`, 
+          side, 
+          quantity: qty, 
+          price: orderType === 'limit' ? price : undefined,
+          orderType 
+        }),
       })
-      if (res.ok) { setQty(''); refreshOrders() } else {
+      if (res.ok) { 
+        setQty(''); 
+        setPrice(''); 
+        // Refresh all data to show immediate updates
+        refreshOrders();
+        refreshBalances();
+      } else {
         const j = await res.json().catch(() => null)
         alert(j?.error || 'Order failed')
       }
     } catch (e) { alert('Order failed') } finally { setPlacing(null) }
   }
 
+  const cancelOrder = async (orderId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/spot/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        credentials: 'include',
+      })
+      if (res.ok) { 
+        // Refresh all data to show immediate updates
+        refreshOrders();
+        refreshBalances();
+      } else {
+        const j = await res.json().catch(() => null)
+        alert(j?.error || 'Cancel failed')
+      }
+    } catch (e) { alert('Cancel failed') }
+  }
+
   const formatDate = (date: string) => date ? new Date(date).toLocaleString() : '-'
 
-  const renderTable = (data: any[], columns: string[], emptyMessage: string) => (
+  const renderTable = (data: any[], columns: string[], emptyMessage: string, showCancel = false) => (
     <table className="w-full text-sm">
       <thead className="text-neutral-500">
         <tr className="text-left">
           {columns.map(col => <th key={col} className="py-2 pr-3">{col}</th>)}
+          {showCancel && <th className="py-2 pr-3">Action</th>}
         </tr>
       </thead>
       <tbody>
         {data.length === 0 ? (
           <tr className="border-t">
-            <td className="py-2 pr-3" colSpan={columns.length}>{emptyMessage}</td>
+            <td className="py-2 pr-3" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</td>
           </tr>
         ) : (
           data.map((item, index) => (
@@ -120,6 +154,13 @@ export default function Spot() {
                   </td>
                 )
               })}
+              {showCancel && (
+                <td className="py-2 pr-3">
+                  <Button size="xs" variant="subtle" color="red" onClick={() => cancelOrder(item.id)}>
+                    Cancel
+                  </Button>
+                </td>
+              )}
             </tr>
           ))
         )}
@@ -200,6 +241,39 @@ export default function Spot() {
             <div className="p-3 border-b text-sm font-medium">Trade</div>
             <div className="p-4 grid gap-3">
               <div className="text-xs text-neutral-500">Available: {available} {quote} • {baseAvail} {token}</div>
+              
+              {/* Order Type Toggle */}
+              <div className="flex gap-1 p-1 bg-neutral-100 rounded">
+                <Button 
+                  size="xs" 
+                  variant={orderType === 'market' ? 'filled' : 'subtle'} 
+                  onClick={() => setOrderType('market')}
+                  className="flex-1"
+                >
+                  Market
+                </Button>
+                <Button 
+                  size="xs" 
+                  variant={orderType === 'limit' ? 'filled' : 'subtle'} 
+                  onClick={() => setOrderType('limit')}
+                  className="flex-1"
+                >
+                  Limit
+                </Button>
+              </div>
+              
+              {/* Price Input (only for limit orders) */}
+              {orderType === 'limit' && (
+                <TextInput 
+                  id="price" 
+                  label="Price" 
+                  placeholder="0.00" 
+                  value={price} 
+                  onChange={(e) => setPrice(e.currentTarget.value)} 
+                  disabled={!isAuthed} 
+                />
+              )}
+              
               <TextInput id="qty" label="Quantity" placeholder="0.00" value={qty} onChange={(e) => setQty(e.currentTarget.value)} disabled={!isAuthed} />
               <div className="flex gap-2">
                 <Button className="flex-1" variant="light" color="teal" loading={placing === 'buy'} disabled={!isAuthed} onClick={() => placeOrder('buy')}>Buy</Button>
@@ -218,7 +292,19 @@ export default function Spot() {
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Order History</div>
             <div className="p-4 overflow-auto">
-              {renderTable(orders, ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No orders')}
+              {renderTable(orders.filter(o => o.status !== 'pending'), ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No orders')}
+            </div>
+          </Card>
+        </Grid.Col>
+      </Grid>
+
+      {/* Pending Orders */}
+      <Grid gutter="md">
+        <Grid.Col span={{ base: 12 }}>
+          <Card padding={0} radius="md" withBorder>
+            <div className="p-3 border-b text-sm font-medium">Pending Orders</div>
+            <div className="p-4 overflow-auto">
+              {renderTable(orders.filter(o => o.status === 'pending'), ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No pending orders', true)}
             </div>
           </Card>
         </Grid.Col>
@@ -236,7 +322,17 @@ export default function Spot() {
         </Grid.Col>
       </Grid>
 
-      <TransferModal opened={transferOpen} onClose={() => setTransferOpen(false)} currentSide="spot" asset={quote as 'USDT'|'USDC'} onTransferred={undefined} />
+      <TransferModal 
+        opened={transferOpen} 
+        onClose={() => setTransferOpen(false)} 
+        currentSide="spot" 
+        asset={quote as 'USDT'|'USDC'} 
+        onTransferred={() => {
+          // Refresh all data after transfer
+          refreshBalances();
+          refreshOrders();
+        }} 
+      />
     </div>
   )
 }

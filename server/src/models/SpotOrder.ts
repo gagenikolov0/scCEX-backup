@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export type SpotOrderSide = "buy" | "sell";
-export type SpotOrderStatus = "filled" | "rejected";
+export type SpotOrderStatus = "filled" | "rejected" | "pending";
 
 export interface SpotOrderDocument extends Document {
   userId: string;  // Changed from mongoose.Types.ObjectId to string to match SpotPosition
@@ -27,7 +27,7 @@ const SpotOrderSchema = new Schema<SpotOrderDocument>(
     quantityBase: { type: Schema.Types.Decimal128, required: true },
     priceQuote: { type: Schema.Types.Decimal128, required: true },
     quoteAmount: { type: Schema.Types.Decimal128, required: true },
-    status: { type: String, required: true, enum: ["filled", "rejected"], index: true },
+    status: { type: String, required: true, enum: ["filled", "rejected", "pending"], index: true },
   },
   { timestamps: true }
 );
