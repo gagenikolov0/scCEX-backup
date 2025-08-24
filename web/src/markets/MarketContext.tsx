@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { API_BASE } from '../config/api'
 
 type SpotTicker = { symbol: string; price: string }
