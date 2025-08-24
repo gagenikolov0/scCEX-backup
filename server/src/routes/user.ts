@@ -1,37 +1,72 @@
-import { Router, type Request, type Response } from "express";
-import { requireAuth, type AuthRequest } from "../middleware/auth";
-import { User } from "../models/User";
-import { AddressGroup } from "../models/AddressGroup";
+import { Router, type Request, type Response } from 'express'
+import { requireAuth, type AuthRequest } from '../middleware/auth'
+import { User } from '../models/User'
+import { AddressGroup } from '../models/AddressGroup'
+import { SpotPosition } from '../models/SpotPosition'
 import mongoose from "mongoose";
 
 const router = Router();
 
-router.get("/me", requireAuth, async (req: AuthRequest, res: Response) => {
-  const user = await User.findById(req.user!.id).lean();
-  if (!user) return res.status(404).json({ error: "User not found" });
-  const group = user.addressGroupId ? await AddressGroup.findById(user.addressGroupId).lean() : null;
-  return res.json({
-    id: String(user._id),
-    email: user.email,
-    balances: {
-      spot: {
-        available: { USDT: user.spotAvailableUSDT?.toString() ?? "0", USDC: user.spotAvailableUSDC?.toString() ?? "0" },
-        total: { USDT: user.spotTotalUSDT?.toString() ?? "0", USDC: user.spotTotalUSDC?.toString() ?? "0" },
+// Simple in-memory cache for MEXC spot tickers
+type TickerCache = { expires: number; data: any[] }
+const tickerCache: TickerCache = { expires: 0, data: [] }
+
+async function getSpotTickers(): Promise<any[]> {
+  const now = Date.now()
+  if (tickerCache.expires > now && Array.isArray(tickerCache.data)) return tickerCache.data
+  const upstream = await fetch("https://api.mexc.com/api/v3/ticker/price")
+  const arr = upstream.ok ? await upstream.json() : []
+  tickerCache.data = Array.isArray(arr) ? arr : []
+  tickerCache.expires = now + 1000 // 1s TTL
+  return tickerCache.data
+}
+
+// Get user profile and balances
+router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findById(req.user!.id).lean()
+    if (!user) return res.status(404).json({ error: "User not found" })
+
+    // Get all spot positions (including USDT/USDC)
+    const positions = await SpotPosition.find({ userId: String(user._id) }).lean()
+    
+    // Find USDT and USDC positions specifically
+    const usdtPosition = positions.find(p => p.asset === 'USDT')
+    const usdcPosition = positions.find(p => p.asset === 'USDC')
+    
+    // Get address group if exists
+    let addressGroup = null
+    if (user.addressGroupId) {
+      addressGroup = await AddressGroup.findById(user.addressGroupId).lean()
+    }
+
+    return res.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        addressGroupId: user.addressGroupId,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       },
-      futures: {
-        available: { USDT: user.futuresAvailableUSDT?.toString() ?? "0", USDC: user.futuresAvailableUSDC?.toString() ?? "0" },
-        total: { USDT: user.futuresTotalUSDT?.toString() ?? "0", USDC: user.futuresTotalUSDC?.toString() ?? "0" },
+      balances: {
+        // USDT balances
+        spotAvailableUSDT: usdtPosition?.available?.toString() ?? '0',
+        
+        // USDC balances  
+        spotAvailableUSDC: usdcPosition?.available?.toString() ?? '0',
+        
+        // All other positions
+        positions: positions.map(p => ({
+          asset: p.asset,
+          available: p.available?.toString() ?? '0'
+        }))
       },
-    },
-    addressGroup: group ? {
-      ethAddress: group.ethAddress ?? null,
-      tronAddress: group.tronAddress ?? null,
-      bscAddress: group.bscAddress ?? null,
-      solAddress: group.solAddress ?? null,
-      xrpAddress: group.xrpAddress ?? null,
-    } : null,
-  });
-});
+      addressGroup
+    })
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to get user profile" })
+  }
+})
 
 router.get("/address-group", requireAuth, async (req: AuthRequest, res: Response) => {
   const user = await User.findById(req.user!.id).lean();

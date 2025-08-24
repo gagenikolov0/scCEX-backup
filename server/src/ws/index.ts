@@ -12,10 +12,11 @@ import { stream as spotStats } from './streams/spotStats'
 import { stream as futuresStats } from './streams/futuresStats'
 import { stream as spotDepth } from './streams/spotDepth'
 import { stream as futuresDepth } from './streams/futuresDepth'
+import { stream as account } from './streams/account'
 
 const streams: Stream[] = [
   spotTicks, spotTickers, futuresTickers, futuresTicks,
-  spotStats, futuresStats, spotDepth, futuresDepth,
+  spotStats, futuresStats, spotDepth, futuresDepth, account,
 ]
 
 export function attachMarketWSS(server: HttpServer) {

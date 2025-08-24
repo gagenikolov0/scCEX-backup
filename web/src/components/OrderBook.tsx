@@ -11,6 +11,8 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
   const lastUpdateRef = useRef<number>(0)
 
   useEffect(() => {
+    if (!symbol) return
+    
     setBids([]); setAsks([]); setError(null); setStatus('connecting')
     const wsBase = API_BASE.replace(/^http/, 'ws')
     const path = market === 'futures' ? '/ws/futures-depth' : '/ws/spot-depth'
@@ -79,6 +81,7 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
   return (
     <div className="p-3 text-sm">
       {error && <div className="text-red-600 mb-2">{error}</div>}
+      {status === 'connecting' && <div className="text-neutral-500 mb-2">Connecting...</div>}
       <div className="grid grid-cols-3 gap-y-1 mb-2 sticky top-0 bg-transparent">
         <div className="text-neutral-500">Price</div>
         <div className="text-neutral-500">Size</div>
@@ -100,9 +103,6 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
           </div>
         ))}
       </div>
-      {status !== 'open' && bids.length === 0 && asks.length === 0 && (
-        <div className="text-xs text-neutral-500 mt-2">{status === 'connecting' ? 'Connecting…' : status === 'error' ? 'Reconnecting…' : 'Waiting for data…'}</div>
-      )}
     </div>
   )
 }

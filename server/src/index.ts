@@ -10,6 +10,7 @@ import { getConfig } from "./config/env";
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
 import marketsRoutes from "./routes/markets";
+import spotRoutes from "./routes/spot";
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -38,6 +39,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/markets", marketsRoutes);
+app.use("/api/spot", spotRoutes);
 
 const start = async () => {
   await mongoose.connect(config.mongoUri);

@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, TextInput, Anchor } from '@mantine/core'
 import { Link } from 'react-router-dom'
-import { API_BASE } from '../config/api'
+import { useMarket } from '../markets/MarketContext'
 
-
-type Ticker = { symbol: string; price: string }
 
 function splitSymbol(sym: string): { base: string; quote: string } {
   if (sym.endsWith('USDT')) return { base: sym.slice(0, -4), quote: 'USDT' }
@@ -13,107 +11,9 @@ function splitSymbol(sym: string): { base: string; quote: string } {
 }
 
 export default function Markets() {
-  const [tickers, setTickers] = useState<Ticker[]>([])
-  const [futures, setFutures] = useState<any[]>([])
+  const { spotTickers: tickers, futuresTickers: futures } = useMarket()
   const [q, setQ] = useState('')
-  const [error, setError] = useState<string | null>(null)
   // (dots/price-direction indicators removed to simplify UI)
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        setError(null)
-        const res = await fetch(`${API_BASE}/api/markets/spot/tickers`)
-        if (!res.ok) throw new Error('Failed to load markets')
-        const data = (await res.json()) as Ticker[]
-        if (!cancelled) setTickers(Array.isArray(data) ? data : [])
-      } catch (e: any) {
-        if (!cancelled) setError(e.message ?? 'Failed to load markets')
-      }
-    })()
-    ;(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/markets/futures/tickers`)
-        if (!res.ok) return
-        const j = await res.json()
-        const arr = Array.isArray(j?.data) ? j.data : []
-        if (!cancelled) setFutures(arr)
-      } catch {}
-    })()
-    return () => { cancelled = true }
-  }, [])
-
-  useEffect(() => {
-    // Live updates via WS tickers (handle React StrictMode double-mount)
-    let stopped = false
-    let ws: WebSocket | null = null
-    const wsBase = API_BASE.replace(/^http/, 'ws')
-    const connect = () => {
-      if (stopped) return
-      try {
-        ws = new WebSocket(`${wsBase}/ws/tickers`)
-        ws.onopen = () => { console.debug('[markets] ws open', ws?.readyState) }
-        ws.onmessage = (ev) => {
-          try {
-            const msg = JSON.parse(ev.data as string)
-            if (msg?.type === 'tickers' && Array.isArray(msg.data)) {
-              setTickers(msg.data)
-            }
-          } catch {}
-        }
-        ws.onclose = (e) => {
-          if (!stopped) {
-            console.warn('[markets] ws close', e.code, e.reason)
-            setTimeout(connect, 1500)
-          }
-        }
-        ws.onerror = (e) => {
-          if (!stopped) console.error('[markets] ws error', e)
-        }
-      } catch (e) { console.error('[markets] ws init error', e) }
-    }
-    connect()
-    return () => {
-      stopped = true
-      // Avoid force-closing CONNECTING sockets during StrictMode teardown
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        try { ws.close() } catch {}
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    // Futures WS updates
-    let stopped = false
-    let ws: WebSocket | null = null
-    const wsBase = API_BASE.replace(/^http/, 'ws')
-    const connect = () => {
-      if (stopped) return
-      try {
-        ws = new WebSocket(`${wsBase}/ws/futures-tickers`)
-        ws.onopen = () => { console.debug('[markets] futures ws open', ws?.readyState) }
-        ws.onmessage = (ev) => {
-          try {
-            const msg = JSON.parse(ev.data as string)
-            if (msg?.type === 'futures-tickers' && msg?.data) {
-              const arr = Array.isArray(msg.data?.data) ? msg.data.data : []
-              setFutures(arr)
-            }
-          } catch {}
-        }
-        ws.onclose = () => { if (!stopped) setTimeout(connect, 1500) }
-        ws.onerror = (e) => { if (!stopped) console.error('[markets] futures ws error', e) }
-      } catch {}
-    }
-    connect()
-    return () => {
-      stopped = true
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        try { ws.close() } catch {}
-      }
-    }
-  }, [])
 
   const filterFn = (t: Ticker) => {
     if (!q) return true
@@ -131,7 +31,7 @@ export default function Markets() {
         <TextInput placeholder="Search (e.g. BTC, SOL)" value={q} onChange={e => setQ(e.currentTarget.value)} className="max-w-xs" />
       </div>
 
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {/* errors handled in provider; page is thin */}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card padding={0} radius="md" withBorder>

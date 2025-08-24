@@ -1,16 +1,113 @@
-import { Button, Card, Group, Text } from '@mantine/core'
-import { Link } from 'react-router-dom'
+import { Card, Group, Text, Stack, Badge, Grid, Paper, NavLink } from '@mantine/core'
+import { useAccount } from '../auth/AccountContext'
+import { useState } from 'react'
 
 export default function Wallet() {
+  const { spotAvailable, positions } = useAccount()
+  const [activeTab, setActiveTab] = useState('overview')
+
+  const formatUSD = (amount: number) => amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+  const formatBalance = (amount: string) => parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })
+  
+  const totalSpotValue = parseFloat(spotAvailable.USDT) + parseFloat(spotAvailable.USDC) + 
+    positions.filter(p => !['USDT', 'USDC'].includes(p.asset)).reduce((sum, p) => sum + parseFloat(p.available), 0)
+
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'futures', label: 'Futures' },
+    { id: 'spot', label: 'Spot' }
+  ]
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <Grid gutter="md">
+            <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+              <Paper withBorder p="md" radius="md">
+                <Stack gap="xs">
+                  <Text size="sm" c="dimmed">Spot Balance</Text>
+                  <Text size="xl" fw={600}>{formatUSD(totalSpotValue)}</Text>
+                </Stack>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+              <Paper withBorder p="md" radius="md">
+                <Stack gap="xs">
+                  <Text size="sm" c="dimmed">Futures Balance</Text>
+                  <Text size="xl" fw={600}>$0.00</Text>
+                </Stack>
+              </Paper>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+              <Paper withBorder p="md" radius="md">
+                <Stack gap="xs">
+                  <Text size="sm" c="dimmed">Total Balance</Text>
+                  <Text size="xl" fw={600}>{formatUSD(totalSpotValue)}</Text>
+                </Stack>
+              </Paper>
+            </Grid.Col>
+          </Grid>
+        )
+
+      case 'futures':
+        return <Card withBorder radius="md" p="md"><Text c="dimmed" ta="center">Futures coming soon</Text></Card>
+
+      case 'spot':
+        return (
+          <>
+            <Paper withBorder p="lg" radius="md" mb="md" bg="dark.0">
+              <Text size="sm" c="dimmed">Total Spot Value</Text>
+              <Text size="2xl" fw={700} c="green">{formatUSD(totalSpotValue)}</Text>
+            </Paper>
+            <Grid gutter="md">
+              {['USDT', 'USDC'].map(asset => (
+                <Grid.Col key={asset} span={{ base: 12, sm: 6, md: 4 }}>
+                  <Paper withBorder p="md" radius="md">
+                    <Stack gap="xs">
+                      <Group justify="space-between">
+                        <Text size="sm" c="dimmed">{asset} Balance</Text>
+                        <Badge color={asset === 'USDT' ? 'green' : 'blue'} variant="light">Stable</Badge>
+                      </Group>
+                      <Text size="xl" fw={600}>{formatBalance(spotAvailable[asset as keyof typeof spotAvailable])}</Text>
+                    </Stack>
+                  </Paper>
+                </Grid.Col>
+              ))}
+              {positions.filter(p => !['USDT', 'USDC'].includes(p.asset)).map(position => (
+                <Grid.Col key={position.asset} span={{ base: 12, sm: 6, md: 4 }}>
+                  <Paper withBorder p="md" radius="md">
+                    <Stack gap="xs">
+                      <Text size="sm" c="dimmed">{position.asset} Balance</Text>
+                      <Text size="xl" fw={600}>{formatBalance(position.available)}</Text>
+                    </Stack>
+                  </Paper>
+                </Grid.Col>
+              ))}
+            </Grid>
+          </>
+        )
+    }
+  }
+
   return (
-    <div className="min-h-screen p-6">
-      <Group justify="space-between" mb="md">
-        <Text size="xl" fw={600}>Wallet</Text>
-        <Button component={Link} to="/deposit" color="dark">Deposit</Button>
-      </Group>
-      <Card withBorder radius="md" p="md">
-        <Text c="dimmed" size="sm">Balances (coming soon)</Text>
-      </Card>
+    <div className="min-h-screen flex">
+      <div className="w-48 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
+        <div className="p-4">
+          <Stack gap="xs">
+            {tabs.map(tab => (
+              <NavLink
+                key={tab.id}
+                label={tab.label}
+                active={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                variant="filled"
+              />
+            ))}
+          </Stack>
+        </div>
+      </div>
+      <div className="flex-1 p-6">{renderContent()}</div>
     </div>
   )
 }

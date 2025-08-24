@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
-import TransferModal from '../components/TransferModal'
 import { API_BASE } from '../config/api'
+import { useMarket } from '../markets/MarketContext'
+import { useIntervals } from '../lib/useIntervals'
 
 export default function Futures() {
   const [search] = useSearchParams()
@@ -14,21 +15,9 @@ export default function Futures() {
   useEffect(() => {
     setToken(initialBase)
   }, [initialBase])
-  type FuturesRow = { symbol: string; lastPrice?: string }
-  const [futuresRows, setFuturesRows] = useState<FuturesRow[]>([])
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/markets/futures/tickers`)
-        if (!res.ok) return
-        const j = await res.json()
-        const arr = Array.isArray(j?.data) ? j.data : []
-        if (!cancelled) setFuturesRows(arr)
-      } catch {}
-    })()
-    return () => { cancelled = true }
-  }, [])
+
+  // Use MarketContext for futures data instead of local fetching
+  const { futuresTickers: futuresRows } = useMarket()
 
   const tokenOptions = useMemo(() => {
     const suffix = `_${quote}`
@@ -39,44 +28,23 @@ export default function Futures() {
   }, [futuresRows, quote])
 
   // Keep user's selection; do not auto-override token when options load to prevent flicker
-
   const [pairQuery, setPairQuery] = useState('')
   const filteredOptions = useMemo(() => {
     const q = pairQuery.trim().toLowerCase()
     const arr = q ? tokenOptions.filter(t => t.toLowerCase().includes(q)) : tokenOptions
     return arr.slice(0, 500)
   }, [tokenOptions, pairQuery])
-  const allIntervals = ['1m','5m','15m','30m','1h','2h','4h','6h','1d','2d','1w'] as const
-  type Interval = typeof allIntervals[number]
-  const [availableIntervals, setAvailableIntervals] = useState<Interval[]>(['1m','5m','1h','1d'])
-  const [interval, setInterval] = useState<Interval>('1m')
+
+  // Use centralized intervals hook
+  const { availableIntervals, interval, setInterval } = useIntervals({
+    symbol: `${token}_${quote}`,
+    market: 'futures'
+  })
+
   const [stats, setStats] = useState<any | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
-  const [transferOpen, setTransferOpen] = useState(false)
-  const [available, setAvailable] = useState<string>('0')
-  const [total, setTotal] = useState<string>('0')
 
-  // Fetch available intervals per futures symbol
-  useEffect(() => {
-    let cancelled = false
-    const sym = `${token}_${quote}`
-    ;(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/markets/futures/intervals?symbol=${sym}`)
-        const j = await res.json().catch(() => ({}))
-        if (cancelled) return
-        const ivs = Array.isArray(j?.intervals) ? j.intervals.filter((iv: string) => (allIntervals as readonly string[]).includes(iv)) : ['1m','5m','1h','1d']
-        setAvailableIntervals(ivs as Interval[])
-        if (!ivs.includes(interval)) setInterval((ivs[0] as any) ?? '1m')
-      } catch {
-        if (cancelled) return
-        setAvailableIntervals(['1m','5m','1h','1d'])
-      }
-    })()
-    return () => { cancelled = true }
-  }, [token, quote])
-
-  // Subscribe to 24h stats via WS for selected futures contract
+  // Subscribe to 24h stats via WS for selected futures pair
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
@@ -113,24 +81,6 @@ export default function Futures() {
     }
   }, [token, quote])
 
-  // Fetch balances (futures) for current quote
-  const loadBalances = async () => {
-    try {
-      const tokenStr = localStorage.getItem('accessToken')
-      const res = await fetch(`${API_BASE}/api/user/me`, {
-        headers: tokenStr ? { 'Authorization': `Bearer ${tokenStr}` } : {},
-        credentials: 'include',
-      })
-      if (!res.ok) return
-      const j = await res.json()
-      const av = j?.balances?.futures?.available?.[quote] ?? '0'
-      const tt = j?.balances?.futures?.total?.[quote] ?? '0'
-      setAvailable(String(av))
-      setTotal(String(tt))
-    } catch {}
-  }
-  useEffect(() => { loadBalances() }, [quote])
-
   return (
     <div className="grid gap-4">
       <div className="flex items-center gap-3">
@@ -139,7 +89,6 @@ export default function Futures() {
             <Button variant="outline" size="compact-md" className="h-10">
               <div className="leading-tight text-left">
                 <div className="text-sm font-medium">{token}/{quote}</div>
-                <div className="text-[11px] text-neutral-500">Perpetual</div>
               </div>
             </Button>
           </Menu.Target>
@@ -155,19 +104,19 @@ export default function Futures() {
             <ScrollArea.Autosize mah={320} mx={0} type="auto">
               {filteredOptions.map((t) => (
                 <Menu.Item key={t} onClick={() => setToken(t)}>
-                  {t}/{quote} Perp
+                  {t}/{quote}
                 </Menu.Item>
               ))}
             </ScrollArea.Autosize>
           </Menu.Dropdown>
         </Menu>
-        <Menu shadow="md" width={180}>
+        <Menu shadow="md" width={180} position="bottom-start" withinPortal>
           <Menu.Target>
             <Button variant="outline" size="compact-md" className="h-10">{interval}</Button>
           </Menu.Target>
           <Menu.Dropdown>
             {availableIntervals.map((iv) => (
-              <Menu.Item key={iv} onClick={() => setInterval(iv as any)}>{iv}</Menu.Item>
+              <Menu.Item key={iv} onClick={() => setInterval(iv)}>{iv}</Menu.Item>
             ))}
           </Menu.Dropdown>
         </Menu>
@@ -181,8 +130,7 @@ export default function Futures() {
               <Text size="sm">High: {stats?.highPrice ?? '-'}</Text>
               <Text size="sm">Low: {stats?.lowPrice ?? '-'}</Text>
               <Text size="sm">Vol: {stats?.volume ?? '-'}</Text>
-              <Text size="sm">QuoteVol: {stats?.quoteVolume ?? stats?.amount ?? '-'}</Text>
-              <Text size="sm">Funding: {stats?.fundingRate ?? '-'}</Text>
+              <Text size="sm">QuoteVol: {stats?.quoteVolume ?? '-'}</Text>
             </>
           )}
         </Group>
@@ -192,7 +140,7 @@ export default function Futures() {
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-2">
-              <PriceChart key={`${token}${quote}-${interval}-futures`} symbol={`${token}${quote}`} interval={interval} market="futures" />
+              <PriceChart key={`${token}_${quote}-${interval}-futures`} symbol={`${token}_${quote}`} interval={interval} market="futures" />
             </div>
           </Card>
         </Grid.Col>
@@ -200,63 +148,19 @@ export default function Futures() {
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Order Book</div>
             <div className="p-0 h-[360px] overflow-y-auto text-sm">
-              <OrderBook symbol={`${token}${quote}`} market="futures" depth={50} />
+              <OrderBook symbol={`${token}_${quote}`} market="futures" depth={50} />
             </div>
           </Card>
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 2 }}>
           <Card padding={0} radius="md" withBorder>
-          <div className="p-3 border-b text-sm font-medium">Trade</div>
-          <div className="p-4 grid gap-3">
-            <div className="text-xs text-neutral-500">Available: {available} {quote} (Total: {total})</div>
-            <div className="grid gap-1">
-              <TextInput id="qty" label="Quantity" placeholder="0.00" />
+            <div className="p-3 border-b text-sm font-medium">Trade</div>
+            <div className="p-4 grid gap-3">
+              <div className="text-xs text-neutral-500">Futures trading coming soon...</div>
             </div>
-            <div className="grid gap-1">
-              <TextInput id="lev" label="Leverage" placeholder="x10" />
-            </div>
-            <div className="flex gap-2">
-              <Button className="flex-1" variant="light" color="teal">Buy</Button>
-              <Button className="flex-1" color="red">Sell</Button>
-            </div>
-            <Button variant="default" onClick={() => setTransferOpen(true)}>Transfer</Button>
-          </div>
           </Card>
         </Grid.Col>
       </Grid>
-
-      <Grid gutter="md">
-        <Grid.Col span={{ base: 12 }}>
-          <Card padding={0} radius="md" withBorder>
-          <div className="p-3 border-b text-sm font-medium">Positions & Orders</div>
-          <div className="p-4 overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="text-neutral-500">
-                <tr className="text-left">
-                  <th className="py-2 pr-3">Symbol</th>
-                  <th className="py-2 pr-3">Side</th>
-                  <th className="py-2 pr-3">Size</th>
-                  <th className="py-2 pr-3">Entry</th>
-                  <th className="py-2 pr-3">Liq</th>
-                  <th className="py-2 pr-3">uPNL</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-t">
-                  <td className="py-2 pr-3">e.g. BTC/{quote} Perp</td>
-                  <td className="py-2 pr-3 text-green-600">e.g. Long</td>
-                  <td className="py-2 pr-3">e.g. 0.50 BTC x10</td>
-                  <td className="py-2 pr-3">e.g. 49,800</td>
-                  <td className="py-2 pr-3">e.g. 45,200</td>
-                  <td className="py-2 pr-3 text-green-600">e.g. +123.40</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          </Card>
-        </Grid.Col>
-      </Grid>
-      <TransferModal opened={transferOpen} onClose={() => setTransferOpen(false)} currentSide="futures" asset={quote as 'USDT'|'USDC'} onTransferred={loadBalances} />
     </div>
   )
 }

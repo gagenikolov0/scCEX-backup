@@ -3,7 +3,6 @@ import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts'
 import { API_BASE } from '../config/api'
 import type { IChartApi, Time } from 'lightweight-charts'
 
-
 type Props = {
   symbol: string // e.g. BTCUSDT or BTC_USDT (normalized internally)
   height?: number
@@ -13,7 +12,6 @@ type Props = {
 
 export default function PriceChart({ symbol, height = 420, interval = '1m', market = 'spot' }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const chartHostRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<any>(null)
   const lastBarRef = useRef<any>(null)
@@ -228,15 +226,16 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
   }, [symbol, interval, market])
 
   return (
-    <div ref={chartHostRef} className="relative w-full">
+    <div className="relative">
       <div ref={containerRef} className="w-full" />
-      <button
-        type="button"
-        onClick={() => { drawStartRef.current = null; setDrawMode((v) => !v) }}
-        className="absolute right-2 top-2 z-10 px-2 py-1 rounded text-xs border bg-white/80 dark:bg-neutral-800/80"
-      >
-        {drawMode ? 'Cancel' : 'Draw'}
-      </button>
+      <div className="absolute top-2 right-2 flex gap-2">
+        <button
+          onClick={() => setDrawMode(!drawMode)}
+          className={`px-2 py-1 text-xs rounded ${drawMode ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+        >
+          {drawMode ? 'Cancel' : 'Draw'}
+        </button>
+      </div>
     </div>
   )
 }
