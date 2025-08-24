@@ -7,6 +7,7 @@ import { PortfolioCalculator } from '../lib/portfolioCalculator'
 interface Position {
   asset: string
   available: string
+  reserved: string
   updatedAt: string
 }
 
@@ -70,6 +71,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
         setPositions(positionsData.map((p: any) => ({
           asset: p.asset,
           available: p.available,
+          reserved: p.reserved,
           updatedAt: new Date().toISOString()
         })))
       }

@@ -1,25 +1,13 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose from 'mongoose'
 
-export interface SpotPositionDocument extends Document {
-  userId: string;
-  asset: string; // base asset, e.g., BTC, USDT, USDC
-  available: string;  // Available for trading (e.g., "0.1" BTC, "5000" USDT)
-  createdAt: Date;
-  updatedAt: Date;
-}
+const spotPositionSchema = new mongoose.Schema({
+  userId: { type: String, required: true, index: true },
+  asset: { type: String, required: true },
+  available: { type: String, default: "0" },
+  reserved: { type: String, default: "0" },
+  updatedAt: { type: Date, default: Date.now }
+}, { timestamps: true })
 
-const SpotPositionSchema = new Schema<SpotPositionDocument>(
-  {
-    userId: { type: String, required: true, index: true },
-    asset: { type: String, required: true },
-    available: { type: String, default: "0" },  // Available for trading
-  },
-  { timestamps: true }
-);
+spotPositionSchema.index({ userId: 1, asset: 1 }, { unique: true })
 
-SpotPositionSchema.index({ userId: 1, asset: 1 }, { unique: true });
-
-export const SpotPosition: Model<SpotPositionDocument> =
-  mongoose.models.SpotPosition || mongoose.model<SpotPositionDocument>("SpotPosition", SpotPositionSchema);
-
-
+export default mongoose.model('SpotPosition', spotPositionSchema)

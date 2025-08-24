@@ -61,25 +61,35 @@ export default function Wallet() {
               <Text size="2xl" fw={700} c="green">{formatUSD(totalSpotValue)}</Text>
             </Paper>
             <Grid gutter="md">
-              {['USDT', 'USDC'].map(asset => (
-                <Grid.Col key={asset} span={{ base: 12, sm: 6, md: 4 }}>
-                  <Paper withBorder p="md" radius="md">
-                    <Stack gap="xs">
-                      <Group justify="space-between">
-                        <Text size="sm" c="dimmed">{asset} Balance</Text>
-                        <Badge color={asset === 'USDT' ? 'green' : 'blue'} variant="light">Stable</Badge>
-                      </Group>
-                      <Text size="xl" fw={600}>{formatBalance(spotAvailable[asset as keyof typeof spotAvailable])}</Text>
-                    </Stack>
-                  </Paper>
-                </Grid.Col>
-              ))}
+              {['USDT', 'USDC'].map(asset => {
+                const position = positions.find(p => p.asset === asset)
+                const reserved = position?.reserved || '0'
+                return (
+                  <Grid.Col key={asset} span={{ base: 12, sm: 6, md: 4 }}>
+                    <Paper withBorder p="md" radius="md">
+                      <Stack gap="xs">
+                        <Group justify="space-between">
+                          <Text size="sm" c="dimmed">{asset} Balance</Text>
+                          <Badge color={asset === 'USDT' ? 'green' : 'blue'} variant="light">Stable</Badge>
+                        </Group>
+                        <Text size="xl" fw={600}>{formatBalance(spotAvailable[asset as keyof typeof spotAvailable])}</Text>
+                        {parseFloat(reserved) > 0 && (
+                          <Text size="sm" c="dimmed">Reserved: {formatBalance(reserved)}</Text>
+                        )}
+                      </Stack>
+                    </Paper>
+                  </Grid.Col>
+                )
+              })}
               {positions.filter(p => !['USDT', 'USDC'].includes(p.asset)).map(position => (
                 <Grid.Col key={position.asset} span={{ base: 12, sm: 6, md: 4 }}>
                   <Paper withBorder p="md" radius="md">
                     <Stack gap="xs">
                       <Text size="sm" c="dimmed">{position.asset} Balance</Text>
                       <Text size="xl" fw={600}>{formatBalance(position.available)}</Text>
+                      {parseFloat(position.reserved || '0') > 0 && (
+                        <Text size="sm" c="dimmed">Reserved: {formatBalance(position.reserved)}</Text>
+                      )}
                     </Stack>
                   </Paper>
                 </Grid.Col>

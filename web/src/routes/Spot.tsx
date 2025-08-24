@@ -145,6 +145,7 @@ export default function Spot() {
                 else if (col === 'Time') value = formatDate(item.createdAt) || '-'
                 else if (col === 'Asset') value = item.asset || '-'
                 else if (col === 'Available') value = item.available || '-'
+                else if (col === 'Reserved') value = item.reserved || '-'
                 else if (col === 'Updated') value = formatDate(item.updatedAt) || '-'
                 else value = item[col.toLowerCase()] || '-'
                 
@@ -316,7 +317,7 @@ export default function Spot() {
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Positions</div>
             <div className="p-4 overflow-auto">
-              {renderTable(positions, ['Asset', 'Available', 'Updated'], 'No positions')}
+              {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Updated'], 'No positions')}
             </div>
           </Card>
         </Grid.Col>
@@ -336,5 +337,3 @@ export default function Spot() {
     </div>
   )
 }
-
-

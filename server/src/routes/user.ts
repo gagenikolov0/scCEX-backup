@@ -1,8 +1,8 @@
 import { Router, type Request, type Response } from 'express'
 import { requireAuth, type AuthRequest } from '../middleware/auth'
 import { User } from '../models/User'
+import SpotPosition from '../models/SpotPosition'
 import { AddressGroup } from '../models/AddressGroup'
-import { SpotPosition } from '../models/SpotPosition'
 import mongoose from "mongoose";
 
 const router = Router();

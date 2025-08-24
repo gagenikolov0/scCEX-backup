@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { requireAuth, type AuthRequest } from "../middleware/auth";
 import { User } from "../models/User";
 import { SpotOrder } from "../models/SpotOrder";
-import { SpotPosition } from "../models/SpotPosition";
+import SpotPosition from "../models/SpotPosition";
 import { emitAccountEvent } from "../ws/streams/account";
 
 const router = Router();
@@ -47,11 +47,11 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const qtyBase = mongoose.Types.Decimal128.fromString(qtyStr);
+    const qtyBase = qtyStr
     const price = isLimit ? parseFloat(limitPrice) : currentPrice;
     const quoteAmtNum = parseFloat(qtyStr) * price;
-    const quoteAmt = mongoose.Types.Decimal128.fromString(String(quoteAmtNum));
-    const priceDec = mongoose.Types.Decimal128.fromString(String(price));
+    const quoteAmt = String(quoteAmtNum);
+    const priceDec = String(price);
 
     // Get quote balance from SpotPosition
     const quotePosition = await SpotPosition.findOne({ userId: String(user._id), asset: quote }).session(session);
@@ -65,8 +65,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
         currentPrice >= price;  // Sell order: execute when current price >= limit price
       
       if (canExecute) {
-        // Execute immediately as a market order
-        // (existing market order logic will handle this)
+        // Execute immediately as a market order (fall through to existing market order logic)
       } else {
         // Check if user has enough balance for this pending order
         if (parseFloat(avail) < quoteAmtNum) {
@@ -74,30 +73,32 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
           return res.status(400).json({ error: "Insufficient balance" })
         }
 
+        // Reserve funds for the pending order
+        const newAvailable = (parseFloat(avail) - quoteAmtNum).toFixed(8)
+        const currentReserved = parseFloat(quotePosition?.reserved?.toString() || "0")
+        const newReserved = (currentReserved + quoteAmtNum).toFixed(8)
+        
+        await SpotPosition.updateOne(
+          { userId: String(user._id), asset: quote },
+          {
+            $set: {
+              available: newAvailable,
+              reserved: newReserved
+            }
+          },
+          { session }
+        )
+
         // Create pending order
         const created = await new SpotOrder({
-          userId: user._id,
-          symbol: sym,
-          baseAsset: base,
-          quoteAsset: quote,
-          side: sd,
-          quantityBase: qtyBase,
-          priceQuote: priceDec,
-          quoteAmount: quoteAmt,
-          status: "pending",
+          userId: String(user._id), symbol: sym, baseAsset: base, quoteAsset: quote, side: sd,
+          quantityBase: qtyBase, priceQuote: priceDec, quoteAmount: quoteAmt, status: "pending",
         }).save({ session });
 
         await session.commitTransaction();
-        
         return res.status(201).json({
-          id: created._id,
-          symbol: sym,
-          side: sd,
-          quantity: qtyStr,
-          price: String(price),
-          quoteAmount: String(quoteAmtNum),
-          status: "pending",
-          createdAt: created.createdAt,
+          id: created._id, symbol: sym, side: sd, quantity: qtyStr, price: String(price),
+          quoteAmount: String(quoteAmtNum), status: "pending", createdAt: created.createdAt,
         });
       }
     }
@@ -176,7 +177,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
     // Remove old user.save() since we're not modifying User model anymore
 
     const created = await new SpotOrder({
-      userId: user._id,
+      userId: String(user._id),
       symbol: sym,
       baseAsset: base,
       quoteAsset: quote,
@@ -263,6 +264,7 @@ router.get("/positions", requireAuth, async (req: AuthRequest, res: Response) =>
     rows.map((r) => ({
       asset: r.asset,
       available: r.available?.toString() ?? "0",
+      reserved: r.reserved?.toString() ?? "0",
       updatedAt: r.updatedAt,
     }))
   );
@@ -284,8 +286,26 @@ router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response
     // Update order status to rejected
     await SpotOrder.updateOne({ _id: orderId }, { status: "rejected" }, { session });
     
-    // Note: Balance is already available since limit orders don't actually move money
-    // The money was never deducted, just "reserved" in the calculation
+    // Return reserved funds back to available balance
+    const quoteAmount = parseFloat(order.quoteAmount?.toString() || "0");
+    if (quoteAmount > 0) {
+      const quotePosition = await SpotPosition.findOne({ userId: req.user!.id, asset: order.quoteAsset }).session(session);
+      if (quotePosition) {
+        const currentAvailable = parseFloat(quotePosition.available?.toString() || "0");
+        const currentReserved = parseFloat(quotePosition.reserved?.toString() || "0");
+        
+        await SpotPosition.updateOne(
+          { userId: req.user!.id, asset: order.quoteAsset },
+          {
+            $set: {
+              available: (currentAvailable + quoteAmount).toFixed(8),
+              reserved: (currentReserved - quoteAmount).toFixed(8)
+            }
+          },
+          { session }
+        );
+      }
+    }
     
     await session.commitTransaction();
     return res.json({ success: true });
