@@ -9,6 +9,9 @@ export interface AppConfig {
   jwtAccessSecret: string;
   jwtRefreshSecret: string;
   corsOrigin: string;
+  // no flags for WS; we keep server simple and predictable
+  // add toggles only when absolutely necessary
+  // useUpstreamWS removed for simplicity
 }
 
 export const getConfig = (): AppConfig => {

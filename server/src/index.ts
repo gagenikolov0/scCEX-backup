@@ -41,7 +41,7 @@ app.use("/api/markets", marketsRoutes);
 
 const start = async () => {
   await mongoose.connect(config.mongoUri);
-  const { attachMarketWSS } = await import('./ws/market')
+  const { attachMarketWSS } = await import('./ws')
   attachMarketWSS(httpServer)
   httpServer.listen(config.port, () => {
     console.log(`Server listening on http://localhost:${config.port}`);

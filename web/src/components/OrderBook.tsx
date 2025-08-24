@@ -23,14 +23,16 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
       try {
         ws = new WebSocket(`${wsBase}${path}`)
         ws.onopen = () => {
+          if (stopped) { try { ws?.close() } catch {} ; return }
           setStatus('open')
           retries = 0
           try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym, depth })) } catch {}
         }
         ws.onmessage = (ev) => {
           try {
+            if (stopped) return
             const msg = JSON.parse(ev.data as string)
-            if (msg?.type === 'depth' && msg?.symbol && Array.isArray(msg?.bids) && Array.isArray(msg?.asks)) {
+            if (msg?.type === 'depth' && msg?.symbol === sym && Array.isArray(msg?.bids) && Array.isArray(msg?.asks)) {
               lastUpdateRef.current = Date.now()
               setBids(msg.bids as SideRow[])
               setAsks(msg.asks as SideRow[])

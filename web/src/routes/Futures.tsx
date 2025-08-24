@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
+import TransferModal from '../components/TransferModal'
 import { API_BASE } from '../config/api'
 
 export default function Futures() {
@@ -37,12 +38,7 @@ export default function Futures() {
     return Array.from(new Set(list))
   }, [futuresRows, quote])
 
-  // Ensure selected token exists in available list; if not, pick first
-  useEffect(() => {
-    if (tokenOptions.length > 0 && !tokenOptions.includes(token)) {
-      setToken(tokenOptions[0])
-    }
-  }, [tokenOptions])
+  // Keep user's selection; do not auto-override token when options load to prevent flicker
 
   const [pairQuery, setPairQuery] = useState('')
   const filteredOptions = useMemo(() => {
@@ -56,6 +52,9 @@ export default function Futures() {
   const [interval, setInterval] = useState<Interval>('1m')
   const [stats, setStats] = useState<any | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [available, setAvailable] = useState<string>('0')
+  const [total, setTotal] = useState<string>('0')
 
   // Fetch available intervals per futures symbol
   useEffect(() => {
@@ -79,6 +78,7 @@ export default function Futures() {
 
   // Subscribe to 24h stats via WS for selected futures contract
   useEffect(() => {
+    setStats(null)
     setLoadingStats(true)
     const wsBase = API_BASE.replace(/^http/, 'ws')
     const sym = `${token}_${quote}`
@@ -87,12 +87,13 @@ export default function Futures() {
     try {
       ws = new WebSocket(`${wsBase}/ws/futures-24h`)
       ws.onopen = () => {
+        if (stopped) { try { ws?.close() } catch {} ; return }
         try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym })) } catch {}
       }
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data as string)
-          if (msg?.type === 'stats' && msg?.symbol === sym) {
+          if (!stopped && msg?.type === 'stats' && msg?.symbol === sym) {
             setStats(msg.data)
             setLoadingStats(false)
           }
@@ -111,6 +112,24 @@ export default function Futures() {
       }
     }
   }, [token, quote])
+
+  // Fetch balances (futures) for current quote
+  const loadBalances = async () => {
+    try {
+      const tokenStr = localStorage.getItem('accessToken')
+      const res = await fetch(`${API_BASE}/api/user/me`, {
+        headers: tokenStr ? { 'Authorization': `Bearer ${tokenStr}` } : {},
+        credentials: 'include',
+      })
+      if (!res.ok) return
+      const j = await res.json()
+      const av = j?.balances?.futures?.available?.[quote] ?? '0'
+      const tt = j?.balances?.futures?.total?.[quote] ?? '0'
+      setAvailable(String(av))
+      setTotal(String(tt))
+    } catch {}
+  }
+  useEffect(() => { loadBalances() }, [quote])
 
   return (
     <div className="grid gap-4">
@@ -152,7 +171,7 @@ export default function Futures() {
             ))}
           </Menu.Dropdown>
         </Menu>
-        <Group gap="md" className="ml-1" wrap="nowrap">
+        <Group gap="md" className="ml-1" wrap="wrap">
           {loadingStats ? <Loader size="xs" /> : (
             <>
               <Text size="sm">Price: {stats?.lastPrice ?? '-'}</Text>
@@ -170,37 +189,26 @@ export default function Futures() {
       </div>
 
       <Grid gutter="md">
-        <Grid.Col span={{ base: 12, lg: 8 }}>
+        <Grid.Col span={{ base: 12, lg: 7 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-2">
               <PriceChart key={`${token}${quote}-${interval}-futures`} symbol={`${token}${quote}`} interval={interval} market="futures" />
             </div>
           </Card>
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 4 }}>
+        <Grid.Col span={{ base: 12, lg: 3 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Order Book</div>
-            <div className="p-0 h-[360px] overflow-auto text-sm">
+            <div className="p-0 h-[360px] overflow-y-auto text-sm">
               <OrderBook symbol={`${token}${quote}`} market="futures" depth={50} />
             </div>
           </Card>
-          <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Recent Trades</div>
-            <div className="p-3 h-[160px] overflow-auto text-sm">
-              <div className="grid grid-cols-3 gap-y-1">
-                <div className="text-green-600">e.g. 49,820</div><div>0.12</div><div>12:01:03</div>
-                <div className="text-red-600">e.g. 49,810</div><div>0.08</div><div>12:00:57</div>
-              </div>
-            </div>
-          </Card>
         </Grid.Col>
-      </Grid>
-
-      <Grid gutter="md">
-        <Grid.Col span={{ base: 12, lg: 4 }}>
+        <Grid.Col span={{ base: 12, lg: 2 }}>
           <Card padding={0} radius="md" withBorder>
           <div className="p-3 border-b text-sm font-medium">Trade</div>
           <div className="p-4 grid gap-3">
+            <div className="text-xs text-neutral-500">Available: {available} {quote} (Total: {total})</div>
             <div className="grid gap-1">
               <TextInput id="qty" label="Quantity" placeholder="0.00" />
             </div>
@@ -211,10 +219,14 @@ export default function Futures() {
               <Button className="flex-1" variant="light" color="teal">Buy</Button>
               <Button className="flex-1" color="red">Sell</Button>
             </div>
+            <Button variant="default" onClick={() => setTransferOpen(true)}>Transfer</Button>
           </div>
           </Card>
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 8 }}>
+      </Grid>
+
+      <Grid gutter="md">
+        <Grid.Col span={{ base: 12 }}>
           <Card padding={0} radius="md" withBorder>
           <div className="p-3 border-b text-sm font-medium">Positions & Orders</div>
           <div className="p-4 overflow-auto">
@@ -244,6 +256,7 @@ export default function Futures() {
           </Card>
         </Grid.Col>
       </Grid>
+      <TransferModal opened={transferOpen} onClose={() => setTransferOpen(false)} currentSide="futures" asset={quote as 'USDT'|'USDC'} onTransferred={loadBalances} />
     </div>
   )
 }

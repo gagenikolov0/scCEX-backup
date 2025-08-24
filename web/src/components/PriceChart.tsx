@@ -168,13 +168,14 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
         ws = new WebSocket(`${wsBase}${path}`)
         let opened = false
         ws.onopen = () => {
+          if (stopped) { try { ws?.close() } catch {} ; return }
           opened = true
           try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym })) } catch {}
         }
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(ev.data as string)
-            if (msg?.type === 'tick' && msg?.symbol === sym && seriesRef.current) {
+            if (!stopped && msg?.type === 'tick' && msg?.symbol === sym && seriesRef.current) {
               const price = Number(msg.price)
               if (!Number.isFinite(price)) return
               const nowSec = Math.floor((msg.t ?? Date.now()) / 1000)
