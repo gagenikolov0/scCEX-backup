@@ -46,74 +46,86 @@ export default function Spot() {
   const available = (spotAvailable as any)?.[quote] ?? '0'
   const baseAvail = positions.find((r: any) => (r?.asset || '').toUpperCase() === token.toUpperCase())?.available ?? '0'
 
-  // WebSocket for 24h stats
+  // WebSocket for 24h stats - Ultra-clean version
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
-    const wsBase = API_BASE.replace(/^http/, 'ws')
+    const ws = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/spot-24h`)
     const sym = `${token}${quote}`
     let stopped = false
-    let ws: WebSocket | null = null
     
-    try {
-      ws = new WebSocket(`${wsBase}/ws/spot-24h`)
-      ws.onopen = () => {
-        if (stopped) { try { ws?.close() } catch {} ; return }
-        try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym })) } catch {}
-      }
-      ws.onmessage = (ev) => {
-        try {
-          const msg = JSON.parse(ev.data as string)
-          if (!stopped && msg?.type === 'stats' && msg?.symbol === sym) {
-            setStats(msg.data)
-            setLoadingStats(false)
-          }
-        } catch {}
-      }
-      ws.onclose = () => { if (!stopped) setLoadingStats(false) }
-      ws.onerror = () => { if (!stopped) setLoadingStats(false) }
-    } catch {
-      setLoadingStats(false)
+    ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym }))
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data as string)
+        if (!stopped && msg?.type === 'stats' && msg?.symbol === sym) { setStats(msg.data); setLoadingStats(false) }
+      } catch {}
     }
+    ws.onclose = () => !stopped && setLoadingStats(false)
+    ws.onerror = () => !stopped && setLoadingStats(false)
     
-    return () => {
-      stopped = true
-      if (ws?.readyState === WebSocket.OPEN) {
-        try { ws.send(JSON.stringify({ type: 'unsub', symbol: sym })) } catch {}
-        try { ws.close() } catch {}
-      }
-    }
+    return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
   }, [token, quote])
 
   const placeOrder = async (side: 'buy'|'sell') => {
-    if (!qty || Number(qty) <= 0) return
-    const tokenStr = localStorage.getItem('accessToken')
-    if (!tokenStr) return
-    
+    if (!qty || Number(qty) <= 0 || !localStorage.getItem('accessToken')) return
     setPlacing(side)
     try {
       const res = await fetch(`${API_BASE}/api/spot/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenStr}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
         credentials: 'include',
         body: JSON.stringify({ symbol: `${token}${quote}`, side, quantity: qty }),
       })
-      
-      if (res.ok) {
-        setQty('')
-        refreshOrders()
-      } else {
+      if (res.ok) { setQty(''); refreshOrders() } else {
         const j = await res.json().catch(() => null)
         alert(j?.error || 'Order failed')
       }
-    } catch (e) {
-      alert('Order failed')
-    } finally {
-      setPlacing(null)
-    }
+    } catch (e) { alert('Order failed') } finally { setPlacing(null) }
   }
 
   const formatDate = (date: string) => date ? new Date(date).toLocaleString() : '-'
+
+  const renderTable = (data: any[], columns: string[], emptyMessage: string) => (
+    <table className="w-full text-sm">
+      <thead className="text-neutral-500">
+        <tr className="text-left">
+          {columns.map(col => <th key={col} className="py-2 pr-3">{col}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {data.length === 0 ? (
+          <tr className="border-t">
+            <td className="py-2 pr-3" colSpan={columns.length}>{emptyMessage}</td>
+          </tr>
+        ) : (
+          data.map((item, index) => (
+            <tr key={item.id || index} className="border-t">
+              {columns.map(col => {
+                let value = ''
+                if (col === 'Symbol') value = item.symbol || '-'
+                else if (col === 'Side') value = item.side || '-'
+                else if (col === 'Size') value = item.quantity || item.available || '-'
+                else if (col === 'Price') value = item.price || '-'
+                else if (col === 'Status') value = item.status || '-'
+                else if (col === 'Time') value = formatDate(item.createdAt) || '-'
+                else if (col === 'Asset') value = item.asset || '-'
+                else if (col === 'Available') value = item.available || '-'
+                else if (col === 'Updated') value = formatDate(item.updatedAt) || '-'
+                else value = item[col.toLowerCase()] || '-'
+                
+                return (
+                  <td key={col} className={`py-2 pr-3 ${col === 'Side' && item.side === 'buy' ? 'text-green-600' : col === 'Side' && item.side === 'sell' ? 'text-red-600' : ''}`}>
+                    {value}
+                  </td>
+                )
+              })}
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  )
 
   return (
     <div className="grid gap-4">
@@ -157,10 +169,8 @@ export default function Spot() {
               <Text size="sm" c={(Number(stats?.priceChangePercent) || 0) >= 0 ? 'teal' : 'red'}>
                 24h: {stats?.priceChangePercent != null ? `${Number(stats.priceChangePercent).toFixed(2)}%` : '-'}
               </Text>
-              <Text size="sm">High: {stats?.highPrice ?? '-'}</Text>
-              <Text size="sm">Low: {stats?.lowPrice ?? '-'}</Text>
-              <Text size="sm">Vol: {stats?.volume ?? '-'}</Text>
-              <Text size="sm">QuoteVol: {stats?.quoteVolume ?? '-'}</Text>
+              <Text size="sm">H: {stats?.highPrice ?? '-'} L: {stats?.lowPrice ?? '-'} V: {stats?.volume ?? '-'}
+              </Text>
             </>
           )}
         </Group>
@@ -208,35 +218,7 @@ export default function Spot() {
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Order History</div>
             <div className="p-4 overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="text-neutral-500">
-                  <tr className="text-left">
-                    <th className="py-2 pr-3">Symbol</th>
-                    <th className="py-2 pr-3">Side</th>
-                    <th className="py-2 pr-3">Size</th>
-                    <th className="py-2 pr-3">Price</th>
-                    <th className="py-2 pr-3">Status</th>
-                    <th className="py-2 pr-3">Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((o) => (
-                    <tr key={o.id} className="border-t">
-                      <td className="py-2 pr-3">{o.symbol}</td>
-                      <td className={`py-2 pr-3 ${o.side === 'buy' ? 'text-green-600' : 'text-red-600'}`}>{o.side}</td>
-                      <td className="py-2 pr-3">{o.quantity}</td>
-                      <td className="py-2 pr-3">{o.price}</td>
-                      <td className="py-2 pr-3">{o.status}</td>
-                      <td className="py-2 pr-3">{formatDate(o.createdAt)}</td>
-                    </tr>
-                  ))}
-                  {orders.length === 0 && (
-                    <tr className="border-t">
-                      <td className="py-2 pr-3" colSpan={6}>No orders</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              {renderTable(orders, ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No orders')}
             </div>
           </Card>
         </Grid.Col>
@@ -248,29 +230,7 @@ export default function Spot() {
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Positions</div>
             <div className="p-4 overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="text-neutral-500">
-                  <tr className="text-left">
-                    <th className="py-2 pr-3">Asset</th>
-                    <th className="py-2 pr-3">Available</th>
-                    <th className="py-2 pr-3">Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {positions.map((p: any) => (
-                    <tr key={p.asset} className="border-t">
-                      <td className="py-2 pr-3">{p.asset}</td>
-                      <td className="py-2 pr-3">{p.available}</td>
-                      <td className="py-2 pr-3">{formatDate(p.updatedAt)}</td>
-                    </tr>
-                  ))}
-                  {positions.length === 0 && (
-                    <tr className="border-t">
-                      <td className="py-2 pr-3" colSpan={3}>No positions</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              {renderTable(positions, ['Asset', 'Available', 'Updated'], 'No positions')}
             </div>
           </Card>
         </Grid.Col>

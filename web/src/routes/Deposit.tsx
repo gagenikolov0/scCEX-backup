@@ -3,6 +3,9 @@ import { Button } from '@mantine/core'
 import QRCode from 'react-qr-code'
 import { API_BASE } from '../config/api'
 
+const CHAINS = ['ETH', 'TRON', 'BSC', 'SOL', 'XRP'] as const
+type Chain = typeof CHAINS[number]
+
 export default function Deposit() {
   type AddressGroup = {
     ethAddress?: string | null
@@ -11,8 +14,9 @@ export default function Deposit() {
     solAddress?: string | null
     xrpAddress?: string | null
   }
+  
   const [group, setGroup] = useState<AddressGroup | null>(null)
-  const [chain, setChain] = useState<'ETH'|'TRON'|'BSC'|'SOL'|'XRP'>('ETH')
+  const [chain, setChain] = useState<Chain>('ETH')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,33 +45,27 @@ export default function Deposit() {
 
   const currentAddress = useMemo(() => {
     if (!group) return null
-    switch (chain) {
-      case 'ETH': return group.ethAddress ?? null
-      case 'TRON': return group.tronAddress ?? null
-      case 'BSC': return group.bscAddress ?? null
-      case 'SOL': return group.solAddress ?? null
-      case 'XRP': return group.xrpAddress ?? null
-      default: return null
-    }
+    const addressKey = `${chain.toLowerCase()}Address` as keyof AddressGroup
+    return group[addressKey] ?? null
   }, [group, chain])
 
   return (
     <div className="min-h-screen p-6">
       <h1 className="text-2xl font-semibold mb-4">Deposit</h1>
+      
       <div className="mb-3 flex gap-2 items-center">
         <label className="text-sm">Chain</label>
-        <select value={chain} onChange={e => setChain(e.target.value as any)} className="border rounded px-2 py-1">
-          <option value="ETH">ETH</option>
-          <option value="TRON">TRON</option>
-          <option value="BSC">BSC</option>
-          <option value="SOL">SOL</option>
-          <option value="XRP">XRP</option>
+        <select value={chain} onChange={e => setChain(e.target.value as Chain)} className="border rounded px-2 py-1">
+          {CHAINS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
+      
       <Button onClick={fetchAddress} disabled={loading} variant="filled" color="dark">
         {loading ? 'Loading...' : 'Show Deposit Address'}
       </Button>
+      
       {error && <p className="text-red-600 mt-3 text-sm">{error}</p>}
+      
       {group && (
         <div className="mt-4 p-4 border rounded">
           {currentAddress ? (

@@ -15,9 +15,7 @@ type FormValues = z.infer<typeof schema>
 export function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
-    resolver: zodResolver(schema)
-  })
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({ resolver: zodResolver(schema) })
   const [serverError, setServerError] = useState<string | null>(null)
 
   const onSubmit = async (data: FormValues) => {
@@ -57,9 +55,7 @@ export function Login() {
 export function Register() {
   const navigate = useNavigate()
   const { register: registerApi } = useAuth()
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
-    resolver: zodResolver(schema)
-  })
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({ resolver: zodResolver(schema) })
   const [serverError, setServerError] = useState<string | null>(null)
 
   const onSubmit = async (data: FormValues) => {

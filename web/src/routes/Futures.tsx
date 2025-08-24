@@ -12,12 +12,13 @@ export default function Futures() {
   const quote = (search.get('quote') || 'USDT').toUpperCase()
   const initialBase = (search.get('base') || 'BTC').toUpperCase()
   const [token, setToken] = useState(initialBase)
-  useEffect(() => {
-    setToken(initialBase)
-  }, [initialBase])
+  const [pairQuery, setPairQuery] = useState('')
+  const [stats, setStats] = useState<any | null>(null)
+  const [loadingStats, setLoadingStats] = useState(false)
 
-  // Use MarketContext for futures data instead of local fetching
   const { futuresTickers: futuresRows } = useMarket()
+
+  useEffect(() => setToken(initialBase), [initialBase])
 
   const tokenOptions = useMemo(() => {
     const suffix = `_${quote}`
@@ -27,58 +28,35 @@ export default function Futures() {
     return Array.from(new Set(list))
   }, [futuresRows, quote])
 
-  // Keep user's selection; do not auto-override token when options load to prevent flicker
-  const [pairQuery, setPairQuery] = useState('')
   const filteredOptions = useMemo(() => {
     const q = pairQuery.trim().toLowerCase()
-    const arr = q ? tokenOptions.filter(t => t.toLowerCase().includes(q)) : tokenOptions
-    return arr.slice(0, 500)
+    return (q ? tokenOptions.filter(t => t.toLowerCase().includes(q)) : tokenOptions).slice(0, 500)
   }, [tokenOptions, pairQuery])
 
-  // Use centralized intervals hook
   const { availableIntervals, interval, setInterval } = useIntervals({
     symbol: `${token}_${quote}`,
     market: 'futures'
   })
 
-  const [stats, setStats] = useState<any | null>(null)
-  const [loadingStats, setLoadingStats] = useState(false)
-
-  // Subscribe to 24h stats via WS for selected futures pair
+  // WebSocket for 24h stats - Ultra-clean version
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
-    const wsBase = API_BASE.replace(/^http/, 'ws')
+    const ws = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/futures-24h`)
     const sym = `${token}_${quote}`
     let stopped = false
-    let ws: WebSocket | null = null
-    try {
-      ws = new WebSocket(`${wsBase}/ws/futures-24h`)
-      ws.onopen = () => {
-        if (stopped) { try { ws?.close() } catch {} ; return }
-        try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym })) } catch {}
-      }
-      ws.onmessage = (ev) => {
-        try {
-          const msg = JSON.parse(ev.data as string)
-          if (!stopped && msg?.type === 'stats' && msg?.symbol === sym) {
-            setStats(msg.data)
-            setLoadingStats(false)
-          }
-        } catch {}
-      }
-      ws.onclose = () => { if (!stopped) setLoadingStats(false) }
-      ws.onerror = () => { if (!stopped) setLoadingStats(false) }
-    } catch {
-      setLoadingStats(false)
+    
+    ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym }))
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data as string)
+        if (!stopped && msg?.type === 'stats' && msg?.symbol === sym) { setStats(msg.data); setLoadingStats(false) }
+      } catch {}
     }
-    return () => {
-      stopped = true
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        try { ws.send(JSON.stringify({ type: 'unsub', symbol: sym })) } catch {}
-        try { ws.close() } catch {}
-      }
-    }
+    ws.onclose = () => !stopped && setLoadingStats(false)
+    ws.onerror = () => !stopped && setLoadingStats(false)
+    
+    return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
   }, [token, quote])
 
   return (
@@ -94,22 +72,16 @@ export default function Futures() {
           </Menu.Target>
           <Menu.Dropdown>
             <div className="p-2">
-              <TextInput
-                placeholder="Search pair"
-                value={pairQuery}
-                onChange={(e) => setPairQuery(e.currentTarget.value)}
-                size="xs"
-              />
+              <TextInput placeholder="Search pair" value={pairQuery} onChange={(e) => setPairQuery(e.currentTarget.value)} size="xs" />
             </div>
             <ScrollArea.Autosize mah={320} mx={0} type="auto">
               {filteredOptions.map((t) => (
-                <Menu.Item key={t} onClick={() => setToken(t)}>
-                  {t}/{quote}
-                </Menu.Item>
+                <Menu.Item key={t} onClick={() => setToken(t)}>{t}/{quote}</Menu.Item>
               ))}
             </ScrollArea.Autosize>
           </Menu.Dropdown>
         </Menu>
+        
         <Menu shadow="md" width={180} position="bottom-start" withinPortal>
           <Menu.Target>
             <Button variant="outline" size="compact-md" className="h-10">{interval}</Button>
@@ -120,6 +92,7 @@ export default function Futures() {
             ))}
           </Menu.Dropdown>
         </Menu>
+        
         <Group gap="md" className="ml-1" wrap="wrap">
           {loadingStats ? <Loader size="xs" /> : (
             <>
@@ -127,10 +100,7 @@ export default function Futures() {
               <Text size="sm" c={(Number(stats?.riseFallRate) || 0) >= 0 ? 'teal' : 'red'}>
                 24h: {stats?.riseFallRate != null ? `${Number(stats.riseFallRate).toFixed(2)}%` : '-'}
               </Text>
-              <Text size="sm">High: {stats?.highPrice ?? '-'}</Text>
-              <Text size="sm">Low: {stats?.lowPrice ?? '-'}</Text>
-              <Text size="sm">Vol: {stats?.volume ?? '-'}</Text>
-              <Text size="sm">QuoteVol: {stats?.quoteVolume ?? '-'}</Text>
+              <Text size="sm">H: {stats?.highPrice ?? '-'} L: {stats?.lowPrice ?? '-'} V: {stats?.volume ?? '-'}</Text>
             </>
           )}
         </Group>
@@ -144,6 +114,7 @@ export default function Futures() {
             </div>
           </Card>
         </Grid.Col>
+        
         <Grid.Col span={{ base: 12, lg: 3 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Order Book</div>
@@ -152,6 +123,7 @@ export default function Futures() {
             </div>
           </Card>
         </Grid.Col>
+        
         <Grid.Col span={{ base: 12, lg: 2 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Trade</div>

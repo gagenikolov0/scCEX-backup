@@ -24,15 +24,12 @@ export function attachMarketWSS(server: HttpServer) {
     const rawUrl = req.url || ''
     let pathname = rawUrl
     try { const u = new URL(rawUrl, `http://${req.headers.host || 'localhost'}`); pathname = u.pathname } catch {}
-    try { console.log('[ws] upgrade', rawUrl, '->', pathname) } catch {}
     for (const s of streams) {
       if (s.paths.some(p => pathname.startsWith(p))) {
-        try { console.log('[ws] match', pathname, '->', s.paths.join(',')) } catch {}
         s.wss.handleUpgrade(req, socket, head, (ws) => { s.wss.emit('connection', ws, req) })
         return
       }
     }
-    try { console.warn('[ws] unknown path, destroying socket:', rawUrl) } catch {}
     socket.destroy()
   })
 }

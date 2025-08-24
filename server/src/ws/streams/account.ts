@@ -63,33 +63,23 @@ function extractToken(req: IncomingMessage): string | null {
 
 stream.wss.on('connection', (ws: any, req: IncomingMessage) => {
   try {
-    console.log('[WS Account] New connection attempt')
-    console.log('[WS Account] URL:', req.url)
-    console.log('[WS Account] Headers:', Object.keys(req.headers))
-    
     const tok = extractToken(req)
-    console.log('[WS Account] Token extracted:', tok ? 'YES' : 'NO')
     
     if (!tok) { 
-      console.log('[WS Account] No token found, closing connection')
       try { ws.close() } catch {}; 
       return 
     }
     
     const payload = verifyAccessToken(tok)
     const userId = String(payload.sub)
-    console.log('[WS Account] User authenticated:', userId)
     
     addSocket(userId, ws as any)
     ws.on('message', (_raw: Buffer) => { /* no-op for now */ })
     ws.on('close', () => { 
-      console.log('[WS Account] Socket closed for user:', userId)
       removeSocket(ws as any) 
     })
     
-    console.log('[WS Account] Connection established successfully')
   } catch (error) {
-    console.error('[WS Account] Connection error:', error)
     try { ws.close() } catch {} 
   }
 })
