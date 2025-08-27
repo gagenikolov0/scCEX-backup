@@ -19,19 +19,23 @@ function App() {
         <MarketProvider>
           <BrowserRouter>
             <AppShell>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            {/* Public market pages */}
-            <Route path="/" element={<Home />} />
-            <Route path="/markets" element={<Markets />} />
-            <Route path="/spot" element={<Spot />} />
-            <Route path="/futures" element={<Futures />} />
-            {/* Account pages require auth */}
-            <Route path="/wallet" element={<Protected><Wallet /></Protected>} />
-            <Route path="/deposit" element={<Protected><Deposit /></Protected>} />
-            <Route path="/settings" element={<Protected><Settings /></Protected>} />
-          </Routes>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/" element={<Home />} />
+                <Route path="/markets" element={<Markets />} />
+                <Route path="/spot" element={<Spot />} />
+                <Route path="/futures" element={<Futures />} />
+                
+                {/* Protected routes */}
+                <Route path="/wallet" element={<Protected><Wallet /></Protected>} />
+                <Route path="/deposit" element={<Protected><Deposit /></Protected>} />
+                <Route path="/settings" element={<Protected><Settings /></Protected>} />
+                
+                {/* Catch-all route for SPA */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
             </AppShell>
           </BrowserRouter>
         </MarketProvider>
