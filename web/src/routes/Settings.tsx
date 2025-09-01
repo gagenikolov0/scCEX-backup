@@ -1,7 +1,7 @@
 import { Button, Card, Group, Text } from '@mantine/core'
 import { useMantineColorScheme } from '@mantine/core'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Settings() {
   const { colorScheme, setColorScheme } = useMantineColorScheme()

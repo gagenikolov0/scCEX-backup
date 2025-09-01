@@ -16,7 +16,7 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
 import classes from './HeaderMegaMenu.module.css'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Header() {
   const { isAuthed } = useAuth()

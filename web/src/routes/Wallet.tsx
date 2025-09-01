@@ -1,5 +1,5 @@
 import { Card, Group, Text, Stack, Badge, Grid, Paper, NavLink } from '@mantine/core'
-import { useAccount } from '../auth/AccountContext'
+import { useAccount } from '../contexts/AccountContext'
 import { useState } from 'react'
 
 export default function Wallet() {

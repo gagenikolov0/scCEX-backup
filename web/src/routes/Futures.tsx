@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
 import { API_BASE } from '../config/api'
-import { useMarket } from '../markets/MarketContext'
+import { useMarket } from '../contexts/MarketContext'
 import { useIntervals } from '../lib/useIntervals'
 
 export default function Futures() {

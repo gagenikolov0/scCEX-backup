@@ -7,7 +7,6 @@ import mongoose from "mongoose";
 
 const router = Router();
 
-// Simple in-memory cache for MEXC spot tickers
 type TickerCache = { expires: number; data: any[] }
 const tickerCache: TickerCache = { expires: 0, data: [] }
 
@@ -21,7 +20,6 @@ async function getSpotTickers(): Promise<any[]> {
   return tickerCache.data
 }
 
-// Get user profile and balances
 router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findById(req.user!.id).lean()
@@ -75,7 +73,7 @@ router.get("/address-group", requireAuth, async (req: AuthRequest, res: Response
   const group = await AddressGroup.findById(user.addressGroupId).lean();
   if (!group) return res.status(404).json({ error: "Group not found" });
   return res.json({
-    ethAddress: group.ethAddress ?? null,
+    ethAddress: group.ethAddress ?? null, //❓why null?
     tronAddress: group.tronAddress ?? null,
     bscAddress: group.bscAddress ?? null,
     solAddress: group.solAddress ?? null,
@@ -83,10 +81,6 @@ router.get("/address-group", requireAuth, async (req: AuthRequest, res: Response
   });
 });
 
-export default router;
-
-// Transfer between spot and futures within same quote currency
-// Body: { asset: 'USDT'|'USDC', from: 'spot'|'futures', to: 'spot'|'futures', amount: string }
 router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) => {
   const { asset, from, to, amount } = req.body || {}
   if (!['USDT','USDC'].includes(asset)) return res.status(400).json({ error: 'Invalid asset' })
@@ -123,5 +117,7 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
     session.endSession()
   }
 })
+
+export default router;
 
 

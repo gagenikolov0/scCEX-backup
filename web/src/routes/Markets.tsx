@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Card, TextInput, Anchor } from '@mantine/core'
 import { Link } from 'react-router-dom'
-import { useMarket } from '../markets/MarketContext'
+import { useMarket } from '../contexts/MarketContext'
 
 function splitSymbol(sym: string): { base: string; quote: string } {
   if (sym.endsWith('USDT')) return { base: sym.slice(0, -4), quote: 'USDT' }

@@ -5,9 +5,9 @@ import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
 import TransferModal from '../components/TransferModal'
 import { API_BASE } from '../config/api'
-import { useAuth } from '../auth/AuthContext'
-import { useAccount } from '../auth/AccountContext'
-import { useMarket } from '../markets/MarketContext'
+import { useAuth } from '../contexts/AuthContext'
+import { useAccount } from '../contexts/AccountContext'
+import { useMarket } from '../contexts/MarketContext'
 import { useIntervals } from '../lib/useIntervals'
 
 export default function Spot() {
@@ -87,11 +87,11 @@ export default function Spot() {
         }),
       })
       if (res.ok) { 
-        setQty(''); 
-        setPrice(''); 
+        setQty('')
+        setPrice('')
         // Refresh all data to show immediate updates
-        refreshOrders();
-        refreshBalances();
+        refreshOrders()
+        refreshBalances()
       } else {
         const j = await res.json().catch(() => null)
         alert(j?.error || 'Order failed')
@@ -108,8 +108,8 @@ export default function Spot() {
       })
       if (res.ok) { 
         // Refresh all data to show immediate updates
-        refreshOrders();
-        refreshBalances();
+        refreshOrders()
+        refreshBalances()
       } else {
         const j = await res.json().catch(() => null)
         alert(j?.error || 'Cancel failed')
@@ -330,8 +330,8 @@ export default function Spot() {
         asset={quote as 'USDT'|'USDC'} 
         onTransferred={() => {
           // Refresh all data after transfer
-          refreshBalances();
-          refreshOrders();
+          refreshBalances()
+          refreshOrders()
         }} 
       />
     </div>

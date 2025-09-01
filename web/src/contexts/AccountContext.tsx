@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from './AuthContext'
 import { API_BASE } from '../config/api'
-import { PortfolioCalculator } from '../lib/portfolioCalculator'
+import { PortfolioCalculator } from '../lib/portfolioCalculator' //❌
 
 interface Position {
   asset: string
@@ -49,6 +49,12 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   const [orders, setOrders] = useState<Order[]>([])
   const [totalPortfolioUSD, setTotalPortfolioUSD] = useState<number>(0)
   
+
+
+
+
+
+  // pollling!!!!
   const refreshBalances = async () => {
     if (!accessToken) return
     
@@ -80,6 +86,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     }
   }
   
+  // polling!!!!
   const refreshOrders = async () => {
     if (!accessToken) return
     
@@ -106,7 +113,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       refreshBalances()
       refreshOrders()
     }
-  }, [accessToken])
+  }, [accessToken]) //❓so if accesstoken available refresh balances and orders and if not what????
 
   // Refresh balances every 30 seconds
   useEffect(() => {
