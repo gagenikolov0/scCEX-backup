@@ -47,7 +47,7 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
       if (stopped || connected) return
       
       try {
-        ws = new WebSocket(`${wsBase}/ws/tickers`)
+        ws = new WebSocket(`${wsBase}/ws/spot-tickers`)
         ws.onopen = () => { 
           connected = true
         }
@@ -125,6 +125,7 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const value = useMemo(() => ({ spotTickers, futuresTickers }), [spotTickers, futuresTickers])
+  
   return <MarketContext.Provider value={value}>{children}</MarketContext.Provider>
 }
 

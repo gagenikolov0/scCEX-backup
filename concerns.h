@@ -80,16 +80,10 @@ account.ts
 
 
 
-
 WEB/
 app.tsx
     Wrapped in <AuthProvider>, <AccountProvider>, and <MarketProvider> because these contexts provide global application state 
     that multiple components need access to. 
-
-
-config/
-api.ts
-    Defined: API_BASE holds the value of the environment variables "backend url"
 
 
 contexts/
@@ -173,55 +167,6 @@ balances and spot positions that /profile is trying to pull from db and stuff WT
 
 
 
-
-
-
-
-
-
-
-# PROJECT WORKFLOWS:
-
-
-Random workflow:
-    1. Frontend → routes/spot.ts
-
-    2. routes/spot.ts → MongoDB //❓via mongoose session??
-
-    3. MongoDB → back to routes //❓via mongoose session??
-
-    4. route → calls emitAccountEvent() that is imported from ws/account // internal connection
-
-    5. emitAccountEvent() that is declared in ws/account → contextAccount //❓ via websocket connection? 
-    // i know that we dont have this yet and that our AccountContext uses rest polling from MEXC http api, 
-    // but how would make a ws connection between ws/account and AccountContext?
-    // and then sends the updated data in ws message form 
-    // i guess that's how it works
-
-    6. contextAccount → spot.tsx to render it //❓internally???
-
-
-
-❓wait do we have the same problem with markets context? 
-
-
-❓also arent they supposed to be isolated??? like MarketContext cares about ws/markets and AccountContext cares about ws/account
-
-
-❓show me in code exactly what should happen for emit function to be called in routes.
-Im thinking transaction should be completed successfully and then emit function should be called, but im not sure...
-and if im right i still dont know what exactly completing transaction means, and I gotta see in code
-
-
-
-
-
-
-
-
-
-
-AuthProvider workfow:
 
 ✅ THE EXACT TECHNICAL REASON why wrapping our app in AuthProvider:
 Without Provider:

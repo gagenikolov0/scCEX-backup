@@ -5,7 +5,7 @@ import { WebSocketServer } from 'ws'
 type ClientMsg = { type: 'sub'; symbol: string } | { type: 'unsub' }
 
 export const stream = {
-	paths: ['/ws/market','/ws/spot-ticks'],
+	paths: ['/ws/spot-ticks'],
 	wss: new WebSocketServer({ noServer: true })
 }
 

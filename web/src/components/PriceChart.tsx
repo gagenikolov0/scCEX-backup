@@ -213,7 +213,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
       }
     }
 
-    const paths = market === 'futures' ? ['/ws/futures-ticks', '/ws/market'] : ['/ws/market']
+    const paths = market === 'futures' ? ['/ws/futures-ticks'] : ['/ws/spot-ticks']
     tryConnect(paths)
 
     return () => {
