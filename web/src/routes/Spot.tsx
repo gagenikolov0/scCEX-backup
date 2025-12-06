@@ -55,21 +55,21 @@ export default function Spot() {
     const ws = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/spot-24h`)
     const sym = `${token}${quote}`
     let stopped = false
-    
+
     ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym }))
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data as string)
         if (!stopped && msg?.type === 'stats' && msg?.symbol === sym) { setStats(msg.data); setLoadingStats(false) }
-      } catch {}
+      } catch { }
     }
     ws.onclose = () => !stopped && setLoadingStats(false)
     ws.onerror = () => !stopped && setLoadingStats(false)
-    
+
     return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
   }, [token, quote])
 
-  const placeOrder = async (side: 'buy'|'sell') => {
+  const placeOrder = async (side: 'buy' | 'sell') => {
     if (!qty || Number(qty) <= 0 || !localStorage.getItem('accessToken')) return
     if (orderType === 'limit' && (!price || Number(price) <= 0)) return
     setPlacing(side)
@@ -78,15 +78,15 @@ export default function Spot() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
         credentials: 'include',
-        body: JSON.stringify({ 
-          symbol: `${token}${quote}`, 
-          side, 
-          quantity: qty, 
+        body: JSON.stringify({
+          symbol: `${token}${quote}`,
+          side,
+          quantity: qty,
           price: orderType === 'limit' ? price : undefined,
-          orderType 
+          orderType
         }),
       })
-      if (res.ok) { 
+      if (res.ok) {
         setQty('')
         setPrice('')
         // Refresh all data to show immediate updates
@@ -106,7 +106,7 @@ export default function Spot() {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
         credentials: 'include',
       })
-      if (res.ok) { 
+      if (res.ok) {
         // Refresh all data to show immediate updates
         refreshOrders()
         refreshBalances()
@@ -148,7 +148,7 @@ export default function Spot() {
                 else if (col === 'Reserved') value = item.reserved || '-'
                 else if (col === 'Updated') value = formatDate(item.updatedAt) || '-'
                 else value = item[col.toLowerCase()] || '-'
-                
+
                 return (
                   <td key={col} className={`py-2 pr-3 ${col === 'Side' && item.side === 'buy' ? 'text-green-600' : col === 'Side' && item.side === 'sell' ? 'text-red-600' : ''}`}>
                     {value}
@@ -192,7 +192,7 @@ export default function Spot() {
             </ScrollArea.Autosize>
           </Menu.Dropdown>
         </Menu>
-        
+
         <Menu shadow="md" width={180} position="bottom-start" withinPortal>
           <Menu.Target>
             <Button variant="outline" size="compact-md" className="h-10">{interval}</Button>
@@ -203,7 +203,7 @@ export default function Spot() {
             ))}
           </Menu.Dropdown>
         </Menu>
-        
+
         <Group gap="md" className="ml-1" wrap="wrap">
           {loadingStats ? <Loader size="xs" /> : (
             <>
@@ -211,7 +211,7 @@ export default function Spot() {
               <Text size="sm" c={(Number(stats?.priceChangePercent) || 0) >= 0 ? 'teal' : 'red'}>
                 24h: {stats?.priceChangePercent != null ? `${Number(stats.priceChangePercent).toFixed(2)}%` : '-'}
               </Text>
-              <Text size="sm">H: {stats?.highPrice ?? '-'} L: {stats?.lowPrice ?? '-'} V: {stats?.volume ?? '-'}
+              <Text size="sm">High: {stats?.highPrice ?? '-'} Low: {stats?.lowPrice ?? '-'} Volume: {stats?.volume ?? '-'}
               </Text>
             </>
           )}
@@ -227,7 +227,7 @@ export default function Spot() {
             </div>
           </Card>
         </Grid.Col>
-        
+
         <Grid.Col span={{ base: 12, lg: 3 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Order Book</div>
@@ -236,45 +236,45 @@ export default function Spot() {
             </div>
           </Card>
         </Grid.Col>
-        
+
         <Grid.Col span={{ base: 12, lg: 2 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Trade</div>
             <div className="p-4 grid gap-3">
               <div className="text-xs text-neutral-500">Available: {available} {quote} • {baseAvail} {token}</div>
-              
+
               {/* Order Type Toggle */}
               <div className="flex gap-1 p-1 bg-neutral-100 rounded">
-                <Button 
-                  size="xs" 
-                  variant={orderType === 'market' ? 'filled' : 'subtle'} 
+                <Button
+                  size="xs"
+                  variant={orderType === 'market' ? 'filled' : 'subtle'}
                   onClick={() => setOrderType('market')}
                   className="flex-1"
                 >
                   Market
                 </Button>
-                <Button 
-                  size="xs" 
-                  variant={orderType === 'limit' ? 'filled' : 'subtle'} 
+                <Button
+                  size="xs"
+                  variant={orderType === 'limit' ? 'filled' : 'subtle'}
                   onClick={() => setOrderType('limit')}
                   className="flex-1"
                 >
                   Limit
                 </Button>
               </div>
-              
+
               {/* Price Input (only for limit orders) */}
               {orderType === 'limit' && (
-                <TextInput 
-                  id="price" 
-                  label="Price" 
-                  placeholder="0.00" 
-                  value={price} 
-                  onChange={(e) => setPrice(e.currentTarget.value)} 
-                  disabled={!isAuthed} 
+                <TextInput
+                  id="price"
+                  label="Price"
+                  placeholder="0.00"
+                  value={price}
+                  onChange={(e) => setPrice(e.currentTarget.value)}
+                  disabled={!isAuthed}
                 />
               )}
-              
+
               <TextInput id="qty" label="Quantity" placeholder="0.00" value={qty} onChange={(e) => setQty(e.currentTarget.value)} disabled={!isAuthed} />
               <div className="flex gap-2">
                 <Button className="flex-1" variant="light" color="teal" loading={placing === 'buy'} disabled={!isAuthed} onClick={() => placeOrder('buy')}>Buy</Button>
@@ -323,16 +323,16 @@ export default function Spot() {
         </Grid.Col>
       </Grid>
 
-      <TransferModal 
-        opened={transferOpen} 
-        onClose={() => setTransferOpen(false)} 
-        currentSide="spot" 
-        asset={quote as 'USDT'|'USDC'} 
+      <TransferModal
+        opened={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        currentSide="spot"
+        asset={quote as 'USDT' | 'USDC'}
         onTransferred={() => {
           // Refresh all data after transfer
           refreshBalances()
           refreshOrders()
-        }} 
+        }}
       />
     </div>
   )

@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const j = await res.json()
       if (j?.accessToken) persist(j.accessToken)
-    } catch {}
+    } catch { }
   }, [persist])
 
   const verify = useCallback(async () => {
@@ -56,12 +56,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [persist])
 
-  useEffect(() => {
+  useEffect(() => { // Initial check
     (async () => {
       // Always attempt refresh first; then verify if we have a token
-      await refresh()
-      await verify()
-      setIsReady(true)
+      await refresh()    // 1. Try to refresh the token
+      await verify()    // 2. Verify if the token is valid
+      setIsReady(true) // 3. Mark auth check as complete
     })()
   }, [])
 
@@ -103,11 +103,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${API_BASE}/api/auth/logout`, { 
-        method: 'POST', 
-        credentials: 'include' 
+      await fetch(`${API_BASE}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
       })
-    } catch {}
+    } catch { }
     persist(null)
   }, [persist])
 

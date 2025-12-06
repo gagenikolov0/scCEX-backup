@@ -27,11 +27,11 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
   const sd = side === "buy" || side === "sell" ? side : null;
   const qtyStr = typeof quantity === "string" ? quantity : String(quantity ?? "");
   const isLimit = orderType === "limit";
-  
+
   if (!sym || !sd) return res.status(400).json({ error: "Invalid input" });
   if (!/^\d+(?:\.\d+)?$/.test(qtyStr)) return res.status(400).json({ error: "Invalid quantity" });
   if (isLimit && (!limitPrice || !/^\d+(?:\.\d+)?$/.test(limitPrice))) return res.status(400).json({ error: "Invalid limit price" });
-  
+
   // Derive base and quote
   const quote = sym.endsWith("USDT") ? "USDT" : sym.endsWith("USDC") ? "USDC" : null;
   if (!quote) return res.status(400).json({ error: "Unsupported quote" });
@@ -59,10 +59,10 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
 
     // For limit orders, check if they can execute immediately
     if (isLimit) {
-      const canExecute = sd === "buy" ? 
-        currentPrice <= price : 
+      const canExecute = sd === "buy" ?
+        currentPrice <= price :
         currentPrice >= price;
-      
+
       if (canExecute) {
         // Execute immediately as a market order (fall through to existing market order logic)
       } else {
@@ -72,10 +72,10 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
             await session.abortTransaction()
             return res.status(400).json({ error: "Insufficient USDT balance" })
           }
-          
+
           const newAvailable = (parseFloat(avail) - quoteAmtNum).toFixed(8)
           const newReserved = (parseFloat(quotePosition?.reserved?.toString() || "0") + quoteAmtNum).toFixed(8)
-          
+
           await SpotPosition.updateOne(
             { userId: String(user._id), asset: quote },
             { $set: { available: newAvailable, reserved: newReserved } },
@@ -85,15 +85,15 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
           // Sell limit order: check and reserve base asset
           const basePosition = await SpotPosition.findOne({ userId: String(user._id), asset: base }).session(session);
           const baseAvail = basePosition?.available?.toString() || "0";
-          
+
           if (parseFloat(baseAvail) < parseFloat(qtyStr)) {
             await session.abortTransaction()
             return res.status(400).json({ error: "Insufficient base balance" })
           }
-          
+
           const newBaseAvailable = (parseFloat(baseAvail) - parseFloat(qtyStr)).toFixed(8)
           const newBaseReserved = (parseFloat(basePosition?.reserved?.toString() || "0") + parseFloat(qtyStr)).toFixed(8)
-          
+
           await SpotPosition.updateOne(
             { userId: String(user._id), asset: base },
             { $set: { available: newBaseAvailable, reserved: newBaseReserved } },
@@ -122,10 +122,10 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
         await session.abortTransaction();
         return res.status(400).json({ error: "Insufficient quote balance" });
       }
-      
+
       // Update quote balance in SpotPosition - simple string math
       const newQuoteAvailable = (parseFloat(avail) - quoteAmtNum).toFixed(8);
-      
+
       await SpotPosition.updateOne(
         { userId: String(user._id), asset: quote },
         {
@@ -135,10 +135,10 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
         },
         { session }
       );
-      
+
       // Increase base position - simple string math
       const newBaseAvailable = parseFloat(qtyStr).toFixed(8);
-      
+
       await SpotPosition.updateOne(
         { userId: String(user._id), asset: base },
         {
@@ -157,7 +157,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
         await session.abortTransaction();
         return res.status(400).json({ error: "Insufficient base holdings" });
       }
-      
+
       // Reduce base position - simple string math
       const newBaseAvailable = (have - qtyNum).toFixed(8);
       await SpotPosition.updateOne(
@@ -169,10 +169,10 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
         },
         { session }
       );
-      
+
       // Increase quote balance in SpotPosition - simple string math
       const newQuoteAvailable = (parseFloat(avail) + quoteAmtNum).toFixed(8);
-      
+
       await SpotPosition.updateOne(
         { userId: String(user._id), asset: quote },
         {
@@ -199,7 +199,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
     }).save({ session });
 
     await session.commitTransaction();
-    
+
     // Emit account events using new SpotPosition system
     try {
       // Get updated quote balance
@@ -213,7 +213,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
           }
         })
       }
-      
+
       // Get updated base position
       const basePos = await SpotPosition.findOne({ userId: String(user._id), asset: base }).lean()
       if (basePos) {
@@ -223,11 +223,13 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
           available: basePos.available?.toString() ?? '0',
         })
       }
-    } catch {}
-    emitAccountEvent(String(user._id), { kind: 'order', order: {
-      id: created._id, symbol: sym, side: sd, quantity: qtyStr,
-      price: String(price), quoteAmount: String(quoteAmtNum), status: 'filled', createdAt: created.createdAt
-    } })
+    } catch { }
+    emitAccountEvent(String(user._id), {
+      kind: 'order', order: {
+        id: created._id, symbol: sym, side: sd, quantity: qtyStr,
+        price: String(price), quoteAmount: String(quoteAmtNum), status: 'filled', createdAt: created.createdAt
+      }
+    })
     return res.status(201).json({
       id: created._id,
       symbol: sym,
@@ -239,7 +241,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
       createdAt: created.createdAt,
     });
   } catch (e: any) {
-    try { await session.abortTransaction(); } catch {}
+    try { await session.abortTransaction(); } catch { }
     return res.status(500).json({ error: "Order failed" });
   } finally {
     session.endSession();
@@ -287,7 +289,7 @@ router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response
 
   const session = await mongoose.startSession();
   session.startTransaction();
-  
+
   try {
     const order = await SpotOrder.findOne({ _id: orderId, userId: req.user!.id }).session(session);
     if (!order) return res.status(404).json({ error: "Order not found" });
@@ -295,7 +297,7 @@ router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response
 
     // Update order status to rejected
     await SpotOrder.updateOne({ _id: orderId }, { status: "rejected" }, { session });
-    
+
     // Return reserved funds back to available balance based on order side
     if (order.side === "buy") {
       const quoteAmount = parseFloat(order.quoteAmount?.toString() || "0");
@@ -332,7 +334,7 @@ router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response
         }
       }
     }
-    
+
     await session.commitTransaction();
     return res.json({ success: true });
   } catch (error) {

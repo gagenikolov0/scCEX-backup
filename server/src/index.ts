@@ -23,7 +23,25 @@ app.use(express.json())
 app.use(helmet())
 app.use(cookieParser())
 app.use(rateLimit({ windowMs: 60 * 1000, limit: 100, standardHeaders: "draft-7", legacyHeaders: false, }))
-app.use(cors({ origin: config.corsOrigin, credentials: true, }))
+// CORS configuration
+const allowedOrigins = config.corsOrigin.split(',').map(origin => origin.trim());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.includes(origin) || 
+        process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Reject requests from other origins
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+}))
 
 app.get("/health", (_req, res) => res.json({ ok: true }))
 

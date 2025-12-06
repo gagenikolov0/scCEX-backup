@@ -40,7 +40,7 @@ export const useAccount = () => {
 
 export const AccountProvider = ({ children }: { children: ReactNode }) => {
   const { accessToken } = useAuth()
-  
+
   const [spotAvailable, setSpotAvailable] = useState<{ USDT: string; USDC: string }>({
     USDT: '0',
     USDC: '0'
@@ -48,7 +48,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   const [positions, setPositions] = useState<Position[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [totalPortfolioUSD, setTotalPortfolioUSD] = useState<number>(0)
-  
+
 
 
 
@@ -57,22 +57,22 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   // pollling!!!!
   const refreshBalances = async () => {
     if (!accessToken) return
-    
+
     try {
       const response = await fetch(`${API_BASE}/api/user/profile`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
       })
-      
+
       if (response.ok) {
         const data = await response.json()
-        
+
         setSpotAvailable({
           USDT: data.balances?.spotAvailableUSDT || '0',
           USDC: data.balances?.spotAvailableUSDC || '0'
         })
-        
+
         const positionsData = data.balances?.positions || []
         setPositions(positionsData.map((p: any) => ({
           asset: p.asset,
@@ -85,18 +85,18 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       // Silent fail for balance refresh
     }
   }
-  
+
   // polling!!!!
   const refreshOrders = async () => {
     if (!accessToken) return
-    
+
     try {
       const response = await fetch(`${API_BASE}/api/spot/orders`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         // Backend returns orders array directly, not wrapped in { orders: [...] }
@@ -118,7 +118,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   // Refresh balances every 30 seconds
   useEffect(() => {
     if (!accessToken) return
-    
+
     const interval = setInterval(refreshBalances, 30000)
     return () => clearInterval(interval)
   }, [accessToken])
@@ -126,7 +126,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   // Refresh orders every 30 seconds to catch new orders
   useEffect(() => {
     if (!accessToken) return
-    
+
     const interval = setInterval(refreshOrders, 30000)
     return () => clearInterval(interval)
   }, [accessToken])
@@ -138,7 +138,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       setTotalPortfolioUSD(summary.totalUSD)
     }
   }, [positions])
-  
+
   // Load existing portfolio on mount
   useEffect(() => {
     const existing = PortfolioCalculator.loadPortfolio()

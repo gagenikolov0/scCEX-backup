@@ -16,8 +16,10 @@ auth.ts
 
 
 models/
+AddressGroup.ts //
+SpotOrders.ts //
 SpotPosition.ts //❌ code style doesn't match to the rest of the models
-
+User.ts //
 
 routes/
 auth.ts
@@ -76,6 +78,8 @@ ws/index.ts
 ws/streams/
 account.ts
     Defined: stream - the stream object that holds the paths and the wss server //❓what?
+    Defined: emitAccountEvent() - emits an account event to the client(s) over a WebSocket connection
+    Defined: extractToken() - extracts the token from the request //❓why exactly?
 
 
 
@@ -83,13 +87,18 @@ account.ts
 WEB/
 app.tsx
     Wrapped in <AuthProvider>, <AccountProvider>, and <MarketProvider> because these contexts provide global application state 
-    that multiple components need access to. 
+    that multiple components need access to.
 
 
 contexts/
 AccountContext.tsx
-    This is actually where the data from ws/stream/account is received in a ws message updates the states and updates the frontend UI.
-    //❓But still dont know eaxctly how it updates the state like how it goes from the updated data in context to render data in spot
+    Makes a regular HTTP GET request (/api/user/profile, /api/spot/orders)
+    Defines refreshBalances() / refreshOrders() and calls them on a timer (every 30s) and once when the 
+    auth token appears.
+
+    AccountContext.tsx and EmitAccountEvent function that sends ws messages to client are completely independent
+    of each other.
+
 
 AuthContext.tsx 
     Authentication State Manager
@@ -97,14 +106,13 @@ AuthContext.tsx
    - Manages login/logout state (is user logged in or not?) //❓how? where?
    - Handles JWT tokens (stores, refreshes, validates) //❓ stores refreshes validates? how? where?
    - Provides login/register functions to the entire app
-   - Auto-refreshes tokens every 10 minutes //❓what??? wait is it doing that with its Provider by wrapping the whole app or no?
+   - Auto-refreshes tokens every 10 minutes //❓what??? wait is it doing that with its Provider by wrapping the whole app or no if yes how?
 
 MarketsContext.tsx
     Market Data Manager
     What it does:
     - Manages market data (tickers, stats, depth, etc.)
     - Provides market data to the entire app
-    - Updates market data every 30 seconds //❓wait what really?? that sounds like polling
 
 
 routes/
@@ -127,14 +135,6 @@ Home.ts
 
 
 
-
-
-
-❓wait wait wait why the fuck are we using emit which is ws and is supposed to be used for routes to be able
-to internally send updated data to ws stream who updates the frontend UI, FOR FUCKING ORDERS???? 
-IT SHOULD BE ONLY FOR POSITIONS!!!!
-
-
 ❓Maybe the spotTickers that gives "Last Price" ws updates shouldnt be isolated completely 
 like depth, 24h change, High-Low-Volume in streams you know, because were gonna have to use it in contexts
 for calculating profits....
@@ -142,33 +142,38 @@ positions
 also idk how we're using "Last Price" for limit orders lol
 
 
-❓What the fuck is isReady And why exactly and where are we using that in our codebase
 
 
-❌ oh btw in futures you didnt really fix the 1m 5m thing it shows 1h 4h until i select the 1d or the 4k and after a second it snaps and back to only 1min and 5min
+
+❓What is isReady And why exactly and where are we using that in our codebase
+✅ Purpose of isReady: Prevents the "flash of login screen" when the app first loads for the authenticated users
+Ensures we dont show protected content until weve verified the users auth state
+Without isReady, you might briefly show the login screen to an already-authenticated user while 
+the token is being verified
+We are using it in AuthContext.tsx
 
 
-❓auth and account contexts are sending requests to user.ts route /profilel why?
-REAL PURPOSE: User existence check - it's not validating the JWT token itself, it's checking if the user still exists in the database.
+❌ oh btw in futures you didnt really fix the 1m 5m thing it shows 1h 4h until i select the 1d or 
+the 4h and after a second it snaps and back to only 1min and 5min
+
+
+
+
+
+
+❓AuthContext and AccountContexts are sending requests to user.ts route /profille ....why?
+✅ REAL PURPOSE: User existence check - its not validating the JWT token itself, its checking if the user 
+still exists in the database.
 dude if its only checing if the user exists in the database by sending request to route that has to do with 
 balances and spot positions that /profile is trying to pull from db and stuff WTFFFF
 
 
-❓how do we achieve the "one socket for each account" and do we achieve that at all actually?
 
 
 
 
-
-
-
-
-
-
-
-
-
-✅ THE EXACT TECHNICAL REASON why wrapping our app in AuthProvider:
+❓Why wrapping the app with AuthProvider?
+✅ With vs Without Provider
 Without Provider:
 Each component calls useAuth()
 Each useAuth() call executes useState()
@@ -177,3 +182,60 @@ Result: Multiple separate state instances
 With Provider:
 Only AuthProvider calls useState() (once)
 All other components call useContext() to get the same state
+
+
+
+❓Why Emit?
+✅ Emit: helper to push a JSON payload from the server to the client(s) over a WebSocket connection
+Without helper You have to repeat: • fetch sockets • build JSON • loop & send
+The only place that calls emitAccountEvent is server/src/routes/spot.ts
+
+#We are using it for ws updates for available balances, orders and positions❓ 
+
+#Flow:
+
+1. Client → Server (HTTP)
+The browser calls a Spot API endpoint (e.g., POST /api/spot/orders).
+
+2. Route handler spot.ts processes the request
+Updates the database, calculates balances/positions, etc.
+
+3. Route calls emitAccountEvent
+Passes userId and an AccountEvent object (kind: 'balance' | 'position' | 'order').
+
+4. emitAccountEvent - helper in account.ts
+Looks up all open WebSocket connections for that userId, builds a JSON payload, loops over each socket
+and calls ws.send(payload). 
+
+5. WebSocket → Client
+The browsers WebSocket listener receives the message, parses the JSON and updates 
+the UI (balances, positions, order status).
+In web/spot.tsx we have
+const ws = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/spot-24h`);
+which listens to messages sent by Emit.
+
+❓But Emit should actually be used for like events so when something is clicked or interacted with only then we start
+getting ws messages like updates or something it doesnt make any sense to get ws messages just for updating 
+available balances once
+
+
+
+
+
+
+
+❓Whats ws/index.ts for?
+✅ Imports all WebSocket stream handlers (spotTickers, futuresTickers, etc.)
+1. Listens for WebSocket upgrade requests (when a client connects via WebSocket)
+2. Routes connections to the correct stream based on the URL path
+3. Handles upgrades from HTTP to WebSocket 
+
+the frontend creates the WebSocket URL, but the backend's 
+ws/index.ts is responsible for:
+
+Accepting the WebSocket handshake
+Routing to the correct handler based on the URL
+Managing the WebSocket connection lifecycle
+
+
+

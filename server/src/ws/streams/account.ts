@@ -2,7 +2,7 @@ import { WebSocketServer } from 'ws'
 import type { IncomingMessage } from 'http'
 import { verifyAccessToken } from '../../utils/jwt'
 
-type AccountEvent = 
+type AccountEvent =
   | { kind: 'balance'; spotAvailable: { USDT: string; USDC: string } }
   | { kind: 'position'; asset: string; available: string }
   | { kind: 'order'; order: any }
@@ -26,12 +26,22 @@ function removeSocket(ws: WebSocket) {
   }
 }
 
+
 export function emitAccountEvent(userId: string, event: AccountEvent) {
-  const set = userSockets.get(userId)
-  if (!set || set.size === 0) return
-  const payload = JSON.stringify({ type: 'account', ...event, t: Date.now() })
-  for (const ws of set) { try { (ws as any).send(payload) } catch {} }
+  const sockets = userSockets.get(userId);          // all sockets for this user
+  if (!sockets) return;
+
+  const payload = JSON.stringify({
+    type: 'account',   // tells the client what kind of data it is
+    ...event,          // e.g. {kind:'balance', spotAvailable:{USDT:'10'}}
+    t: Date.now()      // timestamp
+  });
+
+  for (const ws of sockets) { // the loop, loops WS messages
+    try { (ws as any).send(payload); } catch { }   // <-- actual WS send
+  }
 }
+
 
 function extractToken(req: IncomingMessage): string | null {
   // Try to get token from query parameters first
@@ -40,12 +50,12 @@ function extractToken(req: IncomingMessage): string | null {
     const u = new URL(raw, `http://${req.headers.host || 'localhost'}`)
     const q = u.searchParams.get('token')
     if (q) return q
-  } catch {}
-  
+  } catch { }
+
   // Fallback to authorization header
   const auth = req.headers['authorization']
   if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth.slice(7)
-  
+
   // Try to get from sec-websocket-protocol header (alternative approach)
   const protocol = req.headers['sec-websocket-protocol']
   if (typeof protocol === 'string') {
@@ -57,30 +67,30 @@ function extractToken(req: IncomingMessage): string | null {
       }
     }
   }
-  
+
   return null
 }
 
 stream.wss.on('connection', (ws: any, req: IncomingMessage) => {
   try {
     const tok = extractToken(req)
-    
-    if (!tok) { 
-      try { ws.close() } catch {}; 
-      return 
+
+    if (!tok) {
+      try { ws.close() } catch { };
+      return
     }
-    
+
     const payload = verifyAccessToken(tok)
     const userId = String(payload.sub)
-    
+
     addSocket(userId, ws as any)
     ws.on('message', (_raw: Buffer) => { /* no-op for now */ })
-    ws.on('close', () => { 
-      removeSocket(ws as any) 
+    ws.on('close', () => {
+      removeSocket(ws as any)
     })
-    
+
   } catch (error) {
-    try { ws.close() } catch {} 
+    try { ws.close() } catch { }
   }
 })
 
