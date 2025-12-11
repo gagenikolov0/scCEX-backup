@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from './AuthContext'
 import { API_BASE } from '../config/api'
-import { PortfolioCalculator } from '../lib/portfolioCalculator' //❌
+import { PortfolioCalculator } from '../lib/portfolioCalculator'
 
 interface Position {
   asset: string
@@ -54,7 +54,6 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
 
 
-  // pollling!!!!
   const refreshBalances = async () => {
     if (!accessToken) return
 
@@ -86,7 +85,6 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  // polling!!!!
   const refreshOrders = async () => {
     if (!accessToken) return
 
@@ -107,28 +105,111 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+
+
+
+
+
+
+
+
+
   // Load balances immediately when accessToken is available
   useEffect(() => {
     if (accessToken) {
       refreshBalances()
       refreshOrders()
     }
-  }, [accessToken]) //❓so if accesstoken available refresh balances and orders and if not what????
-
-  // Refresh balances every 30 seconds
-  useEffect(() => {
-    if (!accessToken) return
-
-    const interval = setInterval(refreshBalances, 30000)
-    return () => clearInterval(interval)
   }, [accessToken])
 
-  // Refresh orders every 30 seconds to catch new orders
+  // WebSocket Connection
   useEffect(() => {
     if (!accessToken) return
 
-    const interval = setInterval(refreshOrders, 30000)
-    return () => clearInterval(interval)
+    let ws: WebSocket | null = null
+    let reconnectTimer: NodeJS.Timeout
+    const wsUrl = API_BASE.replace(/^http/, 'ws') + '/ws/account?token=' + accessToken
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl)
+
+      ws.onopen = () => {
+        // Optional: refresh once on connect to ensure sync
+        refreshBalances()
+        refreshOrders()
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.type !== 'account') return
+
+          // Handle specific event kinds
+          if (msg.kind === 'balance' && msg.spotAvailable) {
+            setSpotAvailable(msg.spotAvailable)
+          } else if (msg.kind === 'position') {
+            setPositions(prev => {
+              const idx = prev.findIndex(p => p.asset === msg.asset)
+              if (idx === -1) {
+                // New position
+                return [...prev, {
+                  asset: msg.asset,
+                  available: msg.available,
+                  reserved: '0',
+                  updatedAt: new Date().toISOString()
+                }]
+              }
+              // Update existing
+              const copy = [...prev]
+              copy[idx] = { ...copy[idx], available: msg.available, updatedAt: new Date().toISOString() }
+              return copy
+            })
+          } else if (msg.kind === 'order' && msg.order) {
+            setOrders(prev => {
+              const idx = prev.findIndex(o => o.id === msg.order.id)
+              const newOrder = {
+                id: msg.order.id,
+                symbol: msg.order.symbol,
+                side: msg.order.side,
+                quantity: msg.order.quantity,
+                price: msg.order.price,
+                status: msg.order.status,
+                createdAt: msg.order.createdAt
+              }
+
+              if (idx === -1) {
+                // Prepend new order
+                return [newOrder, ...prev]
+              }
+              // Update existing order status
+              const copy = [...prev]
+              copy[idx] = newOrder
+              return copy
+            })
+            // If order changed, balance likely changed too, so we might get a balance event soon, 
+            // but we can also trigger a fetch to be safe/lazy or just rely on the balance event.
+            // (The server is supposed to emit balance events too)
+          }
+        } catch (e) {
+          console.error('WS Parse error', e)
+        }
+      }
+
+      ws.onclose = () => {
+        // Simple reconnect logic
+        reconnectTimer = setTimeout(connect, 3000)
+      }
+    }
+
+    connect()
+
+    return () => {
+      if (ws) {
+        ws.onclose = null // prevent reconnect loop on unmount
+        ws.close()
+      }
+      clearTimeout(reconnectTimer)
+    }
   }, [accessToken])
 
   // Update portfolio whenever positions change

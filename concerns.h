@@ -93,7 +93,7 @@ app.tsx
 contexts/
 AccountContext.tsx
     Makes a regular HTTP GET request (/api/user/profile, /api/spot/orders)
-    Defines refreshBalances() / refreshOrders() and calls them on a timer (every 30s) and once when the 
+    Defines refreshBalances() / refreshOrders() helper functions
     auth token appears.
 
     AccountContext.tsx and EmitAccountEvent function that sends ws messages to client are completely independent

@@ -23,6 +23,10 @@ async function fetchSpotPrice(symbol: string): Promise<number> {
 // Body: { symbol: "BTCUSDT", side: "buy"|"sell", quantity: string, price?: string, orderType: "market"|"limit" }
 router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
   const { symbol, side, quantity, price: limitPrice, orderType = "market" } = req.body || {};
+
+  // 🔍 DEBUG LOG
+  console.log('Received Order Request:', { symbol, side, quantity, limitPrice, orderType });
+
   const sym = typeof symbol === "string" ? symbol.toUpperCase() : "";
   const sd = side === "buy" || side === "sell" ? side : null;
   const qtyStr = typeof quantity === "string" ? quantity : String(quantity ?? "");
@@ -41,6 +45,10 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
   session.startTransaction();
   try {
     const currentPrice = await fetchSpotPrice(sym);
+
+    // 🔍 PRICE DEBUG
+    console.log(`[EXECUTION] ${sym} Price: ${currentPrice}`);
+
     const user = await User.findById(req.user!.id).session(session);
     if (!user) {
       await session.abortTransaction();
@@ -50,6 +58,10 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
     const qtyBase = qtyStr
     const price = isLimit ? parseFloat(limitPrice) : currentPrice;
     const quoteAmtNum = parseFloat(qtyStr) * price;
+
+    // 🔍 MATH DEBUG
+    console.log(`[MATH] Qty: ${qtyStr} * Price: ${price} = Total: ${quoteAmtNum}`);
+
     const quoteAmt = String(quoteAmtNum);
     const priceDec = String(price);
 
