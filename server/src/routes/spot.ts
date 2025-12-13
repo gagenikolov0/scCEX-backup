@@ -5,65 +5,11 @@ import { User } from "../models/User";
 import { SpotOrder } from "../models/SpotOrder";
 import SpotPosition from "../models/SpotPosition";
 import { emitAccountEvent } from "../ws/streams/account";
+import { moveMoney } from "../utils/moneyMovement";
 
 const router = Router();
 
-// ==========================================
-// 1. THE UNIVERSAL MOVER (Core Engine)
-// ==========================================
-// This single function handles ALL money movement.
-// It replaces the copy-pasted logic scattered everywhere.
 
-async function moveMoney(
-  session: mongoose.ClientSession,
-  userId: string,
-  asset: string,
-  amount: number,
-  action: 'SPEND' | 'RECEIVE' | 'RESERVE' | 'UNRESERVE'
-) {
-  const pos = await SpotPosition.findOne({ userId, asset }).session(session);
-  // optional setting
-  const avail = parseFloat(pos?.available?.toString() || "0"); // ?. take its value... if doesn't exist throw undefined
-  const reserved = parseFloat(pos?.reserved?.toString() || "0"); // if undefined, set to 0
-
-  let newAvail = avail;
-  let newReserved = reserved;
-
-  if (action === 'SPEND') {
-    // "I am buying X, take my money"
-    if (avail < amount) throw new Error(`Insufficient ${asset} balance`);
-    newAvail = avail - amount;
-  }
-  else if (action === 'RECEIVE') {
-    // "I bought X, give me my coins"
-    newAvail = avail + amount;
-  }
-  else if (action === 'RESERVE') {
-    // "Lock funds for a Limit Order"
-    if (avail < amount) throw new Error(`Insufficient ${asset} balance`);
-    newAvail = avail - amount;
-    newReserved = reserved + amount;
-  }
-  else if (action === 'UNRESERVE') {
-    // "Cancel Limit Order, give back funds"
-    newAvail = avail + amount;
-    newReserved = reserved - amount;
-  }
-
-  await SpotPosition.updateOne(
-    { userId, asset },
-    {
-      $set: {
-        available: newAvail.toFixed(8),
-        reserved: newReserved.toFixed(8),
-        updatedAt: new Date()
-      }
-    },
-    { session, upsert: true }
-  );
-
-  return { available: newAvail.toFixed(8), reserved: newReserved.toFixed(8) }; // ❌
-}
 
 
 

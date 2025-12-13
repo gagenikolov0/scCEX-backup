@@ -77,11 +77,24 @@ ws/index.ts
     stream the market data to the frontend //❓what? i thought ws/streams/account is for AccountContext.tsx 
     // and idk exactly what ws stream provides for MarketContext
 
-ws/streams/
+ws/ 
+streams/
 account.ts
     Defined: stream - the stream object that holds the paths and the wss server //❓what?
     Defined: emitAccountEvent() - emits an account event to the client(s) over a WebSocket connection
     Defined: extractToken() - extracts the token from the request //❓why exactly?
+
+futuresDepth.ts
+futuresStats.ts
+futuresTickers.ts
+futuresTicks.ts
+
+SpotDepth.ts
+spotStats.ts
+spotTickers.ts
+spotTicks.ts
+
+
 
 
 
@@ -304,3 +317,15 @@ __Pending limit orders are never executed__. There's no:
 - __Price feeds__ (`/ws/spot-ticks`) broadcast market prices every second, but don't trigger order matching
 
 ##
+
+
+
+❓So look, the EmitAccount functions just sends the ws messages after we send request to server and
+after the ws messages the ws connection dies??? if not when does it die?
+i think we are gonna need the very same ws connection to calculate pnl fast and everything
+or maybe not the same ws 
+
+
+
+
+We are using spotTicks for price monitoring for the matchingengine for limit orders

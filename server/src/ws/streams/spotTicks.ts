@@ -1,6 +1,7 @@
 // Per-symbol spot ticks; subscribe with a symbol; polling fan-out.
 
 import { WebSocketServer } from 'ws'
+import { matchLimitOrders } from '../../utils/matchingEngine'
 
 type ClientMsg = { type: 'sub'; symbol: string } | { type: 'unsub' }
 
@@ -11,6 +12,7 @@ export const stream = {
 
 const subs = new Map<string, Set<WebSocket>>()
 const timers = new Map<string, NodeJS.Timeout>()
+const lastPrices = new Map<string, number>()
 
 async function tick(symbol: string) {
 	try {
@@ -19,6 +21,15 @@ async function tick(symbol: string) {
 		const j = await resp.json() as any
 		const price = parseFloat(j?.price)
 		if (!Number.isFinite(price)) return
+
+		const lastPrice = lastPrices.get(symbol)
+		lastPrices.set(symbol, price)
+
+		// Check for limit order matches if price changed
+		if (lastPrice !== undefined && lastPrice !== price) {
+			void matchLimitOrders(symbol, price)
+		}
+
 		const payload = JSON.stringify({ type: 'tick', symbol, price, t: Date.now() })
 		const set = subs.get(symbol)
 		if (!set || set.size === 0) return
