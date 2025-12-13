@@ -6,24 +6,9 @@ import { SpotOrder } from "../models/SpotOrder";
 import SpotPosition from "../models/SpotPosition";
 import { emitAccountEvent } from "../ws/streams/account";
 import { moveMoney } from "../utils/moneyMovement";
+import { priceService } from "../utils/priceService";
 
 const router = Router();
-
-
-
-
-
-
-
-async function fetchSpotPrice(symbol: string): Promise<number> {
-  const url = `https://api.mexc.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Upstream price error");
-  const j = (await res.json()) as any;
-  const p = parseFloat(j?.price ?? j?.data?.price ?? "NaN");
-  if (!Number.isFinite(p) || p <= 0) throw new Error("Invalid price");
-  return p;
-}
 
 
 // ==========================================
@@ -53,7 +38,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
 
   try {
     const userId = req.user!.id;
-    const currentPrice = await fetchSpotPrice(sym);
+    const currentPrice = await priceService.getPrice(sym);
 
     const qtyBase = parseFloat(qtyStr);
     const executionPrice = isLimit ? parseFloat(limitPrice) : currentPrice;
@@ -106,11 +91,6 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
       price: String(executionPrice), quoteAmount: String(quoteAmount), status, createdAt: orderDoc.createdAt
     };
 
-    // We can fetch fresh state to emit accuarte numbers, or rely on moveMoney returns.
-    // For safety, let's just trigger a balance check emit helper (reusing the one we had or similar logic inline)
-    // Actually, let's keep it simple: The client will receive the "order" event and we can manually emit 
-    // balances if we want perfect sync.
-    // Below is a simplified emit that grabs fresh DB state to be safe.
     (async () => {
       try {
         const qP = await SpotPosition.findOne({ userId, asset: quote });

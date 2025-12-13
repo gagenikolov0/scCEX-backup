@@ -2,6 +2,7 @@
 
 import { WebSocketServer } from 'ws'
 import { matchLimitOrders } from '../../utils/matchingEngine'
+import { priceService } from '../../utils/priceService'
 
 type ClientMsg = { type: 'sub'; symbol: string } | { type: 'unsub' }
 
@@ -12,7 +13,6 @@ export const stream = {
 
 const subs = new Map<string, Set<WebSocket>>()
 const timers = new Map<string, NodeJS.Timeout>()
-const lastPrices = new Map<string, number>()
 
 async function tick(symbol: string) {
 	try {
@@ -22,8 +22,9 @@ async function tick(symbol: string) {
 		const price = parseFloat(j?.price)
 		if (!Number.isFinite(price)) return
 
-		const lastPrice = lastPrices.get(symbol)
-		lastPrices.set(symbol, price)
+		// Update shared price service
+		const lastPrice = priceService.getAllPrices().get(symbol)
+		priceService.updatePrice(symbol, price)
 
 		// Check for limit order matches if price changed
 		if (lastPrice !== undefined && lastPrice !== price) {
