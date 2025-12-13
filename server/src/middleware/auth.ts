@@ -9,7 +9,7 @@ export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction)
   const authHeader = req.headers["authorization"]
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined
   if (!token) return res.status(401).json({ error: "Missing token" })
-  
+
   try {
     const payload = verifyAccessToken(token)
     req.user = { id: payload.sub, version: payload.ver }

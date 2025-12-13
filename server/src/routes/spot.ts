@@ -22,10 +22,9 @@ async function moveMoney(
   action: 'SPEND' | 'RECEIVE' | 'RESERVE' | 'UNRESERVE'
 ) {
   const pos = await SpotPosition.findOne({ userId, asset }).session(session);
-
-  // Safe defaults
-  const avail = parseFloat(pos?.available?.toString() || "0");
-  const reserved = parseFloat(pos?.reserved?.toString() || "0");
+  // optional setting
+  const avail = parseFloat(pos?.available?.toString() || "0"); // ?. take its value... if doesn't exist throw undefined
+  const reserved = parseFloat(pos?.reserved?.toString() || "0"); // if undefined, set to 0
 
   let newAvail = avail;
   let newReserved = reserved;
@@ -63,9 +62,12 @@ async function moveMoney(
     { session, upsert: true }
   );
 
-  // Return formatted strings for Event Emitter
-  return { available: newAvail.toFixed(8), reserved: newReserved.toFixed(8) };
+  return { available: newAvail.toFixed(8), reserved: newReserved.toFixed(8) }; // ❌
 }
+
+
+
+
 
 async function fetchSpotPrice(symbol: string): Promise<number> {
   const url = `https://api.mexc.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`;
@@ -79,7 +81,7 @@ async function fetchSpotPrice(symbol: string): Promise<number> {
 
 
 // ==========================================
-// 2. MAIN ROUTE
+// 4. MAIN ROUTE
 // ==========================================
 
 router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
@@ -97,7 +99,8 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
 
   const quote = sym.endsWith("USDT") ? "USDT" : sym.endsWith("USDC") ? "USDC" : null;
   if (!quote) return res.status(400).json({ error: "Unsupported quote" });
-  const base = sym.replace(/(USDT|USDC)$/i, "");
+
+  const base = sym.replace(/(USDT|USDC)$/i, ""); // Remove quote from symbol
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -157,9 +160,10 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
       price: String(executionPrice), quoteAmount: String(quoteAmount), status, createdAt: orderDoc.createdAt
     };
 
-    // We can fetch fresh state to emit accuate numbers, or rely on moveMoney returns.
+    // We can fetch fresh state to emit accuarte numbers, or rely on moveMoney returns.
     // For safety, let's just trigger a balance check emit helper (reusing the one we had or similar logic inline)
-    // Actually, let's keep it simple: The client will receive the "order" event and we can manually emit balances if we want perfect sync.
+    // Actually, let's keep it simple: The client will receive the "order" event and we can manually emit 
+    // balances if we want perfect sync.
     // Below is a simplified emit that grabs fresh DB state to be safe.
     (async () => {
       try {
@@ -198,6 +202,13 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
     session.endSession();
   }
 });
+
+
+
+
+
+
+
 
 // GET /api/spot/orders
 router.get("/orders", requireAuth, async (req: AuthRequest, res: Response) => {

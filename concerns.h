@@ -11,8 +11,8 @@ index.ts
 
 middleware/
 auth.ts
+    Defined: AuthRequest() - extends the Request type to include the user property
     Defined: requireAuth() - validates the access token in the request header
-    Defined: AuthRequest() - extends the Request type to include the user property //❓not complely understanding
 
 
 models/
@@ -66,8 +66,10 @@ user.ts
 
 utils/
 jwt.ts
-    Defined: verifyAccessToken() - verifies the access token //❓ how does it do that exactly??
-    Defined: extractToken() - extracts the token from the request //❓what does that even mean?
+    Defined: signAccessToken()
+    Defined: signRefreshToken()
+    Defined: verifyAccessToken()
+    Defined: verifyRefreshToken()
 
 
 ws/index.ts
@@ -210,7 +212,7 @@ and calls ws.send(payload).
 5. WebSocket → Client
 The browsers WebSocket listener receives the message, parses the JSON and updates 
 the UI (balances, positions, order status).
-In web/spot.tsx we have
+In spot.tsx we have
 const ws = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/spot-24h`);
 which listens to messages sent by Emit.
 
@@ -239,3 +241,66 @@ Managing the WebSocket connection lifecycle
 
 
 
+
+
+
+Isolated and Cross - Implementation ideas
+
+
+
+
+PortfolioCalculator.ts
+Direct Usage:
+
+AccountContext.tsx: Imports and uses PortfolioCalculator in two places:
+Calculates and updates totalPortfolioUSD whenever positions change via WebSocket/API updates
+Loads saved portfolio value from localStorage on component mount
+Indirect Impact:
+
+totalPortfolioUSD is exposed in the AccountContext but never consumed by any components
+The calculation runs but has no effect on the UI
+Is It Useless?
+No, it's not useless - it's actually solving a real problem that the current UI ignores. Here's the issue:
+
+In Wallet.tsx, the "total balance" is calculated as:
+
+const totalSpotValue = parseFloat(spotAvailable.USDT) + parseFloat(spotAvailable.USDC) + 
+  positions.filter(p => !['USDT', 'USDC'].includes(p.asset)).reduce((sum, p) => sum + parseFloat(p.available), 0)
+
+This incorrectly sums raw quantities instead of USD values. For example:
+
+1 BTC + 1 USDT = 2 (wrong)
+Should be: (1 × $50,000) + 1 = $50,001 (correct)
+PortfolioCalculator properly converts everything to USD, but this corrected value is never displayed.
+
+## Recommendation
+
+The `PortfolioCalculator` should replace the faulty `totalSpotValue` calculation in `Wallet.tsx`. It needs real market prices (from your market data API) instead of mocks, and the UI should display `totalPortfolioUSD` from the context.
+
+
+
+
+❓what's the thing that waits for the price to become limit price on position to turn 
+the limit order into position and does it do that with just http response or ws message?
+
+## The Missing Piece
+
+__Pending limit orders are never executed__. There's no:
+
+- Background matching engine
+- Price monitoring system
+- Cron job or scheduler
+- WebSocket-triggered order matching
+
+
+
+
+
+
+## How Updates Work
+
+- __HTTP responses__ handle order creation/cancellation
+- __WebSocket messages__ (`/ws/account`) send real-time balance/position/order updates to clients
+- __Price feeds__ (`/ws/spot-ticks`) broadcast market prices every second, but don't trigger order matching
+
+##

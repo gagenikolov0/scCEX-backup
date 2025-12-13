@@ -2,8 +2,8 @@ import jwt from "jsonwebtoken";
 import { getConfig } from "../config/env";
 
 export interface JwtPayloadBase {
-  sub: string; // user id
-  ver: number; // refresh token version
+  sub: string; // gonna be used for user id in the future
+  ver: number; // gonna be used for refresh token version in the future
 }
 
 export const signAccessToken = (payload: JwtPayloadBase): string => {

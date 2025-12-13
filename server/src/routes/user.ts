@@ -10,7 +10,7 @@ const router = Router();
 type TickerCache = { expires: number; data: any[] }
 const tickerCache: TickerCache = { expires: 0, data: [] }
 
-async function getSpotTickers(): Promise<any[]> {
+async function getSpotTickers(): Promise<any[]> { // ❌ Defined but never called. Dead code.
   const now = Date.now()
   if (tickerCache.expires > now && Array.isArray(tickerCache.data)) return tickerCache.data
   const upstream = await fetch("https://api.mexc.com/api/v3/ticker/price")
@@ -27,11 +27,11 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
 
     // Get all spot positions (including USDT/USDC)
     const positions = await SpotPosition.find({ userId: String(user._id) }).lean()
-    
+
     // Find USDT and USDC positions specifically
     const usdtPosition = positions.find(p => p.asset === 'USDT')
     const usdcPosition = positions.find(p => p.asset === 'USDC')
-    
+
     // Get address group if exists
     let addressGroup = null
     if (user.addressGroupId) {
@@ -47,13 +47,8 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
         updatedAt: user.updatedAt
       },
       balances: {
-        // USDT balances
         spotAvailableUSDT: usdtPosition?.available?.toString() ?? '0',
-        
-        // USDC balances  
         spotAvailableUSDC: usdcPosition?.available?.toString() ?? '0',
-        
-        // All other positions
         positions: positions.map(p => ({
           asset: p.asset,
           available: p.available?.toString() ?? '0'
@@ -83,8 +78,8 @@ router.get("/address-group", requireAuth, async (req: AuthRequest, res: Response
 
 router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) => {
   const { asset, from, to, amount } = req.body || {}
-  if (!['USDT','USDC'].includes(asset)) return res.status(400).json({ error: 'Invalid asset' })
-  if (!['spot','futures'].includes(from) || !['spot','futures'].includes(to) || from === to) return res.status(400).json({ error: 'Invalid direction' })
+  if (!['USDT', 'USDC'].includes(asset)) return res.status(400).json({ error: 'Invalid asset' })
+  if (!['spot', 'futures'].includes(from) || !['spot', 'futures'].includes(to) || from === to) return res.status(400).json({ error: 'Invalid direction' })
   const amt = typeof amount === 'string' ? amount : String(amount ?? '')
   if (!/^\d+(?:\.\d+)?$/.test(amt)) return res.status(400).json({ error: 'Invalid amount' })
   const session = await mongoose.startSession()
@@ -105,13 +100,13 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
     // Move available; keep totals equal to sum of available (for now)
     const sub = (a: any, b: any) => mongoose.Types.Decimal128.fromString((parseFloat(a.toString()) - parseFloat(b.toString())).toString())
     const add = (a: any, b: any) => mongoose.Types.Decimal128.fromString((parseFloat(a.toString()) + parseFloat(b.toString())).toString())
-    ;(user as any)[fromKeyAvail] = sub(fromAvail, decAmt)
-    ;(user as any)[toKeyAvail] = add(toAvail, decAmt)
+      ; (user as any)[fromKeyAvail] = sub(fromAvail, decAmt)
+      ; (user as any)[toKeyAvail] = add(toAvail, decAmt)
     await user.save({ session })
     await session.commitTransaction()
     return res.json({ ok: true })
   } catch (e: any) {
-    try { await session.abortTransaction() } catch {}
+    try { await session.abortTransaction() } catch { }
     return res.status(500).json({ error: 'Transfer failed' })
   } finally {
     session.endSession()
