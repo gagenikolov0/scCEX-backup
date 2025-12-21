@@ -7,6 +7,7 @@ import SpotPosition from "../models/SpotPosition";
 import { emitAccountEvent } from "../ws/streams/account";
 import { moveMoney } from "../utils/moneyMovement";
 import { priceService } from "../utils/priceService";
+import { syncStableBalances, syncPosition, syncOrder } from "../utils/emitters";
 
 const router = Router();
 
@@ -93,28 +94,9 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
 
     (async () => {
       try {
-        const qP = await SpotPosition.findOne({ userId, asset: quote });
-        const bP = await SpotPosition.findOne({ userId, asset: base });
-
-        if (qP) {
-          emitAccountEvent(userId, {
-            kind: 'balance',
-            spotAvailable: {
-              USDT: quote === 'USDT' ? qP.available?.toString() ?? '0' : '0',
-              USDC: quote === 'USDC' ? qP.available?.toString() ?? '0' : '0'
-            }
-          });
-        }
-
-        if (bP) {
-          emitAccountEvent(userId, {
-            kind: 'position',
-            asset: base,
-            available: bP.available?.toString() ?? '0'
-          });
-        }
-
-        emitAccountEvent(userId, { kind: 'order', order: orderRes });
+        await syncStableBalances(userId);
+        await syncPosition(userId, base);
+        syncOrder(userId, orderRes);
       } catch { }
     })();
 
@@ -184,6 +166,16 @@ router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response
     }
 
     await session.commitTransaction();
+
+    // EMIT UPDATES
+    (async () => {
+      try {
+        await syncStableBalances(req.user!.id);
+        await syncPosition(req.user!.id, order.baseAsset);
+        syncOrder(req.user!.id, { id: order._id, status: 'rejected' });
+      } catch { }
+    })();
+
     return res.json({ success: true });
   } catch (e) {
     await session.abortTransaction();

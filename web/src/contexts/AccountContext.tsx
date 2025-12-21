@@ -158,13 +158,18 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                 return [...prev, {
                   asset: msg.asset,
                   available: msg.available,
-                  reserved: '0',
+                  reserved: msg.reserved || '0',
                   updatedAt: new Date().toISOString()
                 }]
               }
               // Update existing
               const copy = [...prev]
-              copy[idx] = { ...copy[idx], available: msg.available, updatedAt: new Date().toISOString() }
+              copy[idx] = {
+                ...copy[idx],
+                available: msg.available,
+                reserved: msg.reserved || copy[idx].reserved,
+                updatedAt: new Date().toISOString()
+              }
               return copy
             })
           } else if (msg.kind === 'order' && msg.order) {

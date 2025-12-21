@@ -3,6 +3,7 @@ import { SpotOrder } from "../models/SpotOrder";
 import SpotPosition from "../models/SpotPosition";
 import { emitAccountEvent } from "../ws/streams/account";
 import { moveMoney } from "./moneyMovement";
+import { syncStableBalances, syncPosition, syncOrder } from "./emitters";
 
 export async function matchLimitOrders(symbol: string, currentPrice: number) {
   const session = await mongoose.startSession();
@@ -69,28 +70,9 @@ export async function matchLimitOrders(symbol: string, currentPrice: number) {
         // Emit account updates for this user
         (async () => {
           try {
-            const qP = await SpotPosition.findOne({ userId, asset: order.quoteAsset });
-            const bP = await SpotPosition.findOne({ userId, asset: order.baseAsset });
-
-            if (qP) {
-              emitAccountEvent(userId, {
-                kind: 'balance',
-                spotAvailable: {
-                  USDT: order.quoteAsset === 'USDT' ? qP.available?.toString() ?? '0' : '0',
-                  USDC: order.quoteAsset === 'USDC' ? qP.available?.toString() ?? '0' : '0'
-                }
-              });
-            }
-
-            if (bP) {
-              emitAccountEvent(userId, {
-                kind: 'position',
-                asset: order.baseAsset,
-                available: bP.available?.toString() ?? '0'
-              });
-            }
-
-            emitAccountEvent(userId, { kind: 'order', order: executedOrders[executedOrders.length - 1] });
+            await syncStableBalances(userId);
+            await syncPosition(userId, order.baseAsset);
+            syncOrder(userId, executedOrders[executedOrders.length - 1]);
           } catch (error) {
             console.error('Error emitting account updates:', error);
           }
