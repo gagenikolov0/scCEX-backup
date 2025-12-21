@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from './AuthContext'
 import { API_BASE } from '../config/api'
-import { PortfolioCalculator } from '../lib/portfolioCalculator'
 
 interface Position {
   asset: string
@@ -79,6 +78,10 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
           reserved: p.reserved,
           updatedAt: new Date().toISOString()
         })))
+
+        if (typeof data.balances?.totalPortfolioUSD === 'number') {
+          setTotalPortfolioUSD(data.balances.totalPortfolioUSD)
+        }
       }
     } catch (error) {
       // Silent fail for balance refresh
@@ -212,21 +215,6 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [accessToken])
 
-  // Update portfolio whenever positions change
-  useEffect(() => {
-    if (positions.length > 0) {
-      const summary = PortfolioCalculator.updatePortfolio(positions)
-      setTotalPortfolioUSD(summary.totalUSD)
-    }
-  }, [positions])
-
-  // Load existing portfolio on mount
-  useEffect(() => {
-    const existing = PortfolioCalculator.loadPortfolio()
-    if (existing) {
-      setTotalPortfolioUSD(existing.totalUSD)
-    }
-  }, [])
 
   return (
     <AccountContext.Provider value={{

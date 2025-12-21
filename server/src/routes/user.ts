@@ -3,22 +3,11 @@ import { requireAuth, type AuthRequest } from '../middleware/auth'
 import { User } from '../models/User'
 import SpotPosition from '../models/SpotPosition'
 import { AddressGroup } from '../models/AddressGroup'
+import { priceService } from '../utils/priceService'
 import mongoose from "mongoose";
 
 const router = Router();
 
-type TickerCache = { expires: number; data: any[] }
-const tickerCache: TickerCache = { expires: 0, data: [] }
-
-async function getSpotTickers(): Promise<any[]> { // ❌ Defined but never called. Dead code.
-  const now = Date.now()
-  if (tickerCache.expires > now && Array.isArray(tickerCache.data)) return tickerCache.data
-  const upstream = await fetch("https://api.mexc.com/api/v3/ticker/price")
-  const arr = upstream.ok ? await upstream.json() : []
-  tickerCache.data = Array.isArray(arr) ? arr : []
-  tickerCache.expires = now + 1000 // 1s TTL
-  return tickerCache.data
-}
 
 router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -38,6 +27,22 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
       addressGroup = await AddressGroup.findById(user.addressGroupId).lean()
     }
 
+    // Calculate Portfolio USD Value
+    let totalPortfolioUSD = 0;
+    for (const pos of positions) {
+      const amount = parseFloat(pos.available?.toString() ?? '0');
+      if (['USDT', 'USDC'].includes(pos.asset)) {
+        totalPortfolioUSD += amount;
+      } else {
+        try {
+          const price = await priceService.getPrice(`${pos.asset}USDT`);
+          totalPortfolioUSD += amount * price;
+        } catch {
+          // If price fetch fails for a weird asset, omit it or use 0
+        }
+      }
+    }
+
     return res.json({
       user: {
         id: user._id,
@@ -49,6 +54,7 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
       balances: {
         spotAvailableUSDT: usdtPosition?.available?.toString() ?? '0',
         spotAvailableUSDC: usdcPosition?.available?.toString() ?? '0',
+        totalPortfolioUSD: Math.round(totalPortfolioUSD * 100) / 100,
         positions: positions.map(p => ({
           asset: p.asset,
           available: p.available?.toString() ?? '0'

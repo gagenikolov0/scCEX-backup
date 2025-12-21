@@ -3,14 +3,11 @@ import { useAccount } from '../contexts/AccountContext'
 import { useState } from 'react'
 
 export default function Wallet() {
-  const { spotAvailable, positions } = useAccount()
+  const { spotAvailable, positions, totalPortfolioUSD } = useAccount()
   const [activeTab, setActiveTab] = useState('overview')
 
   const formatUSD = (amount: number) => amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
   const formatBalance = (amount: string) => parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })
-  
-  const totalSpotValue = parseFloat(spotAvailable.USDT) + parseFloat(spotAvailable.USDC) + 
-    positions.filter(p => !['USDT', 'USDC'].includes(p.asset)).reduce((sum, p) => sum + parseFloat(p.available), 0)
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -27,7 +24,7 @@ export default function Wallet() {
               <Paper withBorder p="md" radius="md">
                 <Stack gap="xs">
                   <Text size="sm" c="dimmed">Spot Balance</Text>
-                  <Text size="xl" fw={600}>{formatUSD(totalSpotValue)}</Text>
+                  <Text size="xl" fw={600}>{formatUSD(totalPortfolioUSD)}</Text>
                 </Stack>
               </Paper>
             </Grid.Col>
@@ -43,7 +40,7 @@ export default function Wallet() {
               <Paper withBorder p="md" radius="md">
                 <Stack gap="xs">
                   <Text size="sm" c="dimmed">Total Balance</Text>
-                  <Text size="xl" fw={600}>{formatUSD(totalSpotValue)}</Text>
+                  <Text size="xl" fw={600}>{formatUSD(totalPortfolioUSD)}</Text>
                 </Stack>
               </Paper>
             </Grid.Col>
@@ -58,7 +55,7 @@ export default function Wallet() {
           <>
             <Paper withBorder p="lg" radius="md" mb="md" bg="dark.0">
               <Text size="sm" c="dimmed">Total Spot Value</Text>
-              <Text size="2xl" fw={700} c="green">{formatUSD(totalSpotValue)}</Text>
+              <Text size="2xl" fw={700} c="green">{formatUSD(totalPortfolioUSD)}</Text>
             </Paper>
             <Grid gutter="md">
               {['USDT', 'USDC'].map(asset => {
