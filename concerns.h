@@ -58,17 +58,16 @@ or maybe not the same ws
 
 
 
+🟡 I want the display price that is in trading to actually change colors just like on
+professional exchanges like MEXC if you know what i mean.... The big Price that you get after you select asset
+Most importantly i wanna do this extremely cheap. As simple as possible. As optimal as possible. 
+I want the app to be extremely fast and powerful.
 
 
-❌ Fix Stats spotStats futuresStats
-
-❌ Fix intervals
-
-To be more specific which price is actually the real price is it the one dispalyed 
-on the chart or the one in the stats??? which one are we using when trading?
+🟡 after i close position does the profit add to my available balance? and also the total balace of course
+same with the loss, does everything work perfect? you know when close we get deduction and all that ws messages
 
 
-I want the display price that is in trading to actually change colors just like on
-professional exchanges like MEXC if you know what i mean.... Most importantly i wanna
-do this extremely cheap. As simple as possible. As optimal as possible. I want the app
-to be extremely fast and powerful.
+
+
+🟡 Which css file is wallet.tsx using for its styles?

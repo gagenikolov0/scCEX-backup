@@ -1,5 +1,6 @@
 import SpotPosition from '../models/SpotPosition';
 import { FuturesAccount } from '../models/FuturesAccount';
+import { FuturesPosition } from '../models/FuturesPosition';
 import { emitAccountEvent } from '../ws/streams/account';
 
 /**
@@ -63,6 +64,30 @@ export async function syncPosition(userId: string, asset: string) {
         }
     } catch (e) {
         console.error(`Error syncing position for ${asset}:`, e);
+    }
+}
+
+/**
+ * Emits updated futures position to the user.
+ */
+export async function syncFuturesPosition(userId: string, symbol: string) {
+    try {
+        const pos = await FuturesPosition.findOne({ userId, symbol }).lean();
+        emitAccountEvent(userId, {
+            kind: 'futuresPosition',
+            symbol,
+            position: pos ? {
+                symbol: pos.symbol,
+                side: pos.side,
+                quantity: pos.quantity,
+                entryPrice: pos.entryPrice,
+                leverage: pos.leverage,
+                margin: pos.margin,
+                liquidationPrice: pos.liquidationPrice
+            } : null
+        });
+    } catch (e) {
+        console.error(`Error syncing futures position for ${symbol}:`, e);
     }
 }
 

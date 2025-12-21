@@ -22,14 +22,30 @@ const streams: Stream[] = [
 export function attachMarketWSS(server: HttpServer) {
   server.on('upgrade', (req: IncomingMessage, socket, head) => {
     const rawUrl = req.url || ''
+    console.log(`[WS] Upgrade request: ${rawUrl}`)
+
     let pathname = rawUrl
-    try { const u = new URL(rawUrl, `http://${req.headers.host || 'localhost'}`); pathname = u.pathname } catch {}
+    try {
+      const u = new URL(rawUrl, `http://${req.headers.host || 'localhost'}`)
+      pathname = u.pathname
+    } catch (e) {
+      console.error(`[WS] URL parse error:`, e)
+    }
+
+    console.log(`[WS] Pathname: ${pathname}`)
+
     for (const s of streams) {
-      if (s.paths.some(p => pathname.startsWith(p))) {
-        s.wss.handleUpgrade(req, socket, head, (ws) => { s.wss.emit('connection', ws, req) })
+      if (s.paths.some(p => pathname === p)) {
+        console.log(`[WS] Found matching stream for ${pathname}`)
+        s.wss.handleUpgrade(req, socket, head, (ws) => {
+          console.log(`[WS] Handshake successful for ${pathname}`)
+          s.wss.emit('connection', ws, req)
+        })
         return
       }
     }
+
+    console.warn(`[WS] No matching stream for ${pathname}`)
     socket.destroy()
   })
 }

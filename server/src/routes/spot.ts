@@ -35,62 +35,54 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
   const base = sym.replace(/(USDT|USDC)$/i, ""); // Remove quote from symbol
 
   const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const userId = req.user!.id;
-    const currentPrice = await priceService.getPrice(sym);
+    let orderRes: any = null;
 
-    const qtyBase = parseFloat(qtyStr);
-    const executionPrice = isLimit ? parseFloat(limitPrice) : currentPrice;
-    const quoteAmount = qtyBase * executionPrice; // CASINO MATH HAPPENS HERE
+    await session.withTransaction(async () => {
+      const currentPrice = await priceService.getPrice(sym);
+      const qtyBase = parseFloat(qtyStr);
+      const executionPrice = isLimit ? parseFloat(limitPrice) : currentPrice;
+      const quoteAmount = qtyBase * executionPrice;
 
-    console.log(`[EXECUTION] ${sym} Price: ${currentPrice} | Order: ${sd.toUpperCase()} ${qtyBase} @ ${executionPrice}`);
+      console.log(`[EXECUTION] ${sym} Price: ${currentPrice} | Order: ${sd.toUpperCase()} ${qtyBase} @ ${executionPrice}`);
 
-    let status = "filled";
-    let isPending = false;
+      let status = "filled";
+      let isPending = false;
 
-    // Check Limit Conditions
-    if (isLimit) {
-      const isFillable = (sd === "buy" && executionPrice >= currentPrice) ||
-        (sd === "sell" && executionPrice <= currentPrice);
-      if (!isFillable) {
-        status = "pending";
-        isPending = true;
+      if (isLimit) {
+        const isFillable = (sd === "buy" && executionPrice >= currentPrice) ||
+          (sd === "sell" && executionPrice <= currentPrice);
+        if (!isFillable) {
+          status = "pending";
+          isPending = true;
+        }
       }
-    }
 
-    // LOGIC EXECUTION
-    if (isPending) {
-      // Just Lock the funds
-      if (sd === "buy") await moveMoney(session, userId, quote, quoteAmount, 'RESERVE');
-      else await moveMoney(session, userId, base, qtyBase, 'RESERVE');
-    } else {
-      // SWAP (The Casino Exchange)
-      if (sd === "buy") {
-        await moveMoney(session, userId, quote, quoteAmount, 'SPEND');
-        await moveMoney(session, userId, base, qtyBase, 'RECEIVE');
+      if (isPending) {
+        if (sd === "buy") await moveMoney(session, userId, quote, quoteAmount, 'RESERVE');
+        else await moveMoney(session, userId, base, qtyBase, 'RESERVE');
       } else {
-        await moveMoney(session, userId, base, qtyBase, 'SPEND');
-        await moveMoney(session, userId, quote, quoteAmount, 'RECEIVE');
+        if (sd === "buy") {
+          await moveMoney(session, userId, quote, quoteAmount, 'SPEND');
+          await moveMoney(session, userId, base, qtyBase, 'RECEIVE');
+        } else {
+          await moveMoney(session, userId, base, qtyBase, 'SPEND');
+          await moveMoney(session, userId, quote, quoteAmount, 'RECEIVE');
+        }
       }
-    }
 
-    // SAVE ORDER
-    const orderDoc = await new SpotOrder({
-      userId, symbol: sym, baseAsset: base, quoteAsset: quote, side: sd,
-      quantityBase: String(qtyBase), priceQuote: String(executionPrice), quoteAmount: String(quoteAmount),
-      status,
-    }).save({ session });
+      const orderDoc = await new SpotOrder({
+        userId, symbol: sym, baseAsset: base, quoteAsset: quote, side: sd,
+        quantityBase: String(qtyBase), priceQuote: String(executionPrice), quoteAmount: String(quoteAmount),
+        status,
+      }).save({ session });
 
-    await session.commitTransaction();
-
-    // EMIT UPDATES (Fire and forget)
-    // We just emit balance/position for both assets involved to be sure state is synced
-    const orderRes = {
-      id: orderDoc._id, symbol: sym, side: sd, quantity: String(qtyBase),
-      price: String(executionPrice), quoteAmount: String(quoteAmount), status, createdAt: orderDoc.createdAt
-    };
+      orderRes = {
+        id: orderDoc._id, symbol: sym, side: sd, quantity: String(qtyBase),
+        price: String(executionPrice), quoteAmount: String(quoteAmount), status, createdAt: orderDoc.createdAt
+      };
+    });
 
     (async () => {
       try {
@@ -101,13 +93,11 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
     })();
 
     return res.status(201).json(orderRes);
-
   } catch (e: any) {
-    await session.abortTransaction();
     console.error(`Order Error: ${e.message}`);
     return res.status(400).json({ error: e.message || "Order failed" });
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 });
 
@@ -150,38 +140,39 @@ router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response
   if (!orderId) return res.status(400).json({ error: "ID required" });
 
   const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const order = await SpotOrder.findOne({ _id: orderId, userId: req.user!.id }).session(session);
-    if (!order || order.status !== "pending") return res.status(400).json({ error: "Cannot cancel" });
+    const userId = req.user!.id;
+    let orderBaseAsset = '';
+    let orderIdToEmit = '';
 
-    await SpotOrder.updateOne({ _id: orderId }, { status: "rejected" }, { session });
+    await session.withTransaction(async () => {
+      const order = await SpotOrder.findOne({ _id: orderId, userId }).session(session);
+      if (!order || order.status !== "pending") throw new Error("Cannot cancel");
 
-    // REFUND (Use Universal Mover 'UNRESERVE')
-    if (order.side === "buy") {
-      await moveMoney(session, req.user!.id, order.quoteAsset, parseFloat(order.quoteAmount.toString()), 'UNRESERVE');
-    } else {
-      await moveMoney(session, req.user!.id, order.baseAsset, parseFloat(order.quantityBase.toString()), 'UNRESERVE');
-    }
+      orderBaseAsset = order.baseAsset;
+      orderIdToEmit = String(order._id);
+      await SpotOrder.updateOne({ _id: orderId }, { status: "rejected" }, { session });
 
-    await session.commitTransaction();
+      if (order.side === "buy") {
+        await moveMoney(session, userId, order.quoteAsset, parseFloat(order.quoteAmount.toString()), 'UNRESERVE');
+      } else {
+        await moveMoney(session, userId, order.baseAsset, parseFloat(order.quantityBase.toString()), 'UNRESERVE');
+      }
+    });
 
-    // EMIT UPDATES
     (async () => {
       try {
-        await syncStableBalances(req.user!.id);
-        await syncPosition(req.user!.id, order.baseAsset);
-        syncOrder(req.user!.id, { id: order._id, status: 'rejected' });
+        await syncStableBalances(userId);
+        await syncPosition(userId, orderBaseAsset);
+        syncOrder(userId, { id: orderIdToEmit, status: 'rejected' });
       } catch { }
     })();
 
     return res.json({ success: true });
-  } catch (e) {
-    await session.abortTransaction();
-    return res.status(500).json({ error: "Cancel failed" });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message || "Cancel failed" });
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 });
 

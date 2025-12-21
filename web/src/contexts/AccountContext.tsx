@@ -24,6 +24,7 @@ interface AccountContextType {
   spotAvailable: { USDT: string; USDC: string }
   futuresAvailable: { USDT: string; USDC: string }
   positions: Position[]
+  futuresPositions: any[]
   orders: Order[]
   totalPortfolioUSD: number
   refreshBalances: () => Promise<void>
@@ -50,6 +51,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     USDC: '0'
   })
   const [positions, setPositions] = useState<Position[]>([])
+  const [futuresPositions, setFuturesPositions] = useState<any[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [totalPortfolioUSD, setTotalPortfolioUSD] = useState<number>(0)
 
@@ -84,10 +86,14 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
         const positionsData = data.balances?.positions || []
         setPositions(positionsData.map((p: any) => ({
           asset: p.asset,
-          available: p.available,
-          reserved: p.reserved,
+          available: p.available || '0',
+          reserved: p.reserved || '0',
           updatedAt: new Date().toISOString()
         })))
+
+        if (data.balances?.futuresPositions) {
+          setFuturesPositions(data.balances.futuresPositions)
+        }
 
         if (typeof data.balances?.totalPortfolioUSD === 'number') {
           setTotalPortfolioUSD(data.balances.totalPortfolioUSD)
@@ -141,18 +147,27 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
     let ws: WebSocket | null = null
     let reconnectTimer: NodeJS.Timeout
+    let shouldClose = false // Flag to handle cleanup during CONNECTING state
     const wsUrl = API_BASE.replace(/^http/, 'ws') + '/ws/account?token=' + accessToken
 
     const connect = () => {
+      if (shouldClose) return
+      console.log(`[Account WS] Connecting to ${wsUrl}`)
       ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
-        // Optional: refresh once on connect to ensure sync
+        if (shouldClose) {
+          console.log('[Account WS] Closure requested during connection, closing now')
+          ws?.close()
+          return
+        }
+        console.log('[Account WS] Connection established')
         refreshBalances()
         refreshOrders()
       }
 
       ws.onmessage = (event) => {
+        if (shouldClose) return
         try {
           const msg = JSON.parse(event.data)
           if (msg.type !== 'account') return
@@ -166,7 +181,6 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             setPositions(prev => {
               const idx = prev.findIndex(p => p.asset === msg.asset)
               if (idx === -1) {
-                // New position
                 return [...prev, {
                   asset: msg.asset,
                   available: msg.available,
@@ -174,7 +188,6 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                   updatedAt: new Date().toISOString()
                 }]
               }
-              // Update existing
               const copy = [...prev]
               copy[idx] = {
                 ...copy[idx],
@@ -183,6 +196,19 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                 updatedAt: new Date().toISOString()
               }
               return copy
+            })
+          } else if (msg.kind === 'futuresPosition') {
+            setFuturesPositions(prev => {
+              if (!msg.position) {
+                return prev.filter(p => p.symbol !== msg.symbol)
+              }
+              const idx = prev.findIndex(p => p.symbol === msg.symbol)
+              if (idx > -1) {
+                const next = [...prev]
+                next[idx] = msg.position
+                return next
+              }
+              return [...prev, msg.position]
             })
           } else if (msg.kind === 'order' && msg.order) {
             setOrders(prev => {
@@ -196,19 +222,11 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
                 status: msg.order.status,
                 createdAt: msg.order.createdAt
               }
-
-              if (idx === -1) {
-                // Prepend new order
-                return [newOrder, ...prev]
-              }
-              // Update existing order status
+              if (idx === -1) return [newOrder, ...prev]
               const copy = [...prev]
               copy[idx] = newOrder
               return copy
             })
-            // If order changed, balance likely changed too, so we might get a balance event soon, 
-            // but we can also trigger a fetch to be safe/lazy or just rely on the balance event.
-            // (The server is supposed to emit balance events too)
           } else if (msg.kind === 'portfolio' && typeof msg.totalPortfolioUSD === 'number') {
             setTotalPortfolioUSD(msg.totalPortfolioUSD)
           }
@@ -218,7 +236,8 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       }
 
       ws.onclose = () => {
-        // Simple reconnect logic
+        if (shouldClose) return
+        console.warn('[Account WS] Connection closed')
         reconnectTimer = setTimeout(connect, 3000)
       }
     }
@@ -226,9 +245,16 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     connect()
 
     return () => {
+      shouldClose = true
+      console.log('[Account WS] Cleaning up connection')
       if (ws) {
-        ws.onclose = null // prevent reconnect loop on unmount
-        ws.close()
+        ws.onclose = null
+        ws.onopen = null
+        // Only close immediately if it's already OPEN.
+        // If it's CONNECTING, the onopen handler above will catch it once it opens to avoid the browser warning.
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close()
+        }
       }
       clearTimeout(reconnectTimer)
     }
@@ -240,6 +266,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       spotAvailable,
       futuresAvailable,
       positions,
+      futuresPositions,
       orders,
       totalPortfolioUSD,
       refreshBalances,

@@ -1,5 +1,5 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader } from '@mantine/core'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs } from '@mantine/core'
+import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
@@ -22,14 +22,12 @@ export default function Futures() {
 
   const { futuresTickers: futuresRows } = useMarket()
   const { isAuthed } = useAuth()
-  const { futuresAvailable, refreshBalances } = useAccount()
+  const { futuresAvailable, refreshBalances, futuresPositions, orders: recentOrders } = useAccount()
   const [qty, setQty] = useState('')
   const [leverage, setLeverage] = useState('10')
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
   const [limitPrice, setLimitPrice] = useState('')
   const [loadingOrder, setLoadingOrder] = useState<null | 'buy' | 'sell'>(null)
-  const [positions, setPositions] = useState([])
-  const [orders, setOrders] = useState([])
   const [transferOpen, setTransferOpen] = useState(false)
 
   useEffect(() => setToken(initialBase), [initialBase])
@@ -51,7 +49,6 @@ export default function Futures() {
     market: 'futures'
   })
 
-  // WebSocket for 24h stats - Ultra-clean version
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
@@ -77,17 +74,25 @@ export default function Futures() {
   const fetchData = async () => {
     if (!isAuthed) return
     try {
-      const res = await fetch(`${API_BASE}/api/futures/data`, {
+      await refreshBalances();
+    } catch { }
+  }
+
+  const [history, setHistory] = useState<any[]>([])
+
+  const fetchHistory = async () => {
+    if (!isAuthed) return
+    try {
+      const res = await fetch(`${API_BASE}/api/futures/history`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
       })
-      const data = await res.json()
-      if (data.positions) setPositions(data.positions)
-      if (data.orders) setOrders(data.orders)
+      if (res.ok) setHistory(await res.json())
     } catch { }
   }
 
   useEffect(() => {
     fetchData()
+    fetchHistory()
   }, [isAuthed])
 
   const placeOrder = async (side: 'long' | 'short') => {
@@ -154,6 +159,7 @@ export default function Futures() {
       if (res.ok) {
         fetchData()
         refreshBalances()
+        fetchHistory()
       }
       else {
         const j = await res.json()
@@ -180,19 +186,46 @@ export default function Futures() {
               {columns.map(col => {
                 let val: any = '-'
                 const c = col.toLowerCase()
+
                 if (c === 'symbol') val = item.symbol
                 else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? 'teal' : 'red'} fw={600} className="uppercase">{item.side}</Text>
-                else if (c === 'size') val = item.quantity
-                else if (c === 'entry' || c === 'price') val = item.entryPrice || item.price
+                else if (c === 'size') val = Number(item.quantity).toFixed(4)
+                else if (c === 'entry') val = item.entryPrice
+                else if (c === 'exit') val = item.exitPrice
+                else if (c === 'price') val = item.price
+                else if (c === 'liq. price') val = <Text size="xs" color="orange" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
+                else if (c === 'pnl' || c === 'realized pnl') {
+                  const lastPrice = Number(stats?.lastPrice || 0)
+                  const entryPrice = Number(item.entryPrice || 0)
+                  const qty = Number(item.quantity || 0)
+                  const margin = Number(item.margin || 0)
+
+                  let pnlValue = item.realizedPnL
+                  if (pnlValue === undefined && lastPrice > 0) {
+                    pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
+                  }
+
+                  if (pnlValue !== undefined) {
+                    const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
+                    val = (
+                      <div className="flex flex-col">
+                        <Text size="xs" color={pnlValue >= 0 ? 'teal' : 'red'} fw={600}>
+                          {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
+                        </Text>
+                        <Text size="10px" color={pnlValue >= 0 ? 'teal' : 'red'}>
+                          ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                        </Text>
+                      </div>
+                    )
+                  }
+                }
                 else if (c === 'leverage') val = `${item.leverage}x`
                 else if (c === 'status') val = item.status
-                else if (c === 'time') val = new Date(item.createdAt || item.updatedAt).toLocaleString()
+                else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
                 else if (c === 'action') {
-                  if (columns.includes('Entry')) {
-                    // Position action
+                  if (columns.includes('PnL')) {
                     val = <Button size="compact-xs" color="red" variant="light" onClick={() => closePosition(item.symbol)}>Close</Button>
                   } else {
-                    // Order action
                     val = item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
                   }
                 }
@@ -325,18 +358,25 @@ export default function Futures() {
       <Grid gutter="md">
         <Grid.Col span={12}>
           <Card radius="md" withBorder padding={0}>
-            <div className="p-3 border-b text-sm font-medium">Positions</div>
-            <div className="p-4 overflow-auto">
-              {renderTable(positions, ['Symbol', 'Side', 'Size', 'Entry', 'Leverage', 'Action'], 'No active positions')}
-            </div>
-          </Card>
-        </Grid.Col>
-        <Grid.Col span={12}>
-          <Card radius="md" withBorder padding={0}>
-            <div className="p-3 border-b text-sm font-medium">Recent Orders</div>
-            <div className="p-4 overflow-auto">
-              {renderTable(orders, ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time', 'Action'], 'No recent orders')}
-            </div>
+            <Tabs defaultValue="positions" variant="outline">
+              <Tabs.List className="px-3 pt-1">
+                <Tabs.Tab value="positions">Positions</Tabs.Tab>
+                <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
+                <Tabs.Tab value="history" onClick={fetchHistory}>History</Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="positions" p="md">
+                {renderTable(futuresPositions, ['Symbol', 'Side', 'Size', 'Entry', 'Liq. Price', 'PnL', 'Leverage', 'Action'], 'No active positions')}
+              </Tabs.Panel>
+
+              <Tabs.Panel value="orders" p="md">
+                {renderTable(recentOrders.filter(o => o.symbol?.includes('_')), ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time', 'Action'], 'No recent orders')}
+              </Tabs.Panel>
+
+              <Tabs.Panel value="history" p="md">
+                {renderTable(history, ['Symbol', 'Side', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time'], 'No history found')}
+              </Tabs.Panel>
+            </Tabs>
           </Card>
         </Grid.Col>
       </Grid>
@@ -354,5 +394,3 @@ export default function Futures() {
     </div>
   )
 }
-
-

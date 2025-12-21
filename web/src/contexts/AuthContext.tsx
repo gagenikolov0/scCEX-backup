@@ -58,12 +58,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { // Initial check
     (async () => {
-      // Always attempt refresh first; then verify if we have a token
-      await refresh()    // 1. Try to refresh the token
-      await verify()    // 2. Verify if the token is valid
-      setIsReady(true) // 3. Mark auth check as complete
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const j = await res.json()
+          if (j?.accessToken) {
+            persist(j.accessToken)
+            // No need to verify if we just got a fresh token from refresh
+            setIsReady(true)
+            return
+          }
+        }
+      } catch { }
+
+      // If refresh failed or no token, try to verify existing local token
+      const existing = localStorage.getItem('accessToken')
+      if (existing) {
+        try {
+          const res = await fetch(`${API_BASE}/api/user/profile`, {
+            headers: { 'Authorization': `Bearer ${existing}` },
+            credentials: 'include',
+          })
+          if (!res.ok) persist(null)
+        } catch { }
+      }
+
+      setIsReady(true)
     })()
-  }, [])
+  }, [persist, refresh, verify])
 
   // Background silent refresh cadence (every 10 minutes) and on tab focus
   useEffect(() => {

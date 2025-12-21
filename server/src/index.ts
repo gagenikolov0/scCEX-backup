@@ -53,10 +53,18 @@ app.use("/api/spot", spotRoutes)
 app.use("/api/futures", futuresRoutes)
 
 const start = async () => {
+  console.log('Connecting to MongoDB...')
   await mongoose.connect(config.mongoUri)
+  console.log('Connected to MongoDB.')
 
-  const { attachMarketWSS } = await import('./ws') //❓What exactly is happening here?
-  attachMarketWSS(httpServer) //❓ What exactly is happening here?
+  console.log('Attaching WebSocket streams...')
+  const { attachMarketWSS } = await import('./ws')
+  attachMarketWSS(httpServer)
+
+  const { futuresEngine } = await import('./utils/engine')
+  console.log('Starting Futures Engine...')
+  futuresEngine.start()
+
   httpServer.listen(config.port, () => {
     console.log(`Server listening on http://localhost:${config.port}`)
   })

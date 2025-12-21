@@ -3,6 +3,7 @@ import { requireAuth, type AuthRequest } from '../middleware/auth'
 import { User } from '../models/User'
 import SpotPosition from '../models/SpotPosition'
 import { FuturesAccount } from '../models/FuturesAccount'
+import { FuturesPosition } from '../models/FuturesPosition'
 import { AddressGroup } from '../models/AddressGroup'
 import { moveMoney } from '../utils/moneyMovement'
 import { syncStableBalances, syncFuturesBalances } from '../utils/emitters'
@@ -18,9 +19,10 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
     if (!user) return res.status(404).json({ error: "User not found" })
 
     // Get all spot positions (including USDT/USDC)
-    const [positions, futuresAccs] = await Promise.all([
+    const [positions, futuresAccs, futuresPositions] = await Promise.all([
       SpotPosition.find({ userId: String(user._id) }).lean(),
-      FuturesAccount.find({ userId: String(user._id) }).lean()
+      FuturesAccount.find({ userId: String(user._id) }).lean(),
+      FuturesPosition.find({ userId: String(user._id) }).lean()
     ])
 
     // Find USDT and USDC positions specifically
@@ -56,7 +58,8 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
         positions: positions.map(p => ({
           asset: p.asset,
           available: p.available?.toString() ?? '0'
-        }))
+        })),
+        futuresPositions
       },
       addressGroup
     })
@@ -89,33 +92,24 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
   if (isNaN(amtNum) || amtNum <= 0) return res.status(400).json({ error: 'Invalid amount' })
 
   const session = await mongoose.startSession()
-  session.startTransaction()
   try {
     const userId = req.user!.id
-
-    if (from === 'spot') {
-      // 1. Deduct from Spot
-      await moveMoney(session, userId, asset, amtNum, 'SPEND')
-
-      // 2. Add to Futures
-      await FuturesAccount.updateOne(
-        { userId, asset },
-        { $inc: { available: amtNum }, updatedAt: new Date() },
-        { session, upsert: true }
-      )
-    } else {
-      // 1. Deduct from Futures
-      const futAcc = await FuturesAccount.findOne({ userId, asset }).session(session)
-      if (!futAcc || futAcc.available < amtNum) throw new Error('Insufficient futures balance')
-
-      futAcc.available -= amtNum
-      await futAcc.save({ session })
-
-      // 2. Add to Spot
-      await moveMoney(session, userId, asset, amtNum, 'RECEIVE')
-    }
-
-    await session.commitTransaction()
+    await session.withTransaction(async () => {
+      if (from === 'spot') {
+        await moveMoney(session, userId, asset, amtNum, 'SPEND')
+        await FuturesAccount.updateOne(
+          { userId, asset },
+          { $inc: { available: amtNum }, updatedAt: new Date() },
+          { session, upsert: true }
+        )
+      } else {
+        const futAcc = await FuturesAccount.findOne({ userId, asset }).session(session)
+        if (!futAcc || futAcc.available < amtNum) throw new Error('Insufficient futures balance')
+        futAcc.available -= amtNum
+        await futAcc.save({ session })
+        await moveMoney(session, userId, asset, amtNum, 'RECEIVE')
+      }
+    })
 
       // Sync UI
       ; (async () => {
@@ -127,13 +121,10 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
 
     return res.json({ ok: true })
   } catch (e: any) {
-    await session.abortTransaction()
     return res.status(500).json({ error: e.message || 'Transfer failed' })
   } finally {
-    session.endSession()
+    await session.endSession()
   }
 })
 
 export default router;
-
-

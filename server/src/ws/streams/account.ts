@@ -8,6 +8,7 @@ type AccountEvent =
   | { kind: 'position'; asset: string; available: string; reserved: string }
   | { kind: 'order'; order: any }
   | { kind: 'futuresBalance'; futuresAvailable: { USDT: string; USDC: string } }
+  | { kind: 'futuresPosition'; symbol: string; position: any }
   | { kind: 'portfolio'; totalPortfolioUSD: number }
 
 export const stream = {
@@ -100,28 +101,37 @@ function extractToken(req: IncomingMessage): string | null {
 stream.wss.on('connection', (ws: any, req: IncomingMessage) => {
   try {
     const tok = extractToken(req)
+    console.log(`[WS Account] Connection attempt. Token present: ${!!tok}`)
 
     if (!tok) {
+      console.warn(`[WS Account] No token found in request`)
       try { ws.close() } catch { };
       return
     }
 
-    const payload = verifyAccessToken(tok)
-    const userId = String(payload.sub)
+    try {
+      const payload = verifyAccessToken(tok)
+      const userId = String(payload.sub)
+      console.log(`[WS Account] Authorized: ${userId}`)
 
-    addSocket(userId, ws as any)
+      addSocket(userId, ws as any)
 
-    // Start broadcasting if this is the first user
-    if (!broadcastTimer) {
-      broadcastTimer = setInterval(broadcastPortfolioUpdates, 2000)
+      // Start broadcasting if this is the first user
+      if (!broadcastTimer) {
+        broadcastTimer = setInterval(broadcastPortfolioUpdates, 2000)
+      }
+
+      ws.on('message', (_raw: Buffer) => { /* no-op for now */ })
+      ws.on('close', () => {
+        console.log(`[WS Account] Closed for user: ${userId}`)
+        removeSocket(ws as any)
+      })
+    } catch (jwtErr: any) {
+      console.error(`[WS Account] Token verification failed:`, jwtErr.message)
+      try { ws.close() } catch { }
     }
-
-    ws.on('message', (_raw: Buffer) => { /* no-op for now */ })
-    ws.on('close', () => {
-      removeSocket(ws as any)
-    })
-
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`[WS Account] Connection error:`, error.message)
     try { ws.close() } catch { }
   }
 })
