@@ -1,6 +1,7 @@
 // Broadcasts all spot tickers every second. Simple fan-out.
 
 import { WebSocketServer } from 'ws'
+import { priceService } from '../../utils/priceService'
 
 export const stream = {
 	paths: ['/ws/spot-tickers'],
@@ -16,8 +17,17 @@ async function send() {
 		if (!resp.ok) return
 		const data = await resp.json()
 		const payload = JSON.stringify({ type: 'tickers', data, t: Date.now() })
-		for (const c of clients) { try { (c as any).send(payload) } catch {} }
-	} catch {}
+
+		// Bulk update central price service
+		if (Array.isArray(data)) {
+			for (const t of data) {
+				const p = parseFloat(t.price);
+				if (Number.isFinite(p)) priceService.updatePrice(t.symbol, p);
+			}
+		}
+
+		for (const c of clients) { try { (c as any).send(payload) } catch { } }
+	} catch { }
 }
 
 function start() {

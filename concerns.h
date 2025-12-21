@@ -63,3 +63,6 @@ or maybe not the same ws
 ❌ Fix Stats spotStats futuresStats
 
 ❌ Fix intervals
+
+To be more specific which price is actually the real price is it the one dispalyed 
+on the chart or the one in the stats??? which one are we using when trading?

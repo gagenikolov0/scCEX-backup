@@ -1,6 +1,7 @@
 // Per-symbol spot 24h stats; subscribe with symbol. Polling fan-out.
 
 import { WebSocketServer } from 'ws'
+import { priceService } from '../../utils/priceService'
 
 type ClientMsg = { type: 'sub'; symbol: string } | { type: 'unsub' }
 
@@ -27,10 +28,17 @@ async function send(symbol: string) {
 			quoteVolume: raw?.quoteVolume ?? raw?.quoteVol ?? null,
 		}
 		const payload = JSON.stringify({ type: 'stats', symbol, data, t: Date.now() })
+
+		// Update central price service
+		const price = parseFloat(data.lastPrice);
+		if (Number.isFinite(price)) {
+			priceService.updatePrice(symbol, price);
+		}
+
 		const set = subs.get(symbol)
 		if (!set || set.size === 0) return
-		for (const c of set) { try { (c as any).send(payload) } catch {} }
-	} catch {}
+		for (const c of set) { try { (c as any).send(payload) } catch { } }
+	} catch { }
 }
 
 function start(symbol: string) {
@@ -58,7 +66,7 @@ stream.wss.on('connection', (ws: any) => {
 					if (set.delete(ws as any) && set.size === 0) { subs.delete(sym); stop(sym) }
 				}
 			}
-		} catch {}
+		} catch { }
 	})
 	ws.on('close', () => {
 		for (const [sym, set] of subs) {
