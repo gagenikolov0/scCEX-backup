@@ -1,6 +1,7 @@
 // Per-symbol futures ticks; subscribe with a futures symbol like BTC_USDT. Polling fan-out.
 
 import { WebSocketServer } from 'ws'
+import { priceService } from '../../utils/priceService'
 
 type ClientMsg = { type: 'sub'; symbol: string } | { type: 'unsub' }
 
@@ -21,11 +22,17 @@ async function tick(symbol: string) {
 		const row = arr.find((x: any) => x?.symbol === symbol)
 		const price = row ? Number(row.lastPrice) : NaN
 		if (!Number.isFinite(price)) return
+
+		// Update central price service
+		// Normalize symbol for priceService (BTC_USDT -> BTCUSDT if needed, but we used the raw one in user.ts)
+		// Wait, user.ts used `${pos.asset}USDT`. For futures, let's just use the symbol as is.
+		priceService.updatePrice(symbol, price);
+
 		const payload = JSON.stringify({ type: 'tick', symbol, price, t: Date.now() })
 		const set = subs.get(symbol)
 		if (!set || set.size === 0) return
-		for (const c of set) { try { (c as any).send(payload) } catch {} }
-	} catch {}
+		for (const c of set) { try { (c as any).send(payload) } catch { } }
+	} catch { }
 }
 
 function start(symbol: string) {
@@ -44,7 +51,7 @@ stream.wss.on('connection', (ws: any) => {
 		try {
 			const msg = JSON.parse(String(raw)) as ClientMsg
 			if (msg.type === 'sub' && msg.symbol) {
-				const sym = msg.symbol.toUpperCase().includes('_') ? msg.symbol.toUpperCase() : msg.symbol.toUpperCase().replace(/(USDT|USDC)$/,'_$1')
+				const sym = msg.symbol.toUpperCase().includes('_') ? msg.symbol.toUpperCase() : msg.symbol.toUpperCase().replace(/(USDT|USDC)$/, '_$1')
 				let set = subs.get(sym); if (!set) { set = new Set(); subs.set(sym, set) }
 				set.add(ws as any)
 				start(sym)
@@ -53,7 +60,7 @@ stream.wss.on('connection', (ws: any) => {
 					if (set.delete(ws as any) && set.size === 0) { subs.delete(sym); stop(sym) }
 				}
 			}
-		} catch {}
+		} catch { }
 	})
 	ws.on('close', () => {
 		for (const [sym, set] of subs) {

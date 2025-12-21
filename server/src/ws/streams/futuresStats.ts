@@ -1,6 +1,7 @@
 // Per-symbol futures 24h stats; subscribe with symbol. Polling fan-out.
 
 import { WebSocketServer } from 'ws'
+import { priceService } from '../../utils/priceService'
 
 type ClientMsg = { type: 'sub'; symbol: string } | { type: 'unsub' }
 
@@ -34,10 +35,17 @@ async function send(symbol: string) {
 			fundingRate: row?.fundingRate ?? null,
 		}
 		const payload = JSON.stringify({ type: 'stats', symbol, data, t: Date.now() })
+
+		// Update central price service
+		const price = Number(data.lastPrice);
+		if (Number.isFinite(price)) {
+			priceService.updatePrice(symbol, price);
+		}
+
 		const set = subs.get(symbol)
 		if (!set || set.size === 0) return
-		for (const c of set) { try { (c as any).send(payload) } catch {} }
-	} catch {}
+		for (const c of set) { try { (c as any).send(payload) } catch { } }
+	} catch { }
 }
 
 function start(symbol: string) {
@@ -56,7 +64,7 @@ stream.wss.on('connection', (ws: any) => {
 		try {
 			const msg = JSON.parse(String(raw)) as ClientMsg
 			if (msg.type === 'sub' && msg.symbol) {
-				const sym = msg.symbol.toUpperCase().includes('_') ? msg.symbol.toUpperCase() : msg.symbol.toUpperCase().replace(/(USDT|USDC)$/,'_$1')
+				const sym = msg.symbol.toUpperCase().includes('_') ? msg.symbol.toUpperCase() : msg.symbol.toUpperCase().replace(/(USDT|USDC)$/, '_$1')
 				let set = subs.get(sym); if (!set) { set = new Set(); subs.set(sym, set) }
 				set.add(ws as any)
 				start(sym)
@@ -65,7 +73,7 @@ stream.wss.on('connection', (ws: any) => {
 					if (set.delete(ws as any) && set.size === 0) { subs.delete(sym); stop(sym) }
 				}
 			}
-		} catch {}
+		} catch { }
 	})
 	ws.on('close', () => {
 		for (const [sym, set] of subs) {

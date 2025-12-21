@@ -1,6 +1,7 @@
 // Broadcasts all futures contracts’ last prices every second. Polling fan-out.
 
 import { WebSocketServer } from 'ws'
+import { priceService } from '../../utils/priceService'
 
 export const stream = {
 	paths: ['/ws/futures-tickers'],
@@ -16,8 +17,17 @@ async function send() {
 		if (!resp.ok) return
 		const data = await resp.json()
 		const payload = JSON.stringify({ type: 'futures-tickers', data, t: Date.now() })
-		for (const c of clients) { try { (c as any).send(payload) } catch {} }
-	} catch {}
+
+		// Bulk update central price service
+		if (Array.isArray(data?.data)) {
+			for (const t of data.data) {
+				const p = Number(t.lastPrice);
+				if (Number.isFinite(p) && t.symbol) priceService.updatePrice(t.symbol, p);
+			}
+		}
+
+		for (const c of clients) { try { (c as any).send(payload) } catch { } }
+	} catch { }
 }
 
 function start() {

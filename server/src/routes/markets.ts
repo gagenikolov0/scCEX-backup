@@ -37,7 +37,11 @@ router.get('/spot/klines', async (req: Request, res: Response) => {
     const data = await fromCache(key, ttl, async () => {
       const candidates: string[] = [interval]
       if (interval === '1h') candidates.push('60m')
+      if (interval === '2h') candidates.push('120m')
       if (interval === '4h') candidates.push('240m')
+      if (interval === '6h') candidates.push('360m')
+      if (interval === '1w') candidates.push('7d')
+      if (interval === '2d') candidates.push('2880m')
       let lastErr: any = null
       for (const iv of candidates) {
         try {
@@ -63,23 +67,23 @@ router.get('/spot/intervals', async (req: Request, res: Response) => {
     if (!symbol) return res.status(400).json({ error: 'symbol is required' })
     const key = `spot:intv:${symbol}`
     const data = await fromCache(key, 5 * 60 * 1000, async () => {
-      const candidates = ['1m','5m','15m','30m','1h','2h','4h','6h','1d','2d','1w']
+      const candidates = ['1m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '2d', '1w']
       const results: string[] = []
       for (const iv of candidates) {
-        const tries = iv === '1h' ? ['1h','60m']
-          : iv === '2h' ? ['2h','120m']
-          : iv === '4h' ? ['4h','240m']
-          : iv === '6h' ? ['6h','360m']
-          : iv === '2d' ? ['2d','2880m']
-          : iv === '1w' ? ['1w','10080m']
-          : [iv]
+        const tries = iv === '1h' ? ['1h', '60m']
+          : iv === '2h' ? ['2h', '120m']
+            : iv === '4h' ? ['4h', '240m']
+              : iv === '6h' ? ['6h', '360m']
+                : iv === '2d' ? ['2d', '2880m']
+                  : iv === '1w' ? ['1w', '10080m']
+                    : [iv]
         let ok = false
         for (const t of tries) {
           try {
             const url = `https://api.mexc.com/api/v3/klines?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(t)}&limit=1`
             const r = await fetch(url)
             if (r.ok) { ok = true; break }
-          } catch {}
+          } catch { }
         }
         if (ok) results.push(iv)
       }
@@ -139,7 +143,11 @@ router.get('/futures/klines', async (req: Request, res: Response) => {
     const limit = String(req.query.limit || '200')
     if (!symbol) return res.status(400).json({ error: 'symbol is required' })
     // Map spot-style intervals to futures API intervals
-    const map: Record<string, string> = { '1m': 'Min1', '5m': 'Min5', '1h': 'H1', '1d': 'D1' }
+    const map: Record<string, string> = {
+      '1m': 'Min1', '5m': 'Min5', '15m': 'Min15', '30m': 'Min30',
+      '1h': 'H1', '2h': 'H2', '4h': 'H4', '6h': 'H6',
+      '1d': 'D1', '2d': 'D2', '1w': 'W1'
+    }
     const iv = map[interval] ?? 'Min1'
     // Ensure futures symbol uses underscore format, e.g., BTC_USDT
     const sym = symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1')
@@ -180,11 +188,11 @@ router.get('/futures/intervals', async (req: Request, res: Response) => {
     const sym = symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1')
     const key = `futures:intv:${sym}`
     const data = await fromCache(key, 5 * 60 * 1000, async () => {
-      const candidates = ['1m','5m','15m','30m','1h','2h','4h','6h','1d','2d','1w']
+      const candidates = ['1m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '2d', '1w']
       const map: Record<string, string> = {
-        '1m':'Min1','5m':'Min5','15m':'Min15','30m':'Min30',
-        '1h':'H1','2h':'H2','4h':'H4','6h':'H6',
-        '1d':'D1','2d':'D2','1w':'W1'
+        '1m': 'Min1', '5m': 'Min5', '15m': 'Min15', '30m': 'Min30',
+        '1h': 'H1', '2h': 'H2', '4h': 'H4', '6h': 'H6',
+        '1d': 'D1', '2d': 'D2', '1w': 'W1'
       }
       const results: string[] = []
       for (const iv of candidates) {
@@ -193,16 +201,16 @@ router.get('/futures/intervals', async (req: Request, res: Response) => {
           const url = `https://contract.mexc.com/api/v1/contract/kline?symbol=${encodeURIComponent(sym)}&type=${encodeURIComponent(type)}&page_size=1`
           const r = await fetch(url)
           if (r.ok) { results.push(iv); continue }
-        } catch {}
+        } catch { }
       }
       // Fallback to spot availability if none detected
       if (results.length === 0) {
-        const spotSym = sym.replace('_','')
+        const spotSym = sym.replace('_', '')
         const spotUrl = `https://api.mexc.com/api/v3/klines?symbol=${encodeURIComponent(spotSym)}&interval=1m&limit=1`
         try {
           const r = await fetch(spotUrl)
           if (r.ok) return ['1m', '5m']
-        } catch {}
+        } catch { }
       }
       return results
     })
