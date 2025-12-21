@@ -192,6 +192,8 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             // If order changed, balance likely changed too, so we might get a balance event soon, 
             // but we can also trigger a fetch to be safe/lazy or just rely on the balance event.
             // (The server is supposed to emit balance events too)
+          } else if (msg.kind === 'portfolio' && typeof msg.totalPortfolioUSD === 'number') {
+            setTotalPortfolioUSD(msg.totalPortfolioUSD)
           }
         } catch (e) {
           console.error('WS Parse error', e)

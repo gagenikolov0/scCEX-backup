@@ -3,7 +3,7 @@ import { requireAuth, type AuthRequest } from '../middleware/auth'
 import { User } from '../models/User'
 import SpotPosition from '../models/SpotPosition'
 import { AddressGroup } from '../models/AddressGroup'
-import { priceService } from '../utils/priceService'
+import { calculateTotalPortfolioUSD } from '../utils/portfolio'
 import mongoose from "mongoose";
 
 const router = Router();
@@ -28,20 +28,7 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
     }
 
     // Calculate Portfolio USD Value
-    let totalPortfolioUSD = 0;
-    for (const pos of positions) {
-      const amount = parseFloat(pos.available?.toString() ?? '0');
-      if (['USDT', 'USDC'].includes(pos.asset)) {
-        totalPortfolioUSD += amount;
-      } else {
-        try {
-          const price = await priceService.getPrice(`${pos.asset}USDT`);
-          totalPortfolioUSD += amount * price;
-        } catch {
-          // If price fetch fails for a weird asset, omit it or use 0
-        }
-      }
-    }
+    const totalPortfolioUSD = await calculateTotalPortfolioUSD(String(user._id));
 
     return res.json({
       user: {

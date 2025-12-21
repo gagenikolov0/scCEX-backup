@@ -1,11 +1,13 @@
 import { WebSocketServer } from 'ws'
 import type { IncomingMessage } from 'http'
 import { verifyAccessToken } from '../../utils/jwt'
+import { calculateTotalPortfolioUSD } from '../../utils/portfolio'
 
 type AccountEvent =
   | { kind: 'balance'; spotAvailable: { USDT: string; USDC: string } }
   | { kind: 'position'; asset: string; available: string }
   | { kind: 'order'; order: any }
+  | { kind: 'portfolio'; totalPortfolioUSD: number }
 
 export const stream = {
   paths: ['/ws/account'],
@@ -22,7 +24,30 @@ function addSocket(userId: string, ws: WebSocket) {
 }
 function removeSocket(ws: WebSocket) {
   for (const [uid, set] of userSockets) {
-    if (set.delete(ws) && set.size === 0) userSockets.delete(uid)
+    if (set.delete(ws) && set.size === 0) {
+      userSockets.delete(uid)
+      stopBroadcastingIfNoUsers()
+    }
+  }
+}
+
+let broadcastTimer: NodeJS.Timeout | null = null
+
+function stopBroadcastingIfNoUsers() {
+  if (userSockets.size === 0 && broadcastTimer) {
+    clearInterval(broadcastTimer)
+    broadcastTimer = null
+  }
+}
+
+async function broadcastPortfolioUpdates() {
+  for (const userId of userSockets.keys()) {
+    try {
+      const totalUSD = await calculateTotalPortfolioUSD(userId)
+      emitAccountEvent(userId, { kind: 'portfolio', totalPortfolioUSD: totalUSD })
+    } catch {
+      // Quiet fail for one user
+    }
   }
 }
 
@@ -84,6 +109,12 @@ stream.wss.on('connection', (ws: any, req: IncomingMessage) => {
     const userId = String(payload.sub)
 
     addSocket(userId, ws as any)
+
+    // Start broadcasting if this is the first user
+    if (!broadcastTimer) {
+      broadcastTimer = setInterval(broadcastPortfolioUpdates, 2000)
+    }
+
     ws.on('message', (_raw: Buffer) => { /* no-op for now */ })
     ws.on('close', () => {
       removeSocket(ws as any)
