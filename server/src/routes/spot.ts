@@ -4,6 +4,7 @@ import { requireAuth, type AuthRequest } from "../middleware/auth";
 import { User } from "../models/User";
 import { SpotOrder } from "../models/SpotOrder";
 import SpotPosition from "../models/SpotPosition";
+import { SpotPositionHistory } from "../models/SpotPositionHistory";
 import { emitAccountEvent } from "../ws/streams/account";
 import { moveMoney } from "../utils/moneyMovement";
 import { priceService } from "../utils/priceService";
@@ -82,6 +83,19 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
         id: orderDoc._id, symbol: sym, side: sd, quantity: String(qtyBase),
         price: String(executionPrice), quoteAmount: String(quoteAmount), status, createdAt: orderDoc.createdAt
       };
+
+      // Record History if filled
+      if (status === "filled") {
+        await new SpotPositionHistory({
+          userId,
+          symbol: sym,
+          side: sd,
+          price: executionPrice,
+          quantity: qtyBase,
+          total: quoteAmount,
+          closedAt: new Date()
+        }).save({ session });
+      }
     });
 
     (async () => {
@@ -132,6 +146,17 @@ router.get("/positions", requireAuth, async (req: AuthRequest, res: Response) =>
   return res.json(rows.map((r) => ({
     asset: r.asset, available: r.available ?? "0", reserved: r.reserved ?? "0", updatedAt: r.updatedAt,
   })));
+});
+
+// GET /api/spot/history
+router.get("/history", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const history = await SpotPositionHistory.find({ userId }).sort({ closedAt: -1 }).limit(50).lean();
+    return res.json(history);
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
 });
 
 // DELETE /api/spot/orders/:id

@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -26,6 +26,7 @@ export default function Spot() {
   const [stats, setStats] = useState<any | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
   const [tradeSide, setTradeSide] = useState<'buy' | 'sell'>('buy')
+  const [history, setHistory] = useState<any[]>([])
 
   const { spotTickers: tickers } = useMarket()
   const { positions, orders, spotAvailable, refreshOrders, refreshBalances } = useAccount()
@@ -50,7 +51,6 @@ export default function Spot() {
   const available = (spotAvailable as any)?.[quote] ?? '0'
   const baseAvail = positions.find((r: any) => (r?.asset || '').toUpperCase() === token.toUpperCase())?.available ?? '0'
 
-  // WebSocket for 24h stats - Ultra-clean version
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
@@ -70,6 +70,20 @@ export default function Spot() {
 
     return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
   }, [token, quote])
+
+  const fetchHistory = async () => {
+    if (!isAuthed) return
+    try {
+      const res = await fetch(`${API_BASE}/api/spot/history`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+      })
+      if (res.ok) setHistory(await res.json())
+    } catch { }
+  }
+
+  useEffect(() => {
+    fetchHistory()
+  }, [isAuthed])
 
   const placeOrder = async (side: 'buy' | 'sell') => {
     if (!qty || Number(qty) <= 0 || !localStorage.getItem('accessToken')) return
@@ -91,9 +105,9 @@ export default function Spot() {
       if (res.ok) {
         setQty('')
         setPrice('')
-        // Refresh all data to show immediate updates
         refreshOrders()
         refreshBalances()
+        fetchHistory()
       } else {
         const j = await res.json().catch(() => null)
         alert(j?.error || 'Order failed')
@@ -109,7 +123,6 @@ export default function Spot() {
         credentials: 'include',
       })
       if (res.ok) {
-        // Refresh all data to show immediate updates
         refreshOrders()
         refreshBalances()
       } else {
@@ -124,42 +137,40 @@ export default function Spot() {
   const renderTable = (data: any[], columns: string[], emptyMessage: string, showCancel = false) => (
     <table className="w-full text-sm">
       <thead className="text-neutral-500">
-        <tr className="text-left">
+        <tr className="text-left border-b">
           {columns.map(col => <th key={col} className="py-2 pr-3">{col}</th>)}
           {showCancel && <th className="py-2 pr-3">Action</th>}
         </tr>
       </thead>
       <tbody>
         {data.length === 0 ? (
-          <tr className="border-t">
-            <td className="py-2 pr-3" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</td>
+          <tr>
+            <td className="py-4 text-center text-neutral-400" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</td>
           </tr>
         ) : (
           data.map((item, index) => (
-            <tr key={item.id || index} className="border-t">
+            <tr key={item.id || item._id || index} className="border-b last:border-0 hover:bg-neutral-50/50">
               {columns.map(col => {
-                let value = ''
-                if (col === 'Symbol') value = item.symbol || '-'
-                else if (col === 'Side') value = item.side || '-'
-                else if (col === 'Size') value = item.quantity || item.available || '-'
-                else if (col === 'Price') value = item.price || '-'
-                else if (col === 'Status') value = item.status || '-'
-                else if (col === 'Time') value = formatDate(item.createdAt) || '-'
-                else if (col === 'Asset') value = item.asset || '-'
-                else if (col === 'Available') value = item.available || '-'
-                else if (col === 'Reserved') value = item.reserved || '-'
-                else if (col === 'Updated') value = formatDate(item.updatedAt) || '-'
-                else value = item[col.toLowerCase()] || '-'
+                let val: any = '-'
+                const c = col.toLowerCase()
 
-                return (
-                  <td key={col} className={`py-2 pr-3 ${col === 'Side' && item.side === 'buy' ? 'text-green-600' : col === 'Side' && item.side === 'sell' ? 'text-red-600' : ''}`}>
-                    {value}
-                  </td>
-                )
+                if (c === 'symbol') val = item.symbol
+                else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'teal' : 'red'} fw={600} className="uppercase">{item.side}</Text>
+                else if (c === 'size' || c === 'quantity') val = Number(item.quantity || item.quantityBase || 0).toFixed(4)
+                else if (c === 'price') val = item.price || item.priceQuote
+                else if (c === 'total') val = item.total ? `${Number(item.total).toFixed(2)} ${quote}` : (item.quoteAmount ? `${Number(item.quoteAmount).toFixed(2)} ${quote}` : '-')
+                else if (c === 'status') val = item.status
+                else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
+                else if (c === 'asset') val = item.asset
+                else if (c === 'available') val = item.available
+                else if (c === 'reserved') val = item.reserved
+                else if (c === 'updated') val = formatDate(item.updatedAt)
+
+                return <td key={col} className="py-2 pr-3">{val}</td>
               })}
               {showCancel && (
                 <td className="py-2 pr-3">
-                  <Button size="xs" variant="subtle" color="red" onClick={() => cancelOrder(item.id)}>
+                  <Button size="compact-xs" variant="light" color="red" onClick={() => cancelOrder(item.id)}>
                     Cancel
                   </Button>
                 </td>
@@ -170,6 +181,9 @@ export default function Spot() {
       </tbody>
     </table>
   )
+
+  const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders])
+  const filledOrders = useMemo(() => orders.filter(o => o.status !== 'pending'), [orders])
 
   return (
     <div className="grid gap-4">
@@ -220,7 +234,6 @@ export default function Spot() {
         </Group>
       </div>
 
-      {/* Main Trading Interface */}
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <Card padding={0} radius="md" withBorder>
@@ -243,7 +256,6 @@ export default function Spot() {
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Trade</div>
             <div className="p-4 grid gap-3">
-              {/* Buy/Sell Side Toggle */}
               <div className="flex gap-1 p-1 bg-neutral-100 rounded">
                 <Button
                   size="xs"
@@ -269,7 +281,6 @@ export default function Spot() {
                 Available: {tradeSide === 'buy' ? `${available} ${quote}` : `${baseAvail} ${token}`}
               </div>
 
-              {/* Order Type Toggle */}
               <div className="flex gap-1 p-1 bg-neutral-100 rounded">
                 <Button
                   size="xs"
@@ -289,7 +300,6 @@ export default function Spot() {
                 </Button>
               </div>
 
-              {/* Price Input (only for limit orders) */}
               {orderType === 'limit' && (
                 <TextInput
                   id="price"
@@ -334,38 +344,34 @@ export default function Spot() {
         </Grid.Col>
       </Grid>
 
-      {/* Order History */}
+      {/* Tabs for History & Positions */}
       <Grid gutter="md">
-        <Grid.Col span={{ base: 12 }}>
-          <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Order History</div>
-            <div className="p-4 overflow-auto">
-              {renderTable(orders.filter(o => o.status !== 'pending'), ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No orders')}
-            </div>
-          </Card>
-        </Grid.Col>
-      </Grid>
+        <Grid.Col span={12}>
+          <Card radius="md" withBorder padding={0}>
+            <Tabs defaultValue="history" variant="outline">
+              <Tabs.List className="px-3 pt-1">
+                <Tabs.Tab value="history">Order History</Tabs.Tab>
+                <Tabs.Tab value="tradeHistory" onClick={fetchHistory}>Trade History</Tabs.Tab>
+                <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
+                <Tabs.Tab value="positions">Assets</Tabs.Tab>
+              </Tabs.List>
 
-      {/* Pending Orders */}
-      <Grid gutter="md">
-        <Grid.Col span={{ base: 12 }}>
-          <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Pending Orders</div>
-            <div className="p-4 overflow-auto">
-              {renderTable(orders.filter(o => o.status === 'pending'), ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No pending orders', true)}
-            </div>
-          </Card>
-        </Grid.Col>
-      </Grid>
+              <Tabs.Panel value="history" p="md">
+                {renderTable(filledOrders, ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No order history')}
+              </Tabs.Panel>
 
-      {/* Positions */}
-      <Grid gutter="md">
-        <Grid.Col span={{ base: 12 }}>
-          <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Positions</div>
-            <div className="p-4 overflow-auto">
-              {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Updated'], 'No positions')}
-            </div>
+              <Tabs.Panel value="tradeHistory" p="md">
+                {renderTable(history, ['Symbol', 'Side', 'Quantity', 'Price', 'Total', 'Closed At'], 'No trade history')}
+              </Tabs.Panel>
+
+              <Tabs.Panel value="pending" p="md">
+                {renderTable(pendingOrders, ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No open orders', true)}
+              </Tabs.Panel>
+
+              <Tabs.Panel value="positions" p="md">
+                {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Updated'], 'No assets')}
+              </Tabs.Panel>
+            </Tabs>
           </Card>
         </Grid.Col>
       </Grid>
@@ -376,7 +382,6 @@ export default function Spot() {
         currentSide="spot"
         asset={quote as 'USDT' | 'USDC'}
         onTransferred={() => {
-          // Refresh all data after transfer
           refreshBalances()
           refreshOrders()
         }}
