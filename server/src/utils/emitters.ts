@@ -1,4 +1,5 @@
 import SpotPosition from '../models/SpotPosition';
+import { FuturesAccount } from '../models/FuturesAccount';
 import { emitAccountEvent } from '../ws/streams/account';
 
 /**
@@ -13,12 +14,32 @@ export async function syncStableBalances(userId: string) {
         emitAccountEvent(userId, {
             kind: 'balance',
             spotAvailable: {
-                USDT: usdtPos?.available?.toString() ?? '0',
-                USDC: usdcPos?.available?.toString() ?? '0'
+                USDT: usdtPos?.available ?? '0',
+                USDC: usdcPos?.available ?? '0'
             }
         });
     } catch (e) {
         console.error('Error syncing stable balances:', e);
+    }
+}
+
+/**
+ * Emits full futures balance (USDT & USDC) to the user.
+ */
+export async function syncFuturesBalances(userId: string) {
+    try {
+        const usdtAcc = await FuturesAccount.findOne({ userId, asset: 'USDT' }).lean();
+        const usdcAcc = await FuturesAccount.findOne({ userId, asset: 'USDC' }).lean();
+
+        emitAccountEvent(userId, {
+            kind: 'futuresBalance',
+            futuresAvailable: {
+                USDT: (usdtAcc?.available || 0).toString(),
+                USDC: (usdcAcc?.available || 0).toString()
+            }
+        });
+    } catch (e) {
+        console.error('Error syncing futures balances:', e);
     }
 }
 

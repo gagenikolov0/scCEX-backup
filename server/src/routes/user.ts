@@ -2,7 +2,10 @@ import { Router, type Request, type Response } from 'express'
 import { requireAuth, type AuthRequest } from '../middleware/auth'
 import { User } from '../models/User'
 import SpotPosition from '../models/SpotPosition'
+import { FuturesAccount } from '../models/FuturesAccount'
 import { AddressGroup } from '../models/AddressGroup'
+import { moveMoney } from '../utils/moneyMovement'
+import { syncStableBalances, syncFuturesBalances } from '../utils/emitters'
 import { calculateTotalPortfolioUSD } from '../utils/portfolio'
 import mongoose from "mongoose";
 
@@ -15,11 +18,17 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
     if (!user) return res.status(404).json({ error: "User not found" })
 
     // Get all spot positions (including USDT/USDC)
-    const positions = await SpotPosition.find({ userId: String(user._id) }).lean()
+    const [positions, futuresAccs] = await Promise.all([
+      SpotPosition.find({ userId: String(user._id) }).lean(),
+      FuturesAccount.find({ userId: String(user._id) }).lean()
+    ])
 
     // Find USDT and USDC positions specifically
     const usdtPosition = positions.find(p => p.asset === 'USDT')
     const usdcPosition = positions.find(p => p.asset === 'USDC')
+
+    const usdtFutures = futuresAccs.find(p => p.asset === 'USDT')
+    const usdcFutures = futuresAccs.find(p => p.asset === 'USDC')
 
     // Get address group if exists
     let addressGroup = null
@@ -41,6 +50,8 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
       balances: {
         spotAvailableUSDT: usdtPosition?.available?.toString() ?? '0',
         spotAvailableUSDC: usdcPosition?.available?.toString() ?? '0',
+        futuresAvailableUSDT: usdtFutures?.available?.toString() ?? '0',
+        futuresAvailableUSDC: usdcFutures?.available?.toString() ?? '0',
         totalPortfolioUSD: Math.round(totalPortfolioUSD * 100) / 100,
         positions: positions.map(p => ({
           asset: p.asset,
@@ -73,34 +84,51 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
   const { asset, from, to, amount } = req.body || {}
   if (!['USDT', 'USDC'].includes(asset)) return res.status(400).json({ error: 'Invalid asset' })
   if (!['spot', 'futures'].includes(from) || !['spot', 'futures'].includes(to) || from === to) return res.status(400).json({ error: 'Invalid direction' })
-  const amt = typeof amount === 'string' ? amount : String(amount ?? '')
-  if (!/^\d+(?:\.\d+)?$/.test(amt)) return res.status(400).json({ error: 'Invalid amount' })
+
+  const amtNum = parseFloat(amount)
+  if (isNaN(amtNum) || amtNum <= 0) return res.status(400).json({ error: 'Invalid amount' })
+
   const session = await mongoose.startSession()
   session.startTransaction()
   try {
-    const user = await User.findById(req.user!.id).session(session)
-    if (!user) { await session.abortTransaction(); return res.status(404).json({ error: 'User not found' }) }
-    const fromKeyAvail = `${from}Available${asset}` as keyof typeof user
-    const toKeyAvail = `${to}Available${asset}` as keyof typeof user
-    const decAmt = mongoose.Types.Decimal128.fromString(amt)
-    const getDec = (v: any) => (v ? mongoose.Types.Decimal128.fromString(v.toString()) : mongoose.Types.Decimal128.fromString('0'))
-    const fromAvail = getDec((user as any)[fromKeyAvail])
-    const toAvail = getDec((user as any)[toKeyAvail])
-    if (parseFloat(fromAvail.toString()) < parseFloat(decAmt.toString())) {
-      await session.abortTransaction();
-      return res.status(400).json({ error: 'Insufficient available balance' })
+    const userId = req.user!.id
+
+    if (from === 'spot') {
+      // 1. Deduct from Spot
+      await moveMoney(session, userId, asset, amtNum, 'SPEND')
+
+      // 2. Add to Futures
+      await FuturesAccount.updateOne(
+        { userId, asset },
+        { $inc: { available: amtNum }, updatedAt: new Date() },
+        { session, upsert: true }
+      )
+    } else {
+      // 1. Deduct from Futures
+      const futAcc = await FuturesAccount.findOne({ userId, asset }).session(session)
+      if (!futAcc || futAcc.available < amtNum) throw new Error('Insufficient futures balance')
+
+      futAcc.available -= amtNum
+      await futAcc.save({ session })
+
+      // 2. Add to Spot
+      await moveMoney(session, userId, asset, amtNum, 'RECEIVE')
     }
-    // Move available; keep totals equal to sum of available (for now)
-    const sub = (a: any, b: any) => mongoose.Types.Decimal128.fromString((parseFloat(a.toString()) - parseFloat(b.toString())).toString())
-    const add = (a: any, b: any) => mongoose.Types.Decimal128.fromString((parseFloat(a.toString()) + parseFloat(b.toString())).toString())
-      ; (user as any)[fromKeyAvail] = sub(fromAvail, decAmt)
-      ; (user as any)[toKeyAvail] = add(toAvail, decAmt)
-    await user.save({ session })
+
     await session.commitTransaction()
+
+      // Sync UI
+      ; (async () => {
+        try {
+          await syncStableBalances(userId)
+          await syncFuturesBalances(userId)
+        } catch { }
+      })()
+
     return res.json({ ok: true })
   } catch (e: any) {
-    try { await session.abortTransaction() } catch { }
-    return res.status(500).json({ error: 'Transfer failed' })
+    await session.abortTransaction()
+    return res.status(500).json({ error: e.message || 'Transfer failed' })
   } finally {
     session.endSession()
   }

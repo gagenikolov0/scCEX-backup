@@ -66,3 +66,9 @@ or maybe not the same ws
 
 To be more specific which price is actually the real price is it the one dispalyed 
 on the chart or the one in the stats??? which one are we using when trading?
+
+
+I want the display price that is in trading to actually change colors just like on
+professional exchanges like MEXC if you know what i mean.... Most importantly i wanna
+do this extremely cheap. As simple as possible. As optimal as possible. I want the app
+to be extremely fast and powerful.

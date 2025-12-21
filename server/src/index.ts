@@ -13,6 +13,7 @@ import authRoutes from "./routes/auth"
 import userRoutes from "./routes/user"
 import marketsRoutes from "./routes/markets"
 import spotRoutes from "./routes/spot"
+import futuresRoutes from "./routes/futures"
 
 const app = express()
 const httpServer = http.createServer(app)
@@ -29,13 +30,13 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    
+
     // Check if the origin is in the allowed list
-    if (allowedOrigins.includes(origin) || 
-        process.env.NODE_ENV === 'development') {
+    if (allowedOrigins.includes(origin) ||
+      process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
-    
+
     // Reject requests from other origins
     return callback(new Error('Not allowed by CORS'));
   },
@@ -49,6 +50,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/user", userRoutes)
 app.use("/api/markets", marketsRoutes)
 app.use("/api/spot", spotRoutes)
+app.use("/api/futures", futuresRoutes)
 
 const start = async () => {
   await mongoose.connect(config.mongoUri)

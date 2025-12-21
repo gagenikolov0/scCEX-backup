@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAccount } from '../contexts/AccountContext'
 import { useMarket } from '../contexts/MarketContext'
 import { useIntervals } from '../lib/useIntervals'
+import PriceDisplay from '../components/PriceDisplay'
 
 export default function Spot() {
   const { isAuthed } = useAuth()
@@ -24,6 +25,7 @@ export default function Spot() {
   const [transferOpen, setTransferOpen] = useState(false)
   const [stats, setStats] = useState<any | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
+  const [tradeSide, setTradeSide] = useState<'buy' | 'sell'>('buy')
 
   const { spotTickers: tickers } = useMarket()
   const { positions, orders, spotAvailable, refreshOrders, refreshBalances } = useAccount()
@@ -207,7 +209,7 @@ export default function Spot() {
         <Group gap="md" className="ml-1" wrap="wrap">
           {loadingStats ? <Loader size="xs" /> : (
             <>
-              <Text size="sm">Price: {stats?.lastPrice ?? '-'}</Text>
+              <Text size="sm">Price: <PriceDisplay price={stats?.lastPrice} /></Text>
               <Text size="sm" c={(Number(stats?.priceChangePercent) || 0) >= 0 ? 'teal' : 'red'}>
                 24h: {stats?.priceChangePercent != null ? `${Number(stats.priceChangePercent).toFixed(2)}%` : '-'}
               </Text>
@@ -241,7 +243,31 @@ export default function Spot() {
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Trade</div>
             <div className="p-4 grid gap-3">
-              <div className="text-xs text-neutral-500">Available: {available} {quote} • {baseAvail} {token}</div>
+              {/* Buy/Sell Side Toggle */}
+              <div className="flex gap-1 p-1 bg-neutral-100 rounded">
+                <Button
+                  size="xs"
+                  variant={tradeSide === 'buy' ? 'filled' : 'subtle'}
+                  color="teal"
+                  onClick={() => setTradeSide('buy')}
+                  className="flex-1"
+                >
+                  Buy
+                </Button>
+                <Button
+                  size="xs"
+                  variant={tradeSide === 'sell' ? 'filled' : 'subtle'}
+                  color="red"
+                  onClick={() => setTradeSide('sell')}
+                  className="flex-1"
+                >
+                  Sell
+                </Button>
+              </div>
+
+              <div className="text-xs text-neutral-500">
+                Available: {tradeSide === 'buy' ? `${available} ${quote}` : `${baseAvail} ${token}`}
+              </div>
 
               {/* Order Type Toggle */}
               <div className="flex gap-1 p-1 bg-neutral-100 rounded">
@@ -277,8 +303,29 @@ export default function Spot() {
 
               <TextInput id="qty" label="Quantity" placeholder="0.00" value={qty} onChange={(e) => setQty(e.currentTarget.value)} disabled={!isAuthed} />
               <div className="flex gap-2">
-                <Button className="flex-1" variant="light" color="teal" loading={placing === 'buy'} disabled={!isAuthed} onClick={() => placeOrder('buy')}>Buy</Button>
-                <Button className="flex-1" color="red" loading={placing === 'sell'} disabled={!isAuthed} onClick={() => placeOrder('sell')}>Sell</Button>
+                {tradeSide === 'buy' ? (
+                  <Button
+                    className="flex-1"
+                    variant="filled"
+                    color="teal"
+                    loading={placing === 'buy'}
+                    disabled={!isAuthed}
+                    onClick={() => placeOrder('buy')}
+                  >
+                    Buy {token}
+                  </Button>
+                ) : (
+                  <Button
+                    className="flex-1"
+                    variant="filled"
+                    color="red"
+                    loading={placing === 'sell'}
+                    disabled={!isAuthed}
+                    onClick={() => placeOrder('sell')}
+                  >
+                    Sell {token}
+                  </Button>
+                )}
               </div>
               <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
               {!isAuthed && <div className="text-xs text-neutral-500">Login to trade and see your balances.</div>}

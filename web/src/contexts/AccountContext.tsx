@@ -22,6 +22,7 @@ interface Order {
 
 interface AccountContextType {
   spotAvailable: { USDT: string; USDC: string }
+  futuresAvailable: { USDT: string; USDC: string }
   positions: Position[]
   orders: Order[]
   totalPortfolioUSD: number
@@ -41,6 +42,10 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   const { accessToken } = useAuth()
 
   const [spotAvailable, setSpotAvailable] = useState<{ USDT: string; USDC: string }>({
+    USDT: '0',
+    USDC: '0'
+  })
+  const [futuresAvailable, setFuturesAvailable] = useState<{ USDT: string; USDC: string }>({
     USDT: '0',
     USDC: '0'
   })
@@ -69,6 +74,11 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
         setSpotAvailable({
           USDT: data.balances?.spotAvailableUSDT || '0',
           USDC: data.balances?.spotAvailableUSDC || '0'
+        })
+
+        setFuturesAvailable({
+          USDT: data.balances?.futuresAvailableUSDT || '0',
+          USDC: data.balances?.futuresAvailableUSDC || '0'
         })
 
         const positionsData = data.balances?.positions || []
@@ -150,6 +160,8 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
           // Handle specific event kinds
           if (msg.kind === 'balance' && msg.spotAvailable) {
             setSpotAvailable(msg.spotAvailable)
+          } else if (msg.kind === 'futuresBalance' && msg.futuresAvailable) {
+            setFuturesAvailable(msg.futuresAvailable)
           } else if (msg.kind === 'position') {
             setPositions(prev => {
               const idx = prev.findIndex(p => p.asset === msg.asset)
@@ -226,6 +238,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AccountContext.Provider value={{
       spotAvailable,
+      futuresAvailable,
       positions,
       orders,
       totalPortfolioUSD,
