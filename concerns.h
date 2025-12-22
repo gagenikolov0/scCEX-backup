@@ -71,3 +71,9 @@ same with the loss, does everything work perfect? you know when close we get ded
 
 
 🟡 Which css file is wallet.tsx using for its styles?
+
+
+
+
+
+🟡 Icons for assets bro

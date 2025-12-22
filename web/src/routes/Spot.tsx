@@ -82,7 +82,7 @@ export default function Spot() {
   }
 
   useEffect(() => {
-    fetchHistory()
+    if (isAuthed) fetchHistory()
   }, [isAuthed])
 
   const placeOrder = async (side: 'buy' | 'sell') => {
@@ -154,16 +154,24 @@ export default function Spot() {
                 let val: any = '-'
                 const c = col.toLowerCase()
 
+                const getVal = (v: any) => {
+                  if (v && typeof v === 'object' && v.$numberDecimal) return v.$numberDecimal
+                  return v
+                }
+
                 if (c === 'symbol') val = item.symbol
                 else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'teal' : 'red'} fw={600} className="uppercase">{item.side}</Text>
-                else if (c === 'size' || c === 'quantity') val = Number(item.quantity || item.quantityBase || 0).toFixed(4)
-                else if (c === 'price') val = item.price || item.priceQuote
-                else if (c === 'total') val = item.total ? `${Number(item.total).toFixed(2)} ${quote}` : (item.quoteAmount ? `${Number(item.quoteAmount).toFixed(2)} ${quote}` : '-')
+                else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
+                else if (c === 'price') val = getVal(item.price || item.priceQuote)
+                else if (c === 'total' || c === 'quote amount') {
+                  const t = getVal(item.total || item.quoteAmount)
+                  val = t ? `${Number(t).toFixed(2)} ${quote}` : '-'
+                }
                 else if (c === 'status') val = item.status
                 else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
                 else if (c === 'asset') val = item.asset
-                else if (c === 'available') val = item.available
-                else if (c === 'reserved') val = item.reserved
+                else if (c === 'available') val = getVal(item.available)
+                else if (c === 'reserved') val = getVal(item.reserved)
                 else if (c === 'updated') val = formatDate(item.updatedAt)
 
                 return <td key={col} className="py-2 pr-3">{val}</td>
@@ -183,7 +191,6 @@ export default function Spot() {
   )
 
   const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders])
-  const filledOrders = useMemo(() => orders.filter(o => o.status !== 'pending'), [orders])
 
   return (
     <div className="grid gap-4">
@@ -344,28 +351,23 @@ export default function Spot() {
         </Grid.Col>
       </Grid>
 
-      {/* Tabs for History & Positions */}
+      {/* Simplified Tabs */}
       <Grid gutter="md">
         <Grid.Col span={12}>
           <Card radius="md" withBorder padding={0}>
             <Tabs defaultValue="history" variant="outline">
               <Tabs.List className="px-3 pt-1">
-                <Tabs.Tab value="history">Order History</Tabs.Tab>
-                <Tabs.Tab value="tradeHistory" onClick={fetchHistory}>Trade History</Tabs.Tab>
+                <Tabs.Tab value="history">Trade History</Tabs.Tab>
                 <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
                 <Tabs.Tab value="positions">Assets</Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="history" p="md">
-                {renderTable(filledOrders, ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No order history')}
-              </Tabs.Panel>
-
-              <Tabs.Panel value="tradeHistory" p="md">
-                {renderTable(history, ['Symbol', 'Side', 'Quantity', 'Price', 'Total', 'Closed At'], 'No trade history')}
+                {renderTable(history, ['Symbol', 'Side', 'Quantity', 'Price', 'Quote Amount', 'Time'], 'No trade history')}
               </Tabs.Panel>
 
               <Tabs.Panel value="pending" p="md">
-                {renderTable(pendingOrders, ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time'], 'No open orders', true)}
+                {renderTable(pendingOrders, ['Symbol', 'Side', 'Quantity', 'Price', 'Status', 'Time'], 'No open orders', true)}
               </Tabs.Panel>
 
               <Tabs.Panel value="positions" p="md">
