@@ -69,7 +69,6 @@ same with the loss, does everything work perfect? you know when close we get ded
 
 
 
-
 🟡 Which css file is wallet.tsx using for its styles?
 
 
@@ -78,52 +77,65 @@ same with the loss, does everything work perfect? you know when close we get ded
 
 
 
+🟡 Favorites bro. Favorites assets in market page and asset selector as separate toggle
+Market page as well as the asset selector should have assets devideded in
+Futures and spot and then they into 2 MORE lists - USDT and USDC lists
+❓BUT if we make in USDT mode to only get info on assets that are in USDT mode 
+would that implementation save a lot of energy or just a little?
 
 
 
 
+🟡 Stats should be shown in market page, asset selector and Header
 
-Here is the simple 3-source map you asked for.
+❓ yeah now we gotta make the price from Stats to have functionality to change colors...
+wait! not at all!! in markets it should be white
+only in asset selector and Header it should change colors
+so we just gotta link asset selector and Header take all Stats except for Stats price from
+MarketContext and instead of Stats price we use custom backend stream where we implement 
+functionality to change text colors of the price, if we can do that at all....
+idk if we did that with charts in the backend
+because if not then we just use Ticks
 
-There are exactly 3 sources (pipes) of price data. There is no 4th source.
 
-1. Stats Stream (Header)
-Used for: The Header price (Spot & Futures).
-Source: ws/spot-24h & ws/futures-24h
-Updates: Every 5 seconds (Slow).
-2. Ticks Stream (Chart)
-Used for: The Chart candles.
-Source: ws/spot-ticks & ws/futures-ticks
-Updates: Real-time (Fast).
-3. Tickers Stream (Markets Page)
-Used for: The big list of coins on the Markets page.
-Source: ws/spot-tickers & ws/futures-tickers
-Updates: Every 1 second.
 
-The "Executable Price" (Market Orders)
-The Execution Price is a Hybrid. The backend has a central Price Bucket (priceService). 
-ALL 3 sources (Stats, Ticks, and Tickers) dump their latest price into this bucket.
 
 
 1. Header = Stats Only (Stats is 5 second updates - cheap bandwith)
-2. Chart = Ticks Only (Very Expensive. Powers the Charts.) //❓but why expensive? should only use that energy only on the chart that is selected not other charts of other pairs
-3. Execution = Whichever was latest (Stats + Ticks + Tickers)
-4. Market.tsx invisible price = Tickers
+2. Chart = Ticks Only 
+3. Execution = Whichever was latest (Stats + Ticks)
+4. Market.tsx invisible price = Stats
+5. Asset Selector = Startup Snapshot just for names, no price
+6. Orderbook
 
 
 
 
 
-❓Who the fuck is using stats for price dude, i mean where the fuck are we using stats for price
-show me.... wtff it should only be used for info that has nothing to do with logic but 
-only display on app like the 24H change, high, low, volume which is just for visibility on screen nothing more
-
-❓So wait bro, when exactly does the app use energy to give us the price in the Header
-and are we talking about the same thing when we say market page and header because in market page
-there's literally no price only the names of the assets.
 
 
-so the answer to "when exactly des the app use energy to give us price in header" is basically
-the market.tsx pulling prices from tickers but not rendering them literally wasting energy 
-and power and then it shows it after we click on it and takes us to futures or spot pages in
-Header right? oh wait but you said header uses only Stats, not tickers so im hella confused
+
+The "Linking" Challenge
+Since the header is updating locally, but the asset selector search list comes from the global 
+MarketContext
+, we have a mismatch:
+
+Header: Living, breathing real-time data for one asset.
+Asset Selector: Currently just a static list of names (The Snapshot).
+If you want the Asset Selector to show live prices (and change colors): We would need to call 
+listen()
+ when the Search menu is opened. This would tell 
+MarketContext
+ to start the Bulk stream temporarily, so all prices in your search list start moving!
+
+
+
+
+
+
+
+
+
+
+❓So we call user/account every 10 seconds and we call user/account on focus.
+If we are in home page or market page i dont think i should be calling user/account

@@ -14,14 +14,40 @@ async function fromCache(key: string, ttlMs: number, fetcher: () => Promise<any>
   return data
 }
 
-// Proxy: Spot tickers (prices for all symbols)
-router.get('/spot/tickers', async (_req: Request, res: Response) => {
+// Spot: 24h stats for symbol(s)
+router.get('/spot/24h', async (req: Request, res: Response) => {
   try {
-    const data = await fromCache('spot:ticker:all', 1000, async () => {
-      const upstream = await fetch('https://api.mexc.com/api/v3/ticker/price')
+    const symbol = String(req.query.symbol || '')
+    const key = symbol ? `spot:24h:${symbol}` : 'spot:24h:all'
+    const data = await fromCache(key, 2000, async () => {
+      const url = symbol
+        ? `https://api.mexc.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`
+        : `https://api.mexc.com/api/v3/ticker/24hr`
+      const upstream = await fetch(url)
+      if (!upstream.ok) {
+        const text = await upstream.text().catch(() => '')
+        throw new Error(JSON.stringify({ status: upstream.status, body: text }))
+      }
       return upstream.json()
     })
-    return res.json(data)
+    const normalized = Array.isArray(data)
+      ? data.map((raw: any) => ({
+        symbol: raw.symbol,
+        lastPrice: raw.lastPrice ?? raw.last ?? raw.price ?? null,
+        change24h: raw.priceChangePercent ?? null,
+        high24h: raw.highPrice ?? null,
+        low24h: raw.lowPrice ?? null,
+        volume24h: raw.volume ?? null,
+      }))
+      : {
+        symbol: data.symbol,
+        lastPrice: data.lastPrice ?? data.last ?? data.price ?? null,
+        change24h: data.priceChangePercent ?? null,
+        high24h: data.highPrice ?? null,
+        low24h: data.lowPrice ?? null,
+        volume24h: data.volume ?? null,
+      }
+    return res.json(normalized)
   } catch (e: any) {
     return res.status(502).json({ error: 'Upstream error', detail: e?.message ?? null })
   }
@@ -96,45 +122,11 @@ router.get('/spot/intervals', async (req: Request, res: Response) => {
   }
 })
 
-// Spot: 24h ticker stats for a symbol
-router.get('/spot/24h', async (req: Request, res: Response) => {
-  try {
-    const symbol = String(req.query.symbol || '')
-    if (!symbol) return res.status(400).json({ error: 'symbol is required' })
-    const key = `spot:24h:${symbol}`
-    const data = await fromCache(key, 2000, async () => {
-      const url = `https://api.mexc.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`
-      const upstream = await fetch(url)
-      if (!upstream.ok) {
-        const text = await upstream.text().catch(() => '')
-        throw new Error(JSON.stringify({ status: upstream.status, body: text }))
-      }
-      return upstream.json()
-    })
-    return res.json(data)
-  } catch (e: any) {
-    return res.status(502).json({ error: 'Upstream error', detail: e?.message ?? null })
-  }
-})
+
 
 export default router
 
-// Futures: tickers (all contracts)
-router.get('/futures/tickers', async (_req: Request, res: Response) => {
-  try {
-    const data = await fromCache('futures:ticker:all', 1000, async () => {
-      const upstream = await fetch('https://contract.mexc.com/api/v1/contract/ticker')
-      if (!upstream.ok) {
-        const text = await upstream.text().catch(() => '')
-        throw new Error(JSON.stringify({ status: upstream.status, body: text }))
-      }
-      return upstream.json()
-    })
-    return res.json(data)
-  } catch (e: any) {
-    return res.status(502).json({ error: 'Upstream error', detail: e?.message ?? null })
-  }
-})
+
 
 // Futures: klines
 router.get('/futures/klines', async (req: Request, res: Response) => {
@@ -225,26 +217,46 @@ router.get('/futures/intervals', async (req: Request, res: Response) => {
   }
 })
 
-// Futures: 24h ticker stats for a symbol
+// Futures: 24h stats for symbol(s)
 router.get('/futures/24h', async (req: Request, res: Response) => {
   try {
-    let symbol = String(req.query.symbol || '')
-    if (!symbol) return res.status(400).json({ error: 'symbol is required' })
-    const sym = symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1')
-    const key = `futures:24h:${sym}`
+    const symbol = String(req.query.symbol || '')
+    const sym = symbol ? (symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1')) : null
+    const key = sym ? `futures:24h:${sym}` : 'futures:24h:all'
     const data = await fromCache(key, 2000, async () => {
-      // contract ticker list returns 24h fields per symbol; fetch all and pick one (MEXC lacks single-symbol 24h endpoint for futures)
       const upstream = await fetch('https://contract.mexc.com/api/v1/contract/ticker')
       if (!upstream.ok) {
         const text = await upstream.text().catch(() => '')
         throw new Error(JSON.stringify({ status: upstream.status, body: text }))
       }
       const j = await upstream.json()
-      const arr = Array.isArray(j?.data) ? j.data : []
-      const row = arr.find((r: any) => r?.symbol === sym) || null
-      return row || {}
+      if (sym) {
+        const arr = Array.isArray(j?.data) ? j.data : []
+        return arr.find((r: any) => r?.symbol === sym) || {}
+      }
+      return j
     })
-    return res.json(data)
+    const arr = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
+    const normalized = arr.map((row: any) => {
+      const rawRise = row?.riseFallRate
+      const riseFallRate = typeof rawRise === 'number'
+        ? (Math.abs(rawRise) <= 1 ? rawRise * 100 : rawRise)
+        : (typeof rawRise === 'string' ? (Math.abs(parseFloat(rawRise)) <= 1 ? parseFloat(rawRise) * 100 : parseFloat(rawRise)) : null)
+
+      return {
+        symbol: row.symbol,
+        lastPrice: row?.lastPrice ?? row?.last ?? null,
+        change24h: riseFallRate,
+        high24h: row?.highPrice ?? row?.highestPrice ?? row?.high24Price ?? row?.high24h ?? row?.maxPrice ?? row?.max24h ?? row?.priceHigh ?? null,
+        low24h: row?.lowPrice ?? row?.lowestPrice ?? row?.lower24Price ?? row?.low24h ?? row?.minPrice ?? row?.min24h ?? row?.priceLow ?? null,
+        volume24h: row?.volume ?? row?.volume24 ?? row?.vol24 ?? row?.vol ?? row?.baseVolume ?? null,
+      }
+    })
+
+    if (symbol && !Array.isArray(data)) {
+      return res.json(normalized[0] || {})
+    }
+    return res.json(normalized)
   } catch (e: any) {
     return res.status(502).json({ error: 'Upstream error', detail: e?.message ?? null })
   }

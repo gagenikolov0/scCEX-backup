@@ -1,131 +1,153 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { API_BASE } from '../config/api'
 
-type SpotTicker = { symbol: string; price: string }
-type FuturesTicker = { symbol: string; lastPrice?: string; [k: string]: any }
+type SpotStats = {
+  symbol: string;
+  lastPrice: string;
+  change24h?: string;
+  high24h?: string;
+  low24h?: string;
+  volume24h?: string
+}
+
+type FuturesStats = {
+  symbol: string;
+  lastPrice?: string;
+  change24h?: number | string;
+  high24h?: string;
+  low24h?: string;
+  volume24h?: string;
+  [k: string]: any
+}
 
 type MarketContextValue = {
-  spotTickers: SpotTicker[]
-  futuresTickers: FuturesTicker[]
+  spotStats: SpotStats[]
+  futuresStats: FuturesStats[]
+  listen: () => void
+  unlisten: () => void
 }
 
 const MarketContext = createContext<MarketContextValue | undefined>(undefined)
 
 export function MarketProvider({ children }: { children: React.ReactNode }) {
-  const [spotTickers, setSpotTickers] = useState<SpotTicker[]>([])
-  const [futuresTickers, setFuturesTickers] = useState<FuturesTicker[]>([])
+  const [spotStats, setSpotStats] = useState<SpotStats[]>([])
+  const [futuresStats, setFuturesStats] = useState<FuturesStats[]>([])
+  const [listenerCount, setListenerCount] = useState(0)
 
-  // initial load (REST) then WS takeover
+  const listen = () => setListenerCount(c => c + 1)
+  const unlisten = () => setListenerCount(c => Math.max(0, c - 1))
+
+  // initial load (REST) - The Snapshot for the list in asset selector
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/markets/spot/tickers`)
-        const data = await res.json().catch(() => [])
-        if (!cancelled && Array.isArray(data)) setSpotTickers(data)
-      } catch {}
-    })()
-    ;(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/markets/futures/tickers`)
-        const j = await res.json().catch(() => ({}))
-        const arr = Array.isArray(j?.data) ? j.data : []
-        if (!cancelled) setFuturesTickers(arr)
-      } catch {}
-    })()
+      ; (async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/markets/spot/24h`)
+          const data = await res.json().catch(() => [])
+          if (!cancelled && Array.isArray(data)) setSpotStats(data)
+        } catch { }
+      })()
+      ; (async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/markets/futures/24h`)
+          const j = await res.json().catch(() => ({}))
+          const arr = Array.isArray(j?.data) ? j.data : []
+          if (!cancelled) setFuturesStats(arr)
+        } catch { }
+      })()
     return () => { cancelled = true }
   }, [])
 
-  // Connect to spot tickers WebSocket
+  // Connect to spot stats WebSocket (bulk)
   useEffect(() => {
+    if (listenerCount === 0) return
+
     const wsBase = API_BASE.replace(/^http/, 'ws')
     let ws: WebSocket | null = null
     let stopped = false
     let connected = false
-    
+
     const connect = () => {
       if (stopped || connected) return
-      
+
       try {
-        ws = new WebSocket(`${wsBase}/ws/spot-tickers`)
-        ws.onopen = () => { 
+        ws = new WebSocket(`${wsBase}/ws/spot-24h`)
+        ws.onopen = () => {
           connected = true
+          ws?.send(JSON.stringify({ type: 'sub_all' }))
         }
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(String(ev.data))
-            if (msg?.type === 'tickers' && Array.isArray(msg?.data)) {
-              setSpotTickers(msg.data)
+            if (msg?.type === 'stats_all' && Array.isArray(msg?.data)) {
+              setSpotStats(msg.data)
             }
-          } catch {}
+          } catch { }
         }
-        ws.onclose = () => { 
+        ws.onclose = () => {
           connected = false
           if (!stopped) {
-            // Reconnect after a delay if not stopped
             setTimeout(connect, 2000)
           }
         }
         ws.onerror = () => { /* no-op */ }
-      } catch {}
+      } catch { }
     }
-    
-    // Delay connection to avoid React dev mode double-rendering
-    const timeoutId = setTimeout(connect, 100)
-    
-    return () => { 
-      stopped = true
-      clearTimeout(timeoutId)
-      try { ws?.close() } catch {} 
-    }
-  }, [])
 
-  // Connect to futures tickers WebSocket
+    connect()
+
+    return () => {
+      stopped = true
+      try { ws?.close() } catch { }
+    }
+  }, [listenerCount])
+
+  // Connect to futures stats WebSocket (bulk)
   useEffect(() => {
+    if (listenerCount === 0) return
+
     const wsBase = API_BASE.replace(/^http/, 'ws')
     let ws: WebSocket | null = null
     let stopped = false
     let connected = false
-    
+
     const connect = () => {
       if (stopped || connected) return
-      
+
       try {
-        ws = new WebSocket(`${wsBase}/ws/futures-tickers`)
-        ws.onopen = () => { 
+        ws = new WebSocket(`${wsBase}/ws/futures-24h`)
+        ws.onopen = () => {
           connected = true
+          ws?.send(JSON.stringify({ type: 'sub_all' }))
         }
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(String(ev.data))
-            if (msg?.type === 'tickers' && Array.isArray(msg?.data)) {
-              setFuturesTickers(msg.data)
+            if (msg?.type === 'stats_all' && Array.isArray(msg?.data)) {
+              setFuturesStats(msg.data)
             }
-          } catch {}
+          } catch { }
         }
-        ws.onclose = () => { 
+        ws.onclose = () => {
           connected = false
           if (!stopped) {
-            // Reconnect after a delay if not stopped
             setTimeout(connect, 2000)
           }
         }
         ws.onerror = () => { /* no-op */ }
-      } catch {}
+      } catch { }
     }
-    
-    // Delay connection to avoid React dev mode double-rendering
-    const timeoutId = setTimeout(connect, 100)
-    
-    return () => { 
-      stopped = true
-      clearTimeout(timeoutId)
-      try { ws?.close() } catch {} 
-    }
-  }, [])
 
-  const value = useMemo(() => ({ spotTickers, futuresTickers }), [spotTickers, futuresTickers])
-  
+    connect()
+
+    return () => {
+      stopped = true
+      try { ws?.close() } catch { }
+    }
+  }, [listenerCount])
+
+  const value = useMemo(() => ({ spotStats, futuresStats, listen, unlisten }), [spotStats, futuresStats])
+
   return <MarketContext.Provider value={value}>{children}</MarketContext.Provider>
 }
 

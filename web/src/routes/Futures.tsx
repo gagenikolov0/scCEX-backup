@@ -20,7 +20,7 @@ export default function Futures() {
   const [stats, setStats] = useState<any | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
 
-  const { futuresTickers: futuresRows } = useMarket()
+  const { futuresStats } = useMarket()
   const { isAuthed } = useAuth()
   const { futuresAvailable, refreshBalances, futuresPositions, orders: recentOrders } = useAccount()
   const [qty, setQty] = useState('')
@@ -33,11 +33,11 @@ export default function Futures() {
   useEffect(() => setToken(initialBase), [initialBase])
 
   const tokenOptions = useMemo(() => {
-    const list = futuresRows
+    const list = futuresStats
       .filter(r => typeof r.symbol === 'string' && r.symbol.endsWith(quote))
       .map(r => r.symbol.replace(`_${quote}`, ''))
     return Array.from(new Set(list))
-  }, [futuresRows, quote])
+  }, [futuresStats, quote])
 
   const filteredOptions = useMemo(() => {
     const q = pairQuery.trim().toLowerCase()
@@ -49,6 +49,7 @@ export default function Futures() {
     market: 'futures'
   })
 
+  // WebSocket for Stats in Header (selected pair)
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
@@ -277,10 +278,10 @@ export default function Futures() {
           {loadingStats ? <Loader size="xs" /> : (
             <>
               <Text size="sm">Price: <PriceDisplay price={stats?.lastPrice} /></Text>
-              <Text size="sm" c={(Number(stats?.riseFallRate) || 0) >= 0 ? 'teal' : 'red'}>
-                24h: {stats?.riseFallRate != null ? `${Number(stats.riseFallRate).toFixed(2)}%` : '-'}
+              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : 'red'}>
+                24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}%` : '-'}
               </Text>
-              <Text size="sm">H: {stats?.highPrice ?? '-'} L: {stats?.lowPrice ?? '-'} V: {stats?.volume ?? '-'}</Text>
+              <Text size="sm">H: {stats?.high24h ?? '-'} L: {stats?.low24h ?? '-'} V: {stats?.volume24h ?? '-'}</Text>
             </>
           )}
         </Group>

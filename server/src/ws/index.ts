@@ -5,8 +5,6 @@ type Stream = { paths: string[]; wss: WebSocketServer }
 
 // Streams
 import { stream as spotTicks } from './streams/spotTicks'
-import { stream as spotTickers } from './streams/spotTickers'
-import { stream as futuresTickers } from './streams/futuresTickers'
 import { stream as futuresTicks } from './streams/futuresTicks'
 import { stream as spotStats } from './streams/spotStats'
 import { stream as futuresStats } from './streams/futuresStats'
@@ -15,7 +13,7 @@ import { stream as futuresDepth } from './streams/futuresDepth'
 import { stream as account } from './streams/account'
 
 const streams: Stream[] = [
-  spotTicks, spotTickers, futuresTickers, futuresTicks,
+  spotTicks, futuresTicks,
   spotStats, futuresStats, spotDepth, futuresDepth, account,
 ]
 

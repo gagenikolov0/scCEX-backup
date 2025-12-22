@@ -3,7 +3,7 @@
 import { WebSocketServer } from 'ws'
 import { priceService } from '../../utils/priceService'
 
-type ClientMsg = { type: 'sub'; symbol: string } | { type: 'unsub' }
+type ClientMsg = { type: 'sub'; symbol: string } | { type: 'sub_all' } | { type: 'unsub' }
 
 export const stream = {
 	paths: ['/ws/spot-24h'],
@@ -11,66 +11,82 @@ export const stream = {
 }
 
 const subs = new Map<string, Set<WebSocket>>()
-const timers = new Map<string, NodeJS.Timeout>()
+const allStatsSubs = new Set<WebSocket>()
+let timer: NodeJS.Timeout | null = null
 
-async function send(symbol: string) {
+async function send() {
 	try {
-		const url = `https://api.mexc.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`
-		const r = await fetch(url)
+		const r = await fetch('https://api.mexc.com/api/v3/ticker/24hr')
 		if (!r.ok) return
-		const raw = await r.json()
-		const data = {
-			lastPrice: raw?.lastPrice ?? raw?.last ?? raw?.price ?? null,
-			priceChangePercent: raw?.priceChangePercent ?? raw?.changeRate ?? null,
-			highPrice: raw?.highPrice ?? raw?.high ?? null,
-			lowPrice: raw?.lowPrice ?? raw?.low ?? null,
-			volume: raw?.volume ?? raw?.vol ?? null,
-			quoteVolume: raw?.quoteVolume ?? raw?.quoteVol ?? null,
-		}
-		const payload = JSON.stringify({ type: 'stats', symbol, data, t: Date.now() })
+		const rawArr = await r.json()
+		if (!Array.isArray(rawArr)) return
+
+		const data = rawArr.map((raw: any) => ({
+			symbol: raw.symbol,
+			lastPrice: raw.lastPrice ?? raw.last ?? raw.price ?? null,
+			change24h: raw.priceChangePercent ?? null,
+			high24h: raw.highPrice ?? null,
+			low24h: raw.lowPrice ?? null,
+			volume24h: raw.volume ?? null,
+		}))
 
 		// Update central price service
-		const price = parseFloat(data.lastPrice);
-		if (Number.isFinite(price)) {
-			priceService.updatePrice(symbol, price);
+		for (const d of data) {
+			const price = parseFloat(d.lastPrice);
+			if (Number.isFinite(price)) priceService.updatePrice(d.symbol, price);
 		}
 
-		const set = subs.get(symbol)
-		if (!set || set.size === 0) return
-		for (const c of set) { try { (c as any).send(payload) } catch { } }
+		// Broadcast all to 'sub_all' clients
+		if (allStatsSubs.size > 0) {
+			const payload = JSON.stringify({ type: 'stats_all', data, t: Date.now() })
+			for (const c of allStatsSubs) { try { (c as any).send(payload) } catch { } }
+		}
+
+		// Broadcast individual stats to specific symbol subscribers
+		for (const [symbol, set] of subs) {
+			if (set.size === 0) continue
+			const row = data.find(d => d.symbol === symbol)
+			if (!row) continue
+			const payload = JSON.stringify({ type: 'stats', symbol, data: row, t: Date.now() })
+			for (const c of set) { try { (c as any).send(payload) } catch { } }
+		}
 	} catch { }
 }
 
-function start(symbol: string) {
-	if (timers.has(symbol)) return
-	timers.set(symbol, setInterval(() => { void send(symbol) }, 5000))
-	void send(symbol)
+function start() {
+	if (timer) return
+	timer = setInterval(send, 5000)
+	void send()
 }
-function stop(symbol: string) {
-	const t = timers.get(symbol)
-	if (t) clearInterval(t)
-	timers.delete(symbol)
+function stop() {
+	if (allStatsSubs.size === 0 && Array.from(subs.values()).every(s => s.size === 0)) {
+		if (timer) clearInterval(timer)
+		timer = null
+	}
 }
 
 stream.wss.on('connection', (ws: any) => {
 	ws.on('message', (raw: Buffer) => {
 		try {
 			const msg = JSON.parse(String(raw)) as ClientMsg
-			if (msg.type === 'sub' && msg.symbol) {
+			if (msg.type === 'sub_all') {
+				allStatsSubs.add(ws)
+				start()
+			} else if (msg.type === 'sub' && msg.symbol) {
 				const sym = msg.symbol.toUpperCase()
 				let set = subs.get(sym); if (!set) { set = new Set(); subs.set(sym, set) }
-				set.add(ws as any)
-				start(sym)
+				set.add(ws)
+				start()
 			} else if (msg.type === 'unsub') {
-				for (const [sym, set] of subs) {
-					if (set.delete(ws as any) && set.size === 0) { subs.delete(sym); stop(sym) }
-				}
+				allStatsSubs.delete(ws)
+				for (const [sym, set] of subs) { set.delete(ws) }
+				stop()
 			}
 		} catch { }
 	})
 	ws.on('close', () => {
-		for (const [sym, set] of subs) {
-			if (set.delete(ws as any) && set.size === 0) { subs.delete(sym); stop(sym) }
-		}
+		allStatsSubs.delete(ws)
+		for (const [sym, set] of subs) { set.delete(ws) }
+		stop()
 	})
 })

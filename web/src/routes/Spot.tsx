@@ -28,15 +28,15 @@ export default function Spot() {
   const [tradeSide, setTradeSide] = useState<'buy' | 'sell'>('buy')
   const [history, setHistory] = useState<any[]>([])
 
-  const { spotTickers: tickers } = useMarket()
+  const { spotStats } = useMarket()
   const { positions, orders, spotAvailable, refreshOrders, refreshBalances } = useAccount()
 
   useEffect(() => setToken(initialBase), [initialBase])
 
   const tokenOptions = useMemo(() => {
-    const list = tickers.filter(t => t.symbol.endsWith(quote)).map(t => t.symbol.replace(quote, ''))
+    const list = spotStats.filter(t => t.symbol.endsWith(quote)).map(t => t.symbol.replace(quote, ''))
     return Array.from(new Set(list))
-  }, [tickers, quote])
+  }, [spotStats, quote])
 
   const filteredOptions = useMemo(() => {
     const q = pairQuery.trim().toLowerCase()
@@ -51,6 +51,7 @@ export default function Spot() {
   const available = (spotAvailable as any)?.[quote] ?? '0'
   const baseAvail = positions.find((r: any) => (r?.asset || '').toUpperCase() === token.toUpperCase())?.available ?? '0'
 
+  // WebSocket for Stats in Header (selected pair)
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
@@ -231,10 +232,10 @@ export default function Spot() {
           {loadingStats ? <Loader size="xs" /> : (
             <>
               <Text size="sm">Price: <PriceDisplay price={stats?.lastPrice} /></Text>
-              <Text size="sm" c={(Number(stats?.priceChangePercent) || 0) >= 0 ? 'teal' : 'red'}>
-                24h: {stats?.priceChangePercent != null ? `${Number(stats.priceChangePercent).toFixed(2)}%` : '-'}
+              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : 'red'}>
+                24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}%` : '-'}
               </Text>
-              <Text size="sm">High: {stats?.highPrice ?? '-'} Low: {stats?.lowPrice ?? '-'} Volume: {stats?.volume ?? '-'}
+              <Text size="sm">High: {stats?.high24h ?? '-'} Low: {stats?.low24h ?? '-'} Volume: {stats?.volume24h ?? '-'}
               </Text>
             </>
           )}
