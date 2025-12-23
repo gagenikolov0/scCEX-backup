@@ -14,18 +14,27 @@ Spot: Currently only shows Orders (dotted lines)
 Also in spot right next to the amount of asset we have - the calculated real time USDT/USDC value
 
 
+❓So now that we implemented the Price Context how does PriceService take prices and cash them?
+
+
+
+❓How does liquidation engine work?
+
+
+❓Why does spot limit orders overlay on chart say undefined?
+
+
 
 🟡 Share PNL bro
 
-
-
 🟡Slider for available amount in futures and spot right below input
 
-
-
-🟡 Cant see full chart, all candles because history is limited to 200 candles....
-🟡 Which css file is for wallet.tsx?
 🟡 Icons for assets bro
+
+🟡❓ Cant see full chart history, history limited to 200 candles
+
+🟡❓ Which css file is for wallet.tsx?
+
 
 
 
@@ -60,10 +69,55 @@ scrollbars appear
 
 
 
-Centralizing WebSocket Handling
-I am centralizing the WebSocket connections for the application. Currently, 
-BigPrice and PriceChart
-open redundant connections to the same tick streams. I will create a PriceContext that manages 
-a single connection per market (Spot/Futures), handles multiple symbol subscriptions via fan-out,
-and ensures every component receives the exact same data at the same time. 
-This will improve performance and eliminate minor timing discrepancies between UI elements.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. The "Zombie" Reserved Balance (Futures)
+In your FuturesEngine (the "Pro Engine"), when a limit order is filled:
+
+It creates the position and calculates the margin correctly.
+The Issue: It never goes back to the FuturesAccount to clear the reserved margin.
+Result: As a user trades, their "Reserved" balance will keep growing indefinitely in the database, even 
+though the order is no longer pending. Eventually, their wallet will show they have millions "reserved" 
+that dont exist.
+
+
+
+2. The MEXC Underscore Bug (Dead Engines)
+Your UI and Futures orders use symbols like BTC_USDT.
+
+The Issue: When the FuturesEngine asks for a price, it calls priceService.getPrice("BTC_USDT")
+This hits the MEXC Spot API, which does not recognize underscores. It expects BTCUSDT.
+Result: The Price Service will always return an error for any symbol with an underscore. 
+This means your limit orders will never fill and no one will ever be liquidated, even if the 
+price crashes to zero.
+
+
+
+3. The "Last One Wins" Balance Bug
+In moveMoney.ts, the code reads the balance, calculates the new value in Javascript, and uses $set to 
+update MongoDB.
+
+The Issue: This is classic "Race Condition" territory. If two orders are placed at the same microsecond:
+Order A reads balance: 100
+Order B reads balance: 100
+Order A subtracts 10, sets balance to 90
+Order B subtracts 20, sets balance to 80 (overwriting the 90!)
+Result: The user just got a $10 discount because the updates werent atomic. You should be using $inc 
+directly in the MongoDB query.

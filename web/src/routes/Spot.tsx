@@ -76,8 +76,8 @@ export default function Spot() {
   const fetchHistory = async () => {
     if (!isAuthed) return
     try {
-      const res = await fetch(`${API_BASE} /api/spot / history`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')} ` }
+      const res = await fetch(`${API_BASE}/api/spot/history`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
       })
       if (res.ok) setHistory(await res.json())
     } catch { }
@@ -92,9 +92,9 @@ export default function Spot() {
     if (orderType === 'limit' && (!price || Number(price) <= 0)) return
     setPlacing(side)
     try {
-      const res = await fetch(`${API_BASE} /api/spot / orders`, {
+      const res = await fetch(`${API_BASE}/api/spot/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')} ` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
         credentials: 'include',
         body: JSON.stringify({
           symbol: `${token}${quote}`,
@@ -119,9 +119,9 @@ export default function Spot() {
 
   const cancelOrder = async (orderId: string) => {
     try {
-      const res = await fetch(`${API_BASE} /api/spot / orders / ${orderId} `, {
+      const res = await fetch(`${API_BASE}/api/spot/orders/${orderId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')} ` },
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
         credentials: 'include',
       })
       if (res.ok) {
