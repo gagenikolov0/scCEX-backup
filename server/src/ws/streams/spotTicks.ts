@@ -13,6 +13,7 @@ export const stream = {
 
 const subs = new Map<string, Set<WebSocket>>()
 const timers = new Map<string, NodeJS.Timeout>()
+const minuteOpens = new Map<string, { minute: number; price: number }>()
 
 async function tick(symbol: string) {
 	try {
@@ -21,6 +22,15 @@ async function tick(symbol: string) {
 		const j = await resp.json() as any
 		const price = parseFloat(j?.price)
 		if (!Number.isFinite(price)) return
+
+		// Update minute open tracking
+		const now = Date.now()
+		const currentMin = Math.floor(now / 60000)
+		let open = minuteOpens.get(symbol)
+		if (!open || open.minute < currentMin) {
+			open = { minute: currentMin, price }
+			minuteOpens.set(symbol, open)
+		}
 
 		// Update shared price service
 		const lastPrice = priceService.getAllPrices().get(symbol)
@@ -31,11 +41,11 @@ async function tick(symbol: string) {
 			void matchLimitOrders(symbol, price)
 		}
 
-		const payload = JSON.stringify({ type: 'tick', symbol, price, t: Date.now() })
+		const payload = JSON.stringify({ type: 'tick', symbol, price, open: open.price, t: now })
 		const set = subs.get(symbol)
 		if (!set || set.size === 0) return
-		for (const c of set) { try { (c as any).send(payload) } catch {} }
-	} catch {}
+		for (const c of set) { try { (c as any).send(payload) } catch { } }
+	} catch { }
 }
 
 function start(symbol: string) {
@@ -63,7 +73,7 @@ stream.wss.on('connection', (ws: any) => {
 					if (set.delete(ws as any) && set.size === 0) { subs.delete(sym); stop(sym) }
 				}
 			}
-		} catch {}
+		} catch { }
 	})
 	ws.on('close', () => {
 		for (const [sym, set] of subs) {

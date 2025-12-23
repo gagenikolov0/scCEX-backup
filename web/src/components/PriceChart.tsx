@@ -8,9 +8,11 @@ type Props = {
   height?: number
   interval?: string // e.g. '1m','5m','1h','1d'
   market?: 'spot' | 'futures'
+  orders?: any[]
+  positions?: any[]
 }
 
-export default function PriceChart({ symbol, height = 420, interval = '1m', market = 'spot' }: Props) {
+export default function PriceChart({ symbol, height = 420, interval = '1m', market = 'spot', orders = [], positions = [] }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<any>(null)
@@ -47,7 +49,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
   useEffect(() => {
     if (!containerRef.current) return
     if (chartRef.current) {
-      try { chartRef.current.remove() } catch {}
+      try { chartRef.current.remove() } catch { }
     }
     let disposed = false
     const chart = createChart(containerRef.current, {
@@ -73,7 +75,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
       if (disposed) return
       try {
         chart.applyOptions({ width: containerRef.current?.clientWidth ?? 600 })
-      } catch {}
+      } catch { }
     }
     onResize()
     const ro = new ResizeObserver(onResize)
@@ -104,7 +106,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
             { time: tSec, value: price },
           ])
           lineSeriesRef.current.push(ls)
-        } catch {}
+        } catch { }
         drawStartRef.current = null
         setDrawMode(false)
       }
@@ -114,7 +116,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
     return () => {
       ro.disconnect()
       disposed = true
-      try { chart.remove() } catch {}
+      try { chart.remove() } catch { }
       chartRef.current = null
       seriesRef.current = null
       lastBarRef.current = null
@@ -129,8 +131,8 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
     try {
       if (seriesRef.current) seriesRef.current.setData([])
       lastBarRef.current = null
-    } catch {}
-    ;(async () => {
+    } catch { }
+    ; (async () => {
       try {
         // Temporarily use spot klines for futures to avoid upstream 502; WS still uses futures ticks
         const path = 'spot/klines'
@@ -146,7 +148,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
           seriesRef.current.setData(candles)
           lastBarRef.current = candles[candles.length - 1] ?? null
         }
-      } catch {}
+      } catch { }
     })()
     return () => { cancelled = true }
   }, [symbol, interval, market])
@@ -166,9 +168,9 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
         ws = new WebSocket(`${wsBase}${path}`)
         let opened = false
         ws.onopen = () => {
-          if (stopped) { try { ws?.close() } catch {} ; return }
+          if (stopped) { try { ws?.close() } catch { }; return }
           opened = true
-          try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym })) } catch {}
+          try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym })) } catch { }
         }
         ws.onmessage = (ev) => {
           try {
@@ -183,7 +185,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
               if (!prev || prev.time < candleTime) {
                 const open = prev?.close ?? price
                 const newBar = { time: candleTime, open, high: price, low: price, close: price }
-                try { seriesRef.current.update(newBar) } catch {}
+                try { seriesRef.current.update(newBar) } catch { }
                 lastBarRef.current = newBar
               } else if (prev.time === candleTime) {
                 const updated = {
@@ -193,11 +195,11 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
                   low: Math.min(prev.low, price),
                   close: price,
                 }
-                try { seriesRef.current.update(updated) } catch {}
+                try { seriesRef.current.update(updated) } catch { }
                 lastBarRef.current = updated
               }
             }
-          } catch {}
+          } catch { }
         }
         ws.onclose = () => {
           if (!stopped && !opened) {
@@ -219,11 +221,56 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
     return () => {
       stopped = true
       if (ws && ws.readyState === WebSocket.OPEN) {
-        try { ws.send(JSON.stringify({ type: 'unsub', symbol: sym })) } catch {}
-        try { ws.close() } catch {}
+        try { ws.send(JSON.stringify({ type: 'unsub', symbol: sym })) } catch { }
+        try { ws.close() } catch { }
       }
     }
   }, [symbol, interval, market])
+
+  // Overlay: Orders & Positions
+  const orderLinesRef = useRef<any[]>([])
+  const positionLinesRef = useRef<any[]>([])
+
+  useEffect(() => {
+    if (!seriesRef.current) return
+
+    // Clean up old lines
+    orderLinesRef.current.forEach(l => { try { seriesRef.current.removePriceLine(l) } catch { } })
+    positionLinesRef.current.forEach(l => { try { seriesRef.current.removePriceLine(l) } catch { } })
+    orderLinesRef.current = []
+    positionLinesRef.current = []
+
+    // Draw Orders
+    orders.forEach(o => {
+      const price = parseFloat(o.price)
+      if (isNaN(price)) return
+      const line = seriesRef.current.createPriceLine({
+        price,
+        color: o.side === 'buy' ? '#16a34a' : '#ef4444',
+        lineWidth: 1,
+        lineStyle: 2, // Dotted
+        axisLabelVisible: true,
+        title: `${o.side.toUpperCase()} ${o.amount}`,
+      })
+      orderLinesRef.current.push(line)
+    })
+
+    // Draw Positions
+    positions.forEach(p => {
+      const price = parseFloat(p.entryPrice)
+      if (isNaN(price)) return
+      const line = seriesRef.current.createPriceLine({
+        price,
+        color: p.side === 'long' ? '#3b82f6' : '#a855f7',
+        lineWidth: 2,
+        lineStyle: 0, // Solid
+        axisLabelVisible: true,
+        title: `${p.side.toUpperCase()} POS`,
+      })
+      positionLinesRef.current.push(line)
+    })
+
+  }, [orders, positions, symbol, market])
 
   return (
     <div className="relative">

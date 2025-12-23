@@ -12,6 +12,7 @@ export const stream = {
 
 const subs = new Map<string, Set<WebSocket>>()
 const timers = new Map<string, NodeJS.Timeout>()
+const minuteOpens = new Map<string, { minute: number; price: number }>()
 
 async function tick(symbol: string) {
 	try {
@@ -23,12 +24,19 @@ async function tick(symbol: string) {
 		const price = row ? Number(row.lastPrice) : NaN
 		if (!Number.isFinite(price)) return
 
+		// Update minute open tracking
+		const now = Date.now()
+		const currentMin = Math.floor(now / 60000)
+		let open = minuteOpens.get(symbol)
+		if (!open || open.minute < currentMin) {
+			open = { minute: currentMin, price }
+			minuteOpens.set(symbol, open)
+		}
+
 		// Update central price service
-		// Normalize symbol for priceService (BTC_USDT -> BTCUSDT if needed, but we used the raw one in user.ts)
-		// Wait, user.ts used `${pos.asset}USDT`. For futures, let's just use the symbol as is.
 		priceService.updatePrice(symbol, price);
 
-		const payload = JSON.stringify({ type: 'tick', symbol, price, t: Date.now() })
+		const payload = JSON.stringify({ type: 'tick', symbol, price, open: open.price, t: now })
 		const set = subs.get(symbol)
 		if (!set || set.size === 0) return
 		for (const c of set) { try { (c as any).send(payload) } catch { } }

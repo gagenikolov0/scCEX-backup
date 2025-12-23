@@ -293,7 +293,14 @@ export default function Futures() {
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-2">
-              <PriceChart key={`${token}_${quote}-${interval}-futures`} symbol={`${token}_${quote}`} interval={interval} market="futures" />
+              <PriceChart
+                key={`${token}_${quote}-${interval}-futures`}
+                symbol={`${token}_${quote}`}
+                interval={interval}
+                market="futures"
+                orders={recentOrders.filter((o: any) => o.symbol === `${token}_${quote}` && o.status === 'pending')}
+                positions={futuresPositions.filter((p: any) => p.symbol === `${token}_${quote}`)}
+              />
             </div>
           </Card>
         </Grid.Col>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Text, useMantineColorScheme } from '@mantine/core'
 import { API_BASE } from '../config/api'
 
@@ -15,8 +15,7 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
     const [connectionStatus, setConnectionStatus] = useState('connecting')
     const { colorScheme } = useMantineColorScheme()
 
-    // To track the current minute bucket
-    const currentMinuteRef = useRef<number | null>(null)
+
 
     // Helper to normalize symbol for API calls
     const normalizeSymbol = (s: string) => {
@@ -24,8 +23,7 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
         return s.replace('_', '')
     }
 
-    // Convert interval "1m" to ms
-    const INTERVAL_MS = 60 * 1000
+
 
     useEffect(() => {
         let mounted = true
@@ -52,12 +50,11 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
                 if (Array.isArray(data) && data.length > 0) {
                     const latest = data[data.length - 1]
                     // [time, open, high, low, close, volume, ...]
-                    const t = latest[0]
                     const o = parseFloat(latest[1])
                     const c = parseFloat(latest[4])
 
                     if (mounted) {
-                        currentMinuteRef.current = Math.floor(t / INTERVAL_MS)
+
                         setOpenPrice(o)
                         setPrice(c)
                     }
@@ -110,19 +107,12 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
                     const msg = JSON.parse(ev.data)
                     if (msg.type === 'tick' && msg.symbol === apiSymbol) {
                         const p = parseFloat(msg.price)
-                        const t = msg.t // timestamp in ms
+                        const o = parseFloat(msg.open)
 
-                        if (!isNaN(p) && t) {
-                            const tickMinute = Math.floor(t / INTERVAL_MS)
-
-                            // If we moved to a new minute, re-fetch the official Open price
-                            if (currentMinuteRef.current === null || tickMinute > currentMinuteRef.current) {
-                                currentMinuteRef.current = tickMinute
-                                void fetchInitialOpen() // Ask the API for the real Open
-                            }
-
+                        if (!isNaN(p) && !isNaN(o)) {
                             if (mounted) {
                                 setPrice(p)
+                                setOpenPrice(o) // Official Open from Server
                             }
                         }
                     }

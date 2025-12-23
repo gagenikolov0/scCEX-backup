@@ -45,7 +45,7 @@ export default function Spot() {
   }, [tokenOptions, pairQuery])
 
   const { availableIntervals, interval, setInterval } = useIntervals({
-    symbol: `${token}${quote} `,
+    symbol: `${token}${quote}`,
     market: 'spot'
   })
 
@@ -249,7 +249,12 @@ export default function Spot() {
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <Card padding={0} radius="md" withBorder>
             <div className="p-2">
-              <PriceChart key={`${token}${quote}-${interval}-spot`} symbol={`${token}${quote}`} interval={interval} />
+              <PriceChart
+                key={`${token}${quote}-${interval}-spot`}
+                symbol={`${token}${quote}`}
+                interval={interval}
+                orders={orders.filter((o: any) => o.symbol === `${token}${quote}` && o.status === 'pending')}
+              />
             </div>
           </Card>
         </Grid.Col>
