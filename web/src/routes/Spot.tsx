@@ -1,3 +1,4 @@
+
 import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
@@ -44,7 +45,7 @@ export default function Spot() {
   }, [tokenOptions, pairQuery])
 
   const { availableIntervals, interval, setInterval } = useIntervals({
-    symbol: `${token}${quote}`,
+    symbol: `${token}${quote} `,
     market: 'spot'
   })
 
@@ -75,8 +76,8 @@ export default function Spot() {
   const fetchHistory = async () => {
     if (!isAuthed) return
     try {
-      const res = await fetch(`${API_BASE}/api/spot/history`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+      const res = await fetch(`${API_BASE} /api/spot / history`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')} ` }
       })
       if (res.ok) setHistory(await res.json())
     } catch { }
@@ -91,9 +92,9 @@ export default function Spot() {
     if (orderType === 'limit' && (!price || Number(price) <= 0)) return
     setPlacing(side)
     try {
-      const res = await fetch(`${API_BASE}/api/spot/orders`, {
+      const res = await fetch(`${API_BASE} /api/spot / orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')} ` },
         credentials: 'include',
         body: JSON.stringify({
           symbol: `${token}${quote}`,
@@ -118,9 +119,9 @@ export default function Spot() {
 
   const cancelOrder = async (orderId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/spot/orders/${orderId}`, {
+      const res = await fetch(`${API_BASE} /api/spot / orders / ${orderId} `, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')} ` },
         credentials: 'include',
       })
       if (res.ok) {
@@ -166,7 +167,7 @@ export default function Spot() {
                 else if (c === 'price') val = getVal(item.price || item.priceQuote)
                 else if (c === 'total' || c === 'quote amount') {
                   const t = getVal(item.total || item.quoteAmount)
-                  val = t ? `${Number(t).toFixed(2)} ${quote}` : '-'
+                  val = t ? `${Number(t).toFixed(2)} ${quote} ` : '-'
                 }
                 else if (c === 'status') val = item.status
                 else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
@@ -235,7 +236,7 @@ export default function Spot() {
                 Price: <BigPrice symbol={`${token}${quote}`} market="spot" />
               </Text>
               <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : 'red'}>
-                24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}%` : '-'}
+                24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}% ` : '-'}
               </Text>
               <Text size="sm">High: {stats?.high24h ?? '-'} Low: {stats?.low24h ?? '-'} Volume: {stats?.volume24h ?? '-'}
               </Text>
@@ -288,7 +289,7 @@ export default function Spot() {
               </div>
 
               <div className="text-xs text-neutral-500">
-                Available: {tradeSide === 'buy' ? `${available} ${quote}` : `${baseAvail} ${token}`}
+                Available: {tradeSide === 'buy' ? `${available} ${quote} ` : `${baseAvail} ${token} `}
               </div>
 
               <div className="flex gap-1 p-1 bg-neutral-100 rounded">
