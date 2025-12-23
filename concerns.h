@@ -1,7 +1,8 @@
 🟡 Isolated and Cross - Implementation ideas
+
 🟡 after i close position does the profit add to my available balance? and also the total balace of course
 same with the loss, does everything work perfect? you know when close we get deduction and all that ws messages
-🟡 Chart overlays, since we are not using TradingView Widgets but we are fully coding our own chart
+
 
 ❓Chart Overlays 
 Futures: Shows Orders (dotted lines) and Positions (solid lines at entry price)
@@ -50,13 +51,8 @@ should be 100% identical. Is it maybe because of 2 separate ws connections to sa
 
 
 
-
-
-
 ❓So we call user/account every 10 seconds and we call user/account on focus.
 If we are in home page or market page i dont think i should be calling user/account
-
-
 
 
 
@@ -65,3 +61,10 @@ If we are in home page or market page i dont think i should be calling user/acco
 🟡We need complete UI Refactor The mantine responsiveness is not bad but duplicate vertical
 scrollbars appear
 
+
+
+
+❓We have error in console:
+if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                    ws.close() //?????? wtff
+                }

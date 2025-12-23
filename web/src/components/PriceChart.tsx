@@ -183,8 +183,9 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
               const candleTime = Math.floor(nowSec / bucketSec) * bucketSec
               const prev = lastBarRef.current
               if (!prev || prev.time < candleTime) {
-                const open = prev?.close ?? price
-                const newBar = { time: candleTime, open, high: price, low: price, close: price }
+                // Use the official open from the server if it's a 1m chart to match BigPrice logic
+                const open = (interval === '1m' && msg.open) ? Number(msg.open) : (prev?.close ?? price)
+                const newBar = { time: candleTime, open, high: Math.max(open, price), low: Math.min(open, price), close: price }
                 try { seriesRef.current.update(newBar) } catch { }
                 lastBarRef.current = newBar
               } else if (prev.time === candleTime) {
