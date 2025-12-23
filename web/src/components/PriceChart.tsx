@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts'
 import { API_BASE } from '../config/api'
+import { usePrice } from '../contexts/PriceContext'
 import type { IChartApi, Time } from 'lightweight-charts'
 
 type Props = {
@@ -153,80 +154,36 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
     return () => { cancelled = true }
   }, [symbol, interval, market])
 
+  // Live updates via centralized PriceContext
+  const tick = usePrice(market, symbol)
+  const bucketSec = intervalToSeconds(interval)
+
   useEffect(() => {
-    // Live updates via WS proxy aggregated into current candle bucket
-    let stopped = false
-    let ws: WebSocket | null = null
-    const wsBase = API_BASE.replace(/^http/, 'ws')
-    const sym = market === 'futures' ? normalizeFuturesSymbol(symbol) : symbol
-    const bucket = () => intervalToSeconds(interval)
+    if (!tick || !seriesRef.current) return
 
-    const tryConnect = (paths: string[]) => {
-      if (stopped || paths.length === 0) return
-      const path = paths[0]
-      try {
-        ws = new WebSocket(`${wsBase}${path}`)
-        let opened = false
-        ws.onopen = () => {
-          if (stopped) { try { ws?.close() } catch { }; return }
-          opened = true
-          try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym })) } catch { }
-        }
-        ws.onmessage = (ev) => {
-          try {
-            const msg = JSON.parse(ev.data as string)
-            if (!stopped && msg?.type === 'tick' && msg?.symbol === sym && seriesRef.current) {
-              const price = Number(msg.price)
-              if (!Number.isFinite(price)) return
-              const nowSec = Math.floor((msg.t ?? Date.now()) / 1000)
-              const bucketSec = bucket()
-              const candleTime = Math.floor(nowSec / bucketSec) * bucketSec
-              const prev = lastBarRef.current
-              if (!prev || prev.time < candleTime) {
-                // Use the official open from the server if it's a 1m chart to match BigPrice logic
-                const open = (interval === '1m' && msg.open) ? Number(msg.open) : (prev?.close ?? price)
-                const newBar = { time: candleTime, open, high: Math.max(open, price), low: Math.min(open, price), close: price }
-                try { seriesRef.current.update(newBar) } catch { }
-                lastBarRef.current = newBar
-              } else if (prev.time === candleTime) {
-                const updated = {
-                  time: prev.time,
-                  open: prev.open,
-                  high: Math.max(prev.high, price),
-                  low: Math.min(prev.low, price),
-                  close: price,
-                }
-                try { seriesRef.current.update(updated) } catch { }
-                lastBarRef.current = updated
-              }
-            }
-          } catch { }
-        }
-        ws.onclose = () => {
-          if (!stopped && !opened) {
-            // fallback to next path if never opened
-            tryConnect(paths.slice(1))
-          } else if (!stopped) {
-            setTimeout(() => tryConnect([path]), 1500)
-          }
-        }
-        ws.onerror = () => { /* let onclose handle reconnect/fallback */ }
-      } catch {
-        if (!stopped) tryConnect(paths.slice(1))
+    const price = tick.price
+    const nowSec = Math.floor(tick.t / 1000)
+    const candleTime = Math.floor(nowSec / bucketSec) * bucketSec
+    const prev = lastBarRef.current
+
+    if (!prev || prev.time < candleTime) {
+      // Use the official open from the server if it's a 1m chart to match BigPrice logic
+      const open = (interval === '1m' && tick.open) ? tick.open : (prev?.close ?? price)
+      const newBar = { time: candleTime, open, high: Math.max(open, price), low: Math.min(open, price), close: price }
+      try { seriesRef.current.update(newBar) } catch { }
+      lastBarRef.current = newBar
+    } else if (prev.time === candleTime) {
+      const updated = {
+        time: prev.time,
+        open: prev.open,
+        high: Math.max(prev.high, price),
+        low: Math.min(prev.low, price),
+        close: price,
       }
+      try { seriesRef.current.update(updated) } catch { }
+      lastBarRef.current = updated
     }
-
-    const paths = market === 'futures' ? ['/ws/futures-ticks'] : ['/ws/spot-ticks']
-    tryConnect(paths)
-
-    return () => {
-      stopped = true
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        try { ws.send(JSON.stringify({ type: 'unsub', symbol: sym })) } catch { }
-        try { ws.close() } catch { }
-      }
-    }
-  }, [symbol, interval, market])
+  }, [tick, interval, bucketSec])
 
   // Overlay: Orders & Positions
   const orderLinesRef = useRef<any[]>([])

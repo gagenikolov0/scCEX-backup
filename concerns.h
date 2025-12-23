@@ -44,11 +44,6 @@ But what about 24% change, high, low, volume who also also receive subscribed up
 it uses the other stream Stats
 
 
-❓why we have price difference in BigPrice and chart price if they using the same stream they 
-should be 100% identical. Is it maybe because of 2 separate ws connections to same stream?
-
-
-
 
 
 ❓So we call user/account every 10 seconds and we call user/account on focus.
@@ -64,7 +59,11 @@ scrollbars appear
 
 
 
-❓We have error in console:
-if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-                    ws.close() //?????? wtff
-                }
+
+Centralizing WebSocket Handling
+I am centralizing the WebSocket connections for the application. Currently, 
+BigPrice and PriceChart
+open redundant connections to the same tick streams. I will create a PriceContext that manages 
+a single connection per market (Spot/Futures), handles multiple symbol subscriptions via fan-out,
+and ensures every component receives the exact same data at the same time. 
+This will improve performance and eliminate minor timing discrepancies between UI elements.
