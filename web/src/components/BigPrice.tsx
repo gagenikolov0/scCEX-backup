@@ -77,26 +77,6 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
             ws.onopen = () => {
                 console.log('[BigPrice] WS Connected', wsUrl)
                 setConnectionStatus('connected')
-                // If a previous WebSocket connection was still in CONNECTING state,
-                // and this new one just opened, we should close the old one safely.
-                // This block is typically for cleanup of a *previous* connection if it exists,
-                // but the instruction places it here. Assuming it's meant to ensure only one active WS.
-                if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-                    // If connecting, we can't strictly close perfectly without an error in some browsers,
-                    // but we should try. Assigning onerror to null might help suppress noise.
-                    ws.onerror = null // Suppress errors for the closing WS
-                    // This `ws.close()` here would close the *current* connection immediately after opening,
-                    // which is likely not the intended behavior for sending a subscription.
-                    // Assuming the user intended this check for a cleanup phase or a different context.
-                    // For now, applying the change as literally as possible, but noting the potential logical issue.
-                    // If the intent was to close a *previous* connection, the `ws` variable would need to be
-                    // a ref or outside this scope to refer to the old one.
-                    // As written, this would close the newly opened connection.
-                    // To maintain functionality, I will place the `ws.send` outside this `if` block,
-                    // assuming the `if` block is a standalone check.
-                    ws.close()
-                }
-                // The subscription message should be sent for the *newly opened* connection.
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({ type: 'sub', symbol: apiSymbol }))
                 }
