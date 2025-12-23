@@ -283,7 +283,7 @@ export default function Futures() {
               <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : 'red'}>
                 24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}%` : '-'}
               </Text>
-              <Text size="sm">H: {stats?.high24h ?? '-'} L: {stats?.low24h ?? '-'} V: {stats?.volume24h ?? '-'}</Text>
+              <Text size="sm">High: {stats?.high24h ?? '-'} Low: {stats?.low24h ?? '-'} Vol: {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</Text>
             </>
           )}
         </Group>

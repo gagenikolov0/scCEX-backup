@@ -24,10 +24,13 @@ async function send() {
 		const data = rawArr.map((raw: any) => ({
 			symbol: raw.symbol,
 			lastPrice: raw.lastPrice ?? raw.last ?? raw.price ?? null,
-			change24h: raw.priceChangePercent ?? null,
+
+			// Mexc V3 returns priceChangePercent as a decimal ratio (e.g. 0.02 for 2%), so * 100
+			change24h: raw.priceChangePercent ? parseFloat(raw.priceChangePercent) * 100 : null,
 			high24h: raw.highPrice ?? null,
 			low24h: raw.lowPrice ?? null,
-			volume24h: raw.volume ?? null,
+			volume24h: raw.quoteVolume ?? raw.volume ?? null, // Prefer quote volume (USDT) for better readability
+			baseVolume: raw.volume ?? null,
 		}))
 
 		// Update central price service

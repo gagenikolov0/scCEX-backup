@@ -1,29 +1,55 @@
-FUTURES TRADING RELATED
+FUTURES TRADING LOGIC RELATED
 🟡 Isolated and Cross - Implementation ideas
 🟡 after i close position does the profit add to my available balance? and also the total balace of course
 same with the loss, does everything work perfect? you know when close we get deduction and all that ws messages
-
-
-
-
-
-
-CHART RELATED
-🟡 I cant see full chart, all candles
 🟡 Chart overlays, since we are not using TradingView Widgets but we are fully coding our own chart
 
 
 
 
-
-WALLET PAGE AND ASSET SELECTOR RELATED
-🟡 Which css file is wallet.tsx using for its styles?
+UI RELATED
+🟡 I cant see full chart, all candles
+🟡 Which css file is for wallet.tsx?
 🟡 Icons for assets bro
-🟡 Favorites bro. Favorites assets in market page and asset selector as separate toggle
-Market page as well as the asset selector should have assets devideded in
-Futures and spot and then they into 2 MORE lists - USDT and USDC lists
-❓BUT if we make in USDT mode to only get info on assets that are in USDT mode 
-would that implementation save a lot of energy or just a little?
+
+
+
+
+PRICE, WALLET PAGE, ASSET SELECTOR, HEADER RELATED
+🟡 Favorites assets inside market page and asset selector as separate toggle
+Should have assets divided into Futures and then optionally into 2 MORE - USDT and USDC lists
+❓If we split spot and futures into USDT and USDC, would that save a lot of energy or just a bit?
+
+
+BIG PRICE
+❓ws connection from bigPrice component to ticks stream that sends only subscribed updates
+for selected asset opens in spot/futures page and closes when we leave spot/futures....
+But what about 24% change, high, low, volume who also also receive subscribed updates? I only know
+it uses the other stream Stats
+
+❓When I leave the app in the background e.g. I go to Spotify and I come back to browser I see 
+BigPrice not showing the color of the latest 1min candle, I literally see green last 1min candle 
+while the text of  BigPrice is red and when I refresh, BigPrice goes back to showing the correct 
+color like before leaving my app in the background
+
+
+❓why we have price difference in BigPrice and chart price if they using the same stream they 
+should be 100% identical
+
+
+
+
+✅ Market HTTP Route (/api/markets/...):
+Job: Fetching "History" and "Snapshots" 
+e.g., "Give me the last 200 candles so I can draw the chart" and 
+"What was the price when this minute started?"
+Used by:
+PriceChart.tsx: L138: To load the candles when you first open the page (you cant get 200 candles from a ws tick stream).
+BigPrice.tsx L36-L68: When it first "wakes up," it pings this route once to see what the Start Price of the current minute was.
+
+
+
+
 
 
 
