@@ -77,6 +77,13 @@ same with the loss, does everything work perfect? you know when close we get ded
 
 
 
+🟡 I can't see full chart, all candles
+
+
+
+❓what the fuck is PriceDisplay.tsx doing
+
+
 🟡 Favorites bro. Favorites assets in market page and asset selector as separate toggle
 Market page as well as the asset selector should have assets devideded in
 Futures and spot and then they into 2 MORE lists - USDT and USDC lists
@@ -139,3 +146,7 @@ MarketContext
 
 ❓So we call user/account every 10 seconds and we call user/account on focus.
 If we are in home page or market page i dont think i should be calling user/account
+
+
+
+

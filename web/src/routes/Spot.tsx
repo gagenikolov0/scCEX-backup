@@ -9,7 +9,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAccount } from '../contexts/AccountContext'
 import { useMarket } from '../contexts/MarketContext'
 import { useIntervals } from '../lib/useIntervals'
-import PriceDisplay from '../components/PriceDisplay'
+import BigPrice from '../components/BigPrice'
 
 export default function Spot() {
   const { isAuthed } = useAuth()
@@ -231,7 +231,9 @@ export default function Spot() {
         <Group gap="md" className="ml-1" wrap="wrap">
           {loadingStats ? <Loader size="xs" /> : (
             <>
-              <Text size="sm">Price: <PriceDisplay price={stats?.lastPrice} /></Text>
+              <Text size="sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Price: <BigPrice symbol={`${token}${quote}`} market="spot" />
+              </Text>
               <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : 'red'}>
                 24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}%` : '-'}
               </Text>
