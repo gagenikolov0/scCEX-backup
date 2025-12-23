@@ -28,8 +28,9 @@ class FuturesEngine {
 
     private async tick() {
         try {
-            await this.processMatching();
-            await this.processLiquidation();
+            //Executes both tasks in one go
+            await this.processMatching(); // Checks limit orders
+            await this.processLiquidation(); // Checks bankrupt positions
         } catch (e) {
             console.error('[Futures Engine] Tick error:', e);
         }
@@ -64,8 +65,23 @@ class FuturesEngine {
                 order.averagePrice = fillPrice;
                 await order.save({ session });
 
-                let position = await FuturesPosition.findOne({ userId: order.userId, symbol: order.symbol }).session(session);
+                /**
+                 * ISSUE 1 FIX: Clearing "Zombie" Reserved Balance.
+                 * TRIGGER: Executes the moment a Limit Order is successfully "Matched" and filled.
+                 * RATIONALE: When an order is "Pending", the money is locked in 'reserved'. 
+                 * Once it fills and becomes a Position, we MUST pull that money out of 'reserved'.
+                 * Otherwise, the user's wallet would stay "locked" forever.
+                 */
+                const quote = order.symbol.endsWith('USDT') ? 'USDT' : order.symbol.endsWith('USDC') ? 'USDC' : 'USDT';
                 const marginUsed = (order.quantity * (order.price || fillPrice)) / order.leverage;
+
+                await FuturesAccount.updateOne(
+                    { userId: order.userId, asset: quote },
+                    { $inc: { reserved: -marginUsed }, updatedAt: new Date() },
+                    { session }
+                );
+
+                let position = await FuturesPosition.findOne({ userId: order.userId, symbol: order.symbol }).session(session);
 
                 if (position) {
                     position.quantity += order.quantity;
@@ -107,10 +123,13 @@ class FuturesEngine {
         }
     }
 
+    // Runs every 2 seconds regardles of what happens, totally independent logic.
     private async processLiquidation() {
+        // 1. Scan EVERY position in the database
         const positions = await FuturesPosition.find({});
         for (const pos of positions) {
             try {
+                // 2. THE PULL: It "asks" for the price, doesn't wait for a stream
                 const currentPrice = await priceService.getPrice(pos.symbol);
                 const diff = pos.side === 'long'
                     ? (currentPrice - pos.entryPrice)
@@ -122,6 +141,7 @@ class FuturesEngine {
                 const marginRatio = equity / pos.margin;
 
                 if (marginRatio <= 0.1) { // 90% loss of margin = Liquidated
+                    // 4. If they are "Bankrupt", DELETE the position
                     await this.liquidatePosition(pos._id.toString(), currentPrice);
                 }
             } catch {

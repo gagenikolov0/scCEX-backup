@@ -1,7 +1,9 @@
+/**
+ * Handles 100% of the Limit Order matching logic for Spot
+ */
+
 import mongoose from "mongoose";
 import { SpotOrder } from "../models/SpotOrder";
-import SpotPosition from "../models/SpotPosition";
-import { emitAccountEvent } from "../ws/streams/account";
 import { moveMoney } from "./moneyMovement";
 import { syncStableBalances, syncPosition, syncOrder } from "./emitters";
 

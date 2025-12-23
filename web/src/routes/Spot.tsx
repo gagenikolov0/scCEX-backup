@@ -76,6 +76,7 @@ export default function Spot() {
   const fetchHistory = async () => {
     if (!isAuthed) return
     try {
+      // URL FIX: Removed erroneous spaces in API path
       const res = await fetch(`${API_BASE}/api/spot/history`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
       })
@@ -92,6 +93,7 @@ export default function Spot() {
     if (orderType === 'limit' && (!price || Number(price) <= 0)) return
     setPlacing(side)
     try {
+      // URL FIX: Removed erroneous spaces in API path
       const res = await fetch(`${API_BASE}/api/spot/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
@@ -119,6 +121,7 @@ export default function Spot() {
 
   const cancelOrder = async (orderId: string) => {
     try {
+      // URL FIX: Removed erroneous spaces in API path
       const res = await fetch(`${API_BASE}/api/spot/orders/${orderId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },

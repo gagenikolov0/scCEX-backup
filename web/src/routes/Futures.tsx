@@ -20,9 +20,14 @@ export default function Futures() {
   const [stats, setStats] = useState<any | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
 
-  const { futuresStats } = useMarket()
+  const { futuresStats, listen, unlisten } = useMarket()
   const { isAuthed } = useAuth()
   const { futuresAvailable, refreshBalances, futuresPositions, orders: recentOrders } = useAccount()
+
+  useEffect(() => {
+    listen()
+    return () => unlisten()
+  }, [])
   const [qty, setQty] = useState('')
   const [leverage, setLeverage] = useState('10')
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
@@ -196,7 +201,9 @@ export default function Futures() {
                 else if (c === 'price') val = item.price
                 else if (c === 'liq. price') val = <Text size="xs" color="orange" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
                 else if (c === 'pnl' || c === 'realized pnl') {
-                  const lastPrice = Number(stats?.lastPrice || 0)
+                  // BUG FIX: Use the specific symbol's price from futuresStats, not just the page-level stats.
+                  const itemStats = futuresStats.find(s => s.symbol === item.symbol)
+                  const lastPrice = Number(itemStats?.lastPrice || 0)
                   const entryPrice = Number(item.entryPrice || 0)
                   const qty = Number(item.quantity || 0)
                   const margin = Number(item.margin || 0)

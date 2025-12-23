@@ -46,10 +46,24 @@ class PriceService extends EventEmitter {
     }
   }
 
+  /**
+   * ISSUE 2 FIX: MEXC Symbol Normalization.
+   * TRIGGER: Happens right before any price check by the Engines or UI.
+   * RATIONALE: PriceService acts as a unified "Hot Cache" fed by WebSockets. 
+   * We strip underscores so it can look up the correct symbol in its memory 
+   * or fall back to HTTP if the WebSocket isn't yet active.
+   */
+
+  /**
+   * Why the api.mexc link exists (The "Safety Net")
+   * If the Liquidation Engine needs to check the price of ETH_USDT, but no user is currently watching the ETH chart, then 
+   * spotTicks.ts is asleep. It's not feeding the bucket.
+   */
   private async fetchSpotPrice(symbol: string): Promise<number> {
-    const url = `https://api.mexc.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`;
+    const normalized = symbol.replace('_', '').toUpperCase();
+    const url = `https://api.mexc.com/api/v3/ticker/price?symbol=${normalized}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error("Upstream price error");
+    if (!res.ok) throw new Error(`Upstream price error for ${symbol}`);
     const j = (await res.json()) as any;
     const p = parseFloat(j?.price ?? j?.data?.price ?? "NaN");
     if (!Number.isFinite(p) || p <= 0) throw new Error("Invalid price");
@@ -68,3 +82,13 @@ class PriceService extends EventEmitter {
 
 // Global instance
 export const priceService = new PriceService();
+
+
+
+
+
+
+
+
+
+// Who uses PriceService?? - Every other part of the server(the Engines, the API Routes, etc.) just asks this one service: "Hey, what's the price of BTC?"

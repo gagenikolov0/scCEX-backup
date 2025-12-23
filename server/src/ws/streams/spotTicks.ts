@@ -32,12 +32,24 @@ async function tick(symbol: string) {
 			minuteOpens.set(symbol, open)
 		}
 
-		// Update shared price service
+		// 1. Get the previous price from memory BEFORE we update it.
+		// We do this to see if the price has actually changed.
 		const lastPrice = priceService.getAllPrices().get(symbol)
+
+		/**
+		 * FEEDING THE BUCKET: This is where the PriceService gets its "Hot" prices.
+		 * Every time this loop ticks (normally 1s), we push the new price to the service.
+		 */
 		priceService.updatePrice(symbol, price)
 
-		// Check for limit order matches if price changed
+		/**
+		 * SPOT MATCHING ENGINE TRIGGER:
+		 * If the price moved (e.g. from $99 to $100), we immediately check the database
+		 * to see if any user's Limit Orders should now be filled ("Matched").
+		 * We skip this if the price hasn't moved to save CPU power.
+		 */
 		if (lastPrice !== undefined && lastPrice !== price) {
+			// TRIGGER: Only call the SPOT engine if the "sensor" sees movement
 			void matchLimitOrders(symbol, price)
 		}
 
@@ -50,6 +62,7 @@ async function tick(symbol: string) {
 
 function start(symbol: string) {
 	if (timers.has(symbol)) return
+	// THE CLOCK (1 second)... In Spot, the Stream is in control. It fetches the price every 1 second and "dings" the engine.
 	timers.set(symbol, setInterval(() => { void tick(symbol) }, 1000))
 	void tick(symbol)
 }

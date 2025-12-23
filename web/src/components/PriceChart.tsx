@@ -208,7 +208,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
         lineWidth: 1,
         lineStyle: 2, // Dotted
         axisLabelVisible: true,
-        title: `${o.side.toUpperCase()} ${o.amount}`,
+        title: `${o.side.toUpperCase()} ${o.quantity || o.amount || ''}`,
       })
       orderLinesRef.current.push(line)
     })

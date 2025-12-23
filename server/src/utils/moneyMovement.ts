@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { SpotOrder } from "../models/SpotOrder";
 import SpotPosition from "../models/SpotPosition";
 
 export async function moveMoney(
@@ -9,41 +8,45 @@ export async function moveMoney(
   amount: number,
   action: 'SPEND' | 'RECEIVE' | 'RESERVE' | 'UNRESERVE'
 ) {
-  const pos = await SpotPosition.findOne({ userId, asset }).session(session);
-  const avail = parseFloat(pos?.available?.toString() || "0");
-  const reserved = parseFloat(pos?.reserved?.toString() || "0");
-
-  let newAvail = avail;
-  let newReserved = reserved;
+  let inc: any = {};
 
   if (action === 'SPEND') {
-    if (avail < amount) throw new Error(`Insufficient ${asset} balance`);
-    newAvail = avail - amount;
+    // We check balance FIRST before spending to avoid negatives
+    const pos = await SpotPosition.findOne({ userId, asset }).session(session);
+    if (!pos || parseFloat(pos.available.toString()) < amount) {
+      throw new Error(`Insufficient ${asset} balance`);
+    }
+    inc = { available: -amount };
   }
   else if (action === 'RECEIVE') {
-    newAvail = avail + amount;
+    inc = { available: amount };
   }
   else if (action === 'RESERVE') {
-    if (avail < amount) throw new Error(`Insufficient ${asset} balance`);
-    newAvail = avail - amount;
-    newReserved = reserved + amount;
+    const pos = await SpotPosition.findOne({ userId, asset }).session(session);
+    if (!pos || parseFloat(pos.available.toString()) < amount) {
+      throw new Error(`Insufficient ${asset} balance`);
+    }
+    inc = { available: -amount, reserved: amount };
   }
   else if (action === 'UNRESERVE') {
-    newAvail = avail + amount;
-    newReserved = reserved - amount;
+    inc = { available: amount, reserved: -amount };
   }
 
-  await SpotPosition.updateOne(
+  /**
+   * ISSUE 3 FIX: Atomic Balance Updates.
+   * TRIGGER: Called whenever money moves (Order Placement, Fill, or Cancel).
+   * RATIONALE: We use MongoDB's $inc operator to ensure that multiple concurrent trades
+   * (e.g. 2 orders hitting at the exact same microsecond) do not overwrite each other's 
+   * balance changes. This is the only way to guarantee the balance is 100% accurate.
+   */
+  const updated = await SpotPosition.findOneAndUpdate(
     { userId, asset },
-    {
-      $set: {
-        available: newAvail.toFixed(8),
-        reserved: newReserved.toFixed(8),
-        updatedAt: new Date()
-      }
-    },
-    { session, upsert: true }
+    { $inc: inc, $set: { updatedAt: new Date() } },
+    { session, upsert: true, new: true }
   );
 
-  return { available: newAvail.toFixed(8), reserved: newReserved.toFixed(8) };
+  return {
+    available: updated?.available?.toString() || '0',
+    reserved: updated?.reserved?.toString() || '0'
+  };
 }
