@@ -115,10 +115,10 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
                         if (!isNaN(p) && t) {
                             const tickMinute = Math.floor(t / INTERVAL_MS)
 
-                            // If we moved to a new minute, update Open
+                            // If we moved to a new minute, re-fetch the official Open price
                             if (currentMinuteRef.current === null || tickMinute > currentMinuteRef.current) {
                                 currentMinuteRef.current = tickMinute
-                                setOpenPrice(p) // First tick of new minute is the Open
+                                void fetchInitialOpen() // Ask the API for the real Open
                             }
 
                             if (mounted) {

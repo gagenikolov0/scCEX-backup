@@ -34,7 +34,7 @@ color like before leaving my app in the background
 
 
 ❓why we have price difference in BigPrice and chart price if they using the same stream they 
-should be 100% identical
+should be 100% identical. Is it maybe because of 2 separate ws connections to same stream?
 
 
 
