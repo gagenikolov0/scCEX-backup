@@ -15,8 +15,8 @@ export async function syncStableBalances(userId: string) {
         emitAccountEvent(userId, {
             kind: 'balance',
             spotAvailable: {
-                USDT: usdtPos?.available ?? '0',
-                USDC: usdcPos?.available ?? '0'
+                USDT: usdtPos?.available?.toString() ?? '0',
+                USDC: usdcPos?.available?.toString() ?? '0'
             }
         });
     } catch (e) {
