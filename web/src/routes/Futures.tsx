@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, SegmentedControl, Modal, NumberInput, Slider } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, SegmentedControl, Modal, NumberInput, Slider, Badge } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -39,6 +39,10 @@ export default function Futures() {
   const [percent, setPercent] = useState(0)
   const [openedLeverage, setOpenedLeverage] = useState(false)
   const [tempLeverage, setTempLeverage] = useState(leverage)
+
+  const [tpslData, setTpslData] = useState<{ symbol: string; totalQty: number; tp?: number; tpQty?: number; sl?: number; slQty?: number } | null>(null)
+  const [tpslPrices, setTpslPrices] = useState({ tp: '', sl: '', tpQty: '', slQty: '' })
+  const [tpslPercents, setTpslPercents] = useState({ tp: 0, sl: 0 })
 
   const [partialCloseData, setPartialCloseData] = useState<{ symbol: string; totalQty: number } | null>(null)
   const [partialCloseQty, setPartialCloseQty] = useState('')
@@ -194,6 +198,32 @@ export default function Futures() {
     } catch { alert('Network error') }
   }
 
+  const updateTPSL = async (symbol: string, tp: string, sl: string, tpQty: string, slQty: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/futures/positions/tpsl`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+          symbol,
+          tpPrice: tp || 0,
+          slPrice: sl || 0,
+          tpQuantity: tpQty || 0,
+          slQuantity: slQty || 0
+        })
+      })
+      if (res.ok) {
+        refreshBalances() // This usually syncs everything
+        setTpslData(null)
+      } else {
+        const j = await res.json()
+        alert(j.error || 'Failed to update TP/SL')
+      }
+    } catch { alert('Network error') }
+  }
+
   const renderTable = (data: any[], columns: string[], emptyMessage: string) => (
     <table className="w-full text-sm">
       <thead className="text-neutral-500">
@@ -237,9 +267,14 @@ export default function Futures() {
                     const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
                     val = (
                       <div className="flex flex-col">
-                        <Text size="xs" color={pnlValue >= 0 ? 'teal' : 'red'} fw={600}>
-                          {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
-                        </Text>
+                        <div className="flex items-center gap-1">
+                          <Text size="xs" color={pnlValue >= 0 ? 'teal' : 'red'} fw={600}>
+                            {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
+                          </Text>
+                          {item.note === 'Liquidated' && (
+                            <Badge color="red" size="xs" variant="filled">LIQ</Badge>
+                          )}
+                        </div>
                         <Text size="10px" color={pnlValue >= 0 ? 'teal' : 'red'}>
                           ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                         </Text>
@@ -249,6 +284,42 @@ export default function Futures() {
                 }
                 else if (c === 'leverage') val = `${item.leverage}x`
                 else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
+                else if (c === 'tp/sl') {
+                  val = (
+                    <div className="flex flex-col gap-0.5 min-w-[80px]">
+                      <Text size="10px" color="teal" className="cursor-pointer hover:underline" onClick={() => {
+                        setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
+                        setTpslPrices({
+                          tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
+                          sl: item.slPrice > 0 ? String(item.slPrice) : '',
+                          tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
+                          slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
+                        })
+                        setTpslPercents({
+                          tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
+                          sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
+                        })
+                      }}>
+                        TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
+                      </Text>
+                      <Text size="10px" color="red" className="cursor-pointer hover:underline" onClick={() => {
+                        setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
+                        setTpslPrices({
+                          tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
+                          sl: item.slPrice > 0 ? String(item.slPrice) : '',
+                          tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
+                          slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
+                        })
+                        setTpslPercents({
+                          tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
+                          sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
+                        })
+                      }}>
+                        SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
+                      </Text>
+                    </div>
+                  )
+                }
                 else if (c === 'status') val = item.status
                 else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
                 else if (c === 'action') {
@@ -308,7 +379,7 @@ export default function Futures() {
               <Text size="sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Price: <BigPrice symbol={`${token}_${quote}`} market="futures" />
               </Text>
-              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : 'red'}>
+              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : '#FF4761'}>
                 24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}%` : '-'}
               </Text>
               <Text size="sm">High: {stats?.high24h ?? '-'} Low: {stats?.low24h ?? '-'} Vol: {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</Text>
@@ -520,7 +591,7 @@ export default function Futures() {
               </Tabs.List>
 
               <Tabs.Panel value="positions" p="md">
-                {renderTable(futuresPositions, ['Symbol', 'Side', 'Size', 'Entry', 'Margin', 'Liq. Price', 'PnL', 'Leverage', 'Action'], 'No active positions')}
+                {renderTable(futuresPositions, ['Symbol', 'Side', 'Size', 'Entry', 'Margin', 'Liq. Price', 'PnL', 'TP/SL', 'Leverage', 'Action'], 'No active positions')}
               </Tabs.Panel>
 
               <Tabs.Panel value="orders" p="md">
@@ -590,6 +661,63 @@ export default function Futures() {
           fetchData()
         }}
       />
+
+      <Modal opened={!!tpslData} onClose={() => setTpslData(null)} title={`TP/SL Settings - ${tpslData?.symbol}`} centered size="sm">
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-4 p-3 border rounded-md bg-neutral-50/50">
+            <Text size="sm" fw={600} color="teal">Take Profit (TP)</Text>
+            <TextInput
+              label="Trigger Price"
+              placeholder="0.00"
+              value={tpslPrices.tp}
+              onChange={(e) => setTpslPrices({ ...tpslPrices, tp: e.currentTarget.value })}
+            />
+            <TextInput
+              label="Quantity to Close"
+              placeholder="All"
+              value={tpslPrices.tpQty}
+              onChange={(e) => setTpslPrices({ ...tpslPrices, tpQty: e.currentTarget.value })}
+            />
+            <TradeSlider
+              value={tpslPercents.tp}
+              onChange={(val) => {
+                setTpslPercents({ ...tpslPercents, tp: val })
+                const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
+                setTpslPrices({ ...tpslPrices, tpQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
+              }}
+            />
+          </div>
+
+          <div className="grid gap-4 p-3 border rounded-md bg-neutral-50/50">
+            <Text size="sm" fw={600} color="red">Stop Loss (SL)</Text>
+            <TextInput
+              label="Trigger Price"
+              placeholder="0.00"
+              value={tpslPrices.sl}
+              onChange={(e) => setTpslPrices({ ...tpslPrices, sl: e.currentTarget.value })}
+            />
+            <TextInput
+              label="Quantity to Close"
+              placeholder="All"
+              value={tpslPrices.slQty}
+              onChange={(e) => setTpslPrices({ ...tpslPrices, slQty: e.currentTarget.value })}
+            />
+            <TradeSlider
+              value={tpslPercents.sl}
+              onChange={(val) => {
+                setTpslPercents({ ...tpslPercents, sl: val })
+                const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
+                setTpslPrices({ ...tpslPrices, slQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
+              }}
+            />
+          </div>
+
+          <Group grow mt="md">
+            <Button variant="light" color="gray" onClick={() => setTpslData(null)}>Cancel</Button>
+            <Button color="blue" onClick={() => updateTPSL(tpslData!.symbol, tpslPrices.tp, tpslPrices.sl, tpslPrices.tpQty, tpslPrices.slQty)}>Save TP/SL</Button>
+          </Group>
+        </div>
+      </Modal>
     </div>
   )
 }

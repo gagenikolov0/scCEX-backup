@@ -215,17 +215,47 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
 
     // Draw Positions
     positions.forEach(p => {
-      const price = parseFloat(p.entryPrice)
-      if (isNaN(price)) return
-      const line = seriesRef.current.createPriceLine({
-        price,
-        color: p.side === 'long' ? '#3b82f6' : '#a855f7',
-        lineWidth: 2,
-        lineStyle: 0, // Solid
-        axisLabelVisible: true,
-        title: `${p.side.toUpperCase()} `,
-      })
-      positionLinesRef.current.push(line)
+      // Entry Line
+      const entryPrice = parseFloat(p.entryPrice)
+      if (!isNaN(entryPrice)) {
+        const line = seriesRef.current.createPriceLine({
+          price: entryPrice,
+          color: p.side === 'long' ? '#099264ff' : '#e03131',
+          lineWidth: 2,
+          lineStyle: 0, // Solid
+          axisLabelVisible: true,
+          title: `${p.side.charAt(0).toUpperCase() + p.side.slice(1)} Entry`,
+        })
+        positionLinesRef.current.push(line)
+      }
+
+      // Take Profit Line
+      const tpPrice = parseFloat(p.tpPrice)
+      if (!isNaN(tpPrice) && tpPrice > 0) {
+        const line = seriesRef.current.createPriceLine({
+          price: tpPrice,
+          color: '#10b981', // green-600
+          lineWidth: 1,
+          lineStyle: 1, // Dashed
+          axisLabelVisible: true,
+          title: 'TP',
+        })
+        positionLinesRef.current.push(line)
+      }
+
+      // Stop Loss Line
+      const slPrice = parseFloat(p.slPrice)
+      if (!isNaN(slPrice) && slPrice > 0) {
+        const line = seriesRef.current.createPriceLine({
+          price: slPrice,
+          color: '#ef4444', // red-500
+          lineWidth: 1,
+          lineStyle: 1, // Dashed
+          axisLabelVisible: true,
+          title: 'SL',
+        })
+        positionLinesRef.current.push(line)
+      }
     })
 
   }, [orders, positions, symbol, market])

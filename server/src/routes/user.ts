@@ -121,7 +121,8 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
 
     return res.json({ ok: true })
   } catch (e: any) {
-    return res.status(500).json({ error: e.message || 'Transfer failed' })
+    console.error('Transfer error:', e);
+    return res.status(500).json({ error: e.message || 'Transfer failed', stack: e.stack, details: JSON.stringify(e) })
   } finally {
     await session.endSession()
   }

@@ -61,11 +61,11 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
         if (price === null || openPrice === null) return
         const isDark = colorScheme === 'dark'
         if (price > openPrice) {
-            setColor('#00b98bff')
+            setColor('#0BBA74')
         } else if (price < openPrice) {
-            setColor('#ef4444')
+            setColor('#FF4761')
         } else {
-            setColor(isDark ? '#fff' : '#000')
+            setColor(isDark ? '#F2F4F6' : '#374151')
         }
     }, [price, openPrice, colorScheme])
 

@@ -256,7 +256,7 @@ export default function Spot() {
               <Text size="sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Price: <BigPrice symbol={`${token}${quote}`} market="spot" />
               </Text>
-              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : 'red'}>
+              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : '#FF4761'}>
                 24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}% ` : '-'}
               </Text>
               <Text size="sm">High: {stats?.high24h ?? '-'} Low: {stats?.low24h ?? '-'} Vol: {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}

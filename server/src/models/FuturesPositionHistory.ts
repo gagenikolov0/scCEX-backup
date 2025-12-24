@@ -11,6 +11,7 @@ export interface IFuturesPositionHistory extends Document {
     margin: number;
     realizedPnL: number;
     closedAt: Date;
+    note?: string;
 }
 
 const FuturesPositionHistorySchema: Schema = new Schema({
@@ -23,7 +24,8 @@ const FuturesPositionHistorySchema: Schema = new Schema({
     leverage: { type: Number, required: true },
     margin: { type: Number, required: true },
     realizedPnL: { type: Number, required: true },
-    closedAt: { type: Date, default: Date.now }
+    closedAt: { type: Date, default: Date.now },
+    note: { type: String }
 });
 
 export const FuturesPositionHistory = mongoose.model<IFuturesPositionHistory>('FuturesPositionHistory', FuturesPositionHistorySchema);

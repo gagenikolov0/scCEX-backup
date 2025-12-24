@@ -9,6 +9,10 @@ const FuturesPositionSchema = new mongoose.Schema({
     leverage: { type: Number, required: true },
     margin: { type: Number, required: true },
     liquidationPrice: { type: Number },
+    tpPrice: { type: Number, default: 0 },
+    tpQuantity: { type: Number, default: 0 }, // 0 means 100%
+    slPrice: { type: Number, default: 0 },
+    slQuantity: { type: Number, default: 0 }, // 0 means 100%
     updatedAt: { type: Date, default: Date.now }
 });
 

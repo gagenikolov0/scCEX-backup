@@ -8,6 +8,7 @@ import { FuturesPositionHistory } from '../models/FuturesPositionHistory'
 import { priceService } from '../utils/priceService'
 import { moveMoney } from '../utils/moneyMovement'
 import { syncFuturesBalances, syncOrder, syncFuturesPosition } from '../utils/emitters'
+import { futuresEngine } from '../utils/futuresEngine'
 
 const router = Router()
 
@@ -178,81 +179,48 @@ router.get('/history', requireAuth, async (req: AuthRequest, res: Response) => {
 
 // Close a futures position
 router.post('/close-position', requireAuth, async (req: AuthRequest, res: Response) => {
-    const session = await mongoose.startSession()
     try {
         const userId = (req as any).user?.id
         const { symbol, quantity } = (req as any).body
 
-        await session.withTransaction(async () => {
-            const position = await FuturesPosition.findOne({ userId, symbol }).session(session)
-            if (!position) throw new Error('Position not found')
+        const position = await FuturesPosition.findOne({ userId, symbol })
+        if (!position) throw new Error('Position not found')
 
-            const totalQty = position.quantity
-            const closeQty = quantity ? Math.min(parseFloat(quantity), totalQty) : totalQty
+        let closePrice = position.entryPrice
+        try {
+            closePrice = await priceService.getPrice(symbol)
+        } catch { }
 
-            const quote = symbol.endsWith('USDT') ? 'USDT' : symbol.endsWith('USDC') ? 'USDC' : 'USDT'
-            let closePrice = position.entryPrice
-            try {
-                closePrice = await priceService.getPrice(symbol)
-            } catch { }
-
-            const diff = position.side === 'long'
-                ? (closePrice - position.entryPrice)
-                : (position.entryPrice - closePrice)
-
-            // Calculate PnL for the CLOSED portion
-            const pnl = closeQty * diff
-
-            // Calculate proportional margin to release
-            const marginToRelease = (closeQty / totalQty) * position.margin
-            const amountToRefund = Math.max(0, marginToRelease + pnl)
-
-            await FuturesAccount.updateOne(
-                { userId, asset: quote },
-                { $inc: { available: amountToRefund }, updatedAt: new Date() },
-                { session, upsert: true }
-            )
-
-            // Record history for the portion closed
-            await FuturesPositionHistory.create([{
-                userId,
-                symbol: position.symbol,
-                side: position.side,
-                entryPrice: position.entryPrice,
-                exitPrice: closePrice,
-                quantity: closeQty,
-                leverage: position.leverage,
-                margin: marginToRelease,
-                realizedPnL: pnl,
-                closedAt: new Date()
-            }], { session });
-
-            if (closeQty >= totalQty) {
-                await FuturesPosition.deleteOne({ _id: position._id }).session(session)
-            } else {
-                // PARTIAL CLOSE: Update position numbers
-                position.quantity -= closeQty
-                position.margin -= marginToRelease
-                // entryPrice remains the same for the remaining portion
-                // liquidationPrice might need a slight tweak if rounding occurs, but formula is based on margin/qty ratio which stays same
-                position.updatedAt = new Date()
-                await position.save({ session })
-            }
-        });
-
-        // Sync UI
-        (async () => {
-            try {
-                await syncFuturesBalances(userId)
-                await syncFuturesPosition(userId, symbol)
-            } catch { }
-        })();
+        await futuresEngine.executePositionClose(position._id.toString(), closePrice, quantity ? parseFloat(quantity) : undefined)
 
         return res.json({ success: true })
     } catch (e: any) {
         return res.status(500).json({ error: e.message })
-    } finally {
-        await session.endSession()
+    }
+})
+
+// Set TP/SL for a position
+router.post('/positions/tpsl', requireAuth, async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = (req as any).user?.id
+        const { symbol, tpPrice, slPrice, tpQuantity, slQuantity } = (req as any).body
+
+        const position = await FuturesPosition.findOne({ userId, symbol })
+        if (!position) return res.status(404).json({ error: 'Position not found' })
+
+        position.tpPrice = tpPrice !== undefined ? Number(tpPrice) : position.tpPrice
+        position.tpQuantity = tpQuantity !== undefined ? Number(tpQuantity) : position.tpQuantity
+        position.slPrice = slPrice !== undefined ? Number(slPrice) : position.slPrice
+        position.slQuantity = slQuantity !== undefined ? Number(slQuantity) : position.slQuantity
+        position.updatedAt = new Date()
+        await position.save()
+
+        // Sync UI
+        await syncFuturesPosition(userId, symbol)
+
+        return res.json({ success: true, tpPrice: position.tpPrice, slPrice: position.slPrice })
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message })
     }
 })
 

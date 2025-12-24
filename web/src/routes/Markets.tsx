@@ -43,7 +43,7 @@ export default function Markets() {
           vol = item.volume24h ? parseFloat(item.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : ''
 
           const changeNum = parseFloat(String(change)) || 0
-          const changeColor = changeNum > 0 ? 'text-green-500' : changeNum < 0 ? 'text-red-500' : 'text-neutral-500'
+          const changeColor = changeNum > 0 ? 'text-green-500' : changeNum < 0 ? 'text-[#FF4761]' : 'text-neutral-500'
 
           return (
             <Anchor key={`${type}-${quote.toLowerCase()}-${item.symbol}`} component={Link} to={`/${type}?base=${base.replace('/', '_')}&quote=${quote}`} underline="never" c="inherit" className="flex flex-col px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">

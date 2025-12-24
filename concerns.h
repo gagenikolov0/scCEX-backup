@@ -5,38 +5,21 @@ Missing ideas:
 🟡 Isolated and Cross
 🟡 In the future we are gonna want Unrealized PNL, close position button and liquidation on chart
 🟡 The asset selector should appear on hover. And you should make it when hovering thats when ws updadtes
- come same one that shows everything in market page litrally everything the same just smaller UI obviously
+come same one that shows everything in market page litrally everything the same just smaller UI obviously
 
-🟡Partial closing bro. When i close position i get deduction and all that ws messages fast and power saving.
-when we click on the close button in position we should get a small popup asking to enter amount 
-"position available" and give us slider which if we pull all the way to right input shows all 
-position available from position as if we typed the position available amount which is the margin btw....
-And minimum closeable should be 0.1% of position available/margin.
 
-Also we should have a toggle in futures, just like spot that we have buy/sell, except in futures - open/close
-basically when we togle on close thats where we get input for how much we want to close from the position available/margin
-with the text shoing position available and lastly single close button 
-available = Margin
-
-Same slider should be in spot too oh! and in futures on open toggle, serving same functionality basicalyl
-super professional reusable component.
 
 ❓According to huge CEXs like MEXC what is using toggle button and then limit means setting TP/SL?
 
 
 
 
-🟡TP and SL bro on the positions with partial closing And they should be overlays on thge chart too!!
-
-
-
-🟡 Margin (USDT/USDC) should be showed in futures position just like "Size". Margin is literally the one that used to be available balance
-Also in spot right next to the amount of asset we have - the calculated real time USDT/USDC value
+🟡TP and SL bro on the positions with partial closing And they should be overlays on the chart too!!
 
 
 
 
-
+git add --all; git commit --amend; git push --force
 ❓ Cant see full chart history - limited to 200 candles, but 200 candles applied to all intervals/charts?
 
 
@@ -80,11 +63,6 @@ receives price from ticks stream
 
 ❓I wanna know exactly where priceService is fed by both ticks and stats at the same time and how
 is that even possible
-
-
-
-
-
 
 
 
