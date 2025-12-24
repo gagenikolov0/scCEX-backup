@@ -31,14 +31,14 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
-    // Check if the origin is in the allowed list
-    if (allowedOrigins.includes(origin) ||
+    // Check if the origin is in the allowed list or if wildcard is enabled
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*') ||
       process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
 
     // Reject requests from other origins
-    return callback(new Error('Not allowed by CORS'));
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   optionsSuccessStatus: 200 // Some legacy browsers choke on 204
