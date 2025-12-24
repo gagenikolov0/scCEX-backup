@@ -54,24 +54,22 @@ class FuturesEngine {
         }
     }
 
+    //When an order is "Pending", the money is locked in 'reserved'. Once it fills and becomes a Position, we MUST pull that money out of 'reserved'.
     private async fillOrder(orderId: string, fillPrice: number) {
         const session = await mongoose.startSession();
         try {
             await session.withTransaction(async () => {
+                // 1. FETCH: Get the order from DB using the session for ACID safety
                 const order = await FuturesOrder.findById(orderId).session(session);
                 if (!order || order.status !== 'pending') return;
 
+                // 2. STATUS UPDATE: Mark the order as filled and set its final execution price
                 order.status = 'filled';
                 order.averagePrice = fillPrice;
                 await order.save({ session });
 
-                /**
-                 * ISSUE 1 FIX: Clearing "Zombie" Reserved Balance.
-                 * TRIGGER: Executes the moment a Limit Order is successfully "Matched" and filled.
-                 * RATIONALE: When an order is "Pending", the money is locked in 'reserved'. 
-                 * Once it fills and becomes a Position, we MUST pull that money out of 'reserved'.
-                 * Otherwise, the user's wallet would stay "locked" forever.
-                 */
+                // 3. UNLOCK FUNDS: Calculate margin and pull it out of 'reserved'
+                // When pending, money is in 'reserved'. Now it's a position, so we clear that lock.
                 const quote = order.symbol.endsWith('USDT') ? 'USDT' : order.symbol.endsWith('USDC') ? 'USDC' : 'USDT';
                 const marginUsed = (order.quantity * (order.price || fillPrice)) / order.leverage;
 
@@ -81,14 +79,34 @@ class FuturesEngine {
                     { session }
                 );
 
+                // 4. Check if user already has a position on this pair
                 let position = await FuturesPosition.findOne({ userId: order.userId, symbol: order.symbol }).session(session);
 
                 if (position) {
+                    /**
+                     * ADDING TO POSITION (Just like Spot):
+                     * If you already have 1 BTC and buy 1 more, you now have 2 BTC (Size).
+                     * Since you bought more, you also had to put up more collateral (Margin).
+                     * We also recalculate the AVERAGE entry price so the PnL is accurate.
+                     */
+                    const oldTotalValue = position.quantity * position.entryPrice;
+                    const newBatchValue = order.quantity * fillPrice;
+
                     position.quantity += order.quantity;
                     position.margin += marginUsed;
+                    // Weighted Average Entry Price
+                    position.entryPrice = (oldTotalValue + newBatchValue) / position.quantity;
+
+                    // Recalculate Liquidation: More size/margin means the "Bankrupt" point moved!
+                    position.liquidationPrice = position.side === 'long'
+                        ? position.entryPrice - (0.9 * position.margin / position.quantity)
+                        : position.entryPrice + (0.9 * position.margin / position.quantity);
+
                     position.updatedAt = new Date();
                     await position.save({ session });
                 } else {
+                    // NEW POSITION: The very first time a user enters a trade for this coin.
+                    // We calculate where they go bankrupt (Liquidation) based on 90% margin loss.
                     const liqPrice = order.side === 'long'
                         ? fillPrice - (0.9 * marginUsed / order.quantity)
                         : fillPrice + (0.9 * marginUsed / order.quantity);

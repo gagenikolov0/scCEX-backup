@@ -6,21 +6,27 @@ Missing ideas:
 🟡 In the future we are gonna want Unrealized PNL, close position button and liquidation on chart
 
 
+🟡Partial closing bro. When i close position i get deduction and all that ws messages fast and power saving.
+when we click on the close button in position we should get a small popup asking to enter amount 
+"position available" and give us slider which if we pull all the way to right input shows all 
+position available from position as if we typed the position available amount which is the margin btw....
+And minimum closeable should be 0.1% of position available/margin.
+
+Also we should have a toggle in futures, just like spot that we have buy/sell, except in futures - open/close
+basically when we togle on close thats where we get input for how much we want to close from the position available/margin
+with the text shoing position available and lastly single close button 
+available = Margin
+
+Same slider should be in spot too, why not.
 
 
-❓ after i close position does the profit add to my available balance? and also the total balace of course
-same with the loss, does everything work perfect? you know when close we get deduction and all that ws messages
+
+🟡TP and SL bro on the positions with partial closing And they should be overlays on thge chart too!!
 
 
-
-
-❓ Margin (USDT/USDC) should be showed in futures position just like "Size"
+🟡 Margin (USDT/USDC) should be showed in futures position just like "Size". Margin is literally the one that used to be available balance
 Also in spot right next to the amount of asset we have - the calculated real time USDT/USDC value
 
-
-
-
-❓So now that we implemented the Price Context how does PriceService take prices and cash them?
 
 
 
@@ -29,9 +35,7 @@ Also in spot right next to the amount of asset we have - the calculated real tim
 
 
 
-
 ❓ Which css file is for wallet.tsx?
-
 
 
 
@@ -44,14 +48,14 @@ Should have assets divided into Futures and then optionally into 2 MORE - USDT a
 
 
 
-❓So we call user/account every 10 seconds and we call user/account on focus.
+❌So we call user/account every 10 seconds and we call user/account on focus.
 If we are in home page or market page i dont think i should be calling user/account
 
 
 
 
 
-🟡We need complete UI Refactor The mantine responsiveness is not bad but duplicate vertical
+❌We need complete UI Refactor The mantine responsiveness is not bad but duplicate vertical
 scrollbars appear
 
 
@@ -79,27 +83,6 @@ is that even possible
 
 
 
-✅ 2. Futures (The "Pro" Engine)
-Where: engine.ts
-Clock: 2 seconds
-Logic: The Engine is its own Boss. It wakes up, checks the DB, and "asks" for the price.
-Why: Futures are heavy. Calculating "Unrealized PnL" and "Liquidation Ratios" for every user takes
-more CPU. We run it every 2s so the server doesnt catch fire if there are thousands of positions.
-
-
-The Pro Engine (Futures) never listens to the stream. It is completely deaf to the stream calls.
-The only thing the stream calls is the Spot matching function.
-
-
-✅The "Pro Engine" is a single class that handles both Futures Matching and Liquidation in one go
-
-
-❓why calling engine every time we get new price if pro engine doesnt even listen to him lol
-oh wait theres the catch, when say pro enine wakes up and as for the price thats where you mean 
-he starts to listen to the calls from stream and stops ignoring him
-
-❓Also do we have like 3 separate engines like one for limit orders in spot one for limit orders in
-futures and one for liquidations in futures?
 
 
 
@@ -109,16 +92,3 @@ futures and one for liquidations in futures?
 
 
 
-
-
-
-
-
-
-❌ There's terrible mistake in UnrealizedPNL in futures it literally shows 100 times more than it is
-but then wwhen i close the position it shos correct amount.
-
-✅fixed that "100x" PnL bug!
-The Problem:
-The UI was calculating PnL for all your positions using only the price of the coin currently showing in 
-the chart header. So if you looked at BTC, it would think your PEPE position was suddenly worth $96,000f
