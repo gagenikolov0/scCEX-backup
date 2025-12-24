@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Modal, Button, TextInput, SegmentedControl, Group } from '@mantine/core'
 import { API_BASE } from '../config/api'
+import { useAccount } from '../contexts/AccountContext'
+import TradeSlider from './TradeSlider'
 
 type Props = {
   opened: boolean
@@ -14,11 +16,38 @@ export default function TransferModal({ opened, onClose, currentSide, asset, onT
   const [direction, setDirection] = useState<'to-other' | 'from-other'>('to-other')
   const [amount, setAmount] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [percent, setPercent] = useState(0)
   const other = currentSide === 'spot' ? 'futures' : 'spot'
 
+  const { spotAvailable, futuresAvailable } = useAccount()
+
+  const getMax = () => {
+    const from = direction === 'to-other' ? currentSide : other
+    if (from === 'spot') {
+      return parseFloat((spotAvailable as any)?.[asset] || '0')
+    } else {
+      return parseFloat((futuresAvailable as any)?.[asset] || '0')
+    }
+  }
+
+  const maxAmount = getMax()
+
   useEffect(() => {
-    if (opened) { setAmount(''); setDirection('to-other') }
+    if (opened) {
+      setAmount('')
+      setDirection('to-other')
+      setPercent(0)
+    }
   }, [opened])
+
+  const handleSliderChange = (val: number) => {
+    setPercent(val)
+    if (val === 100) {
+      setAmount(maxAmount.toString())
+    } else {
+      setAmount(((maxAmount * val) / 100).toFixed(6).replace(/\.?0+$/, ''))
+    }
+  }
 
   const submit = async () => {
     if (!amount || Number(amount) <= 0) return
@@ -52,22 +81,38 @@ export default function TransferModal({ opened, onClose, currentSide, asset, onT
       <Group gap="sm" mb="sm">
         <SegmentedControl
           value={direction}
-          onChange={(v) => setDirection(v as any)}
+          onChange={(v) => {
+            setDirection(v as any)
+            setAmount('')
+            setPercent(0)
+          }}
           data={[
             { label: `${currentSide} → ${other}`, value: 'to-other' },
             { label: `${other} → ${currentSide}`, value: 'from-other' },
           ]}
+          fullWidth
         />
       </Group>
+
+      <div className="mb-2 text-xs text-neutral-500 text-right">
+        Available: <span className="font-semibold text-neutral-800 dark:text-neutral-200">{maxAmount} {asset}</span>
+      </div>
+
       <TextInput
         label="Amount"
         placeholder="0.00"
         value={amount}
-        onChange={(e) => setAmount(e.currentTarget.value)}
-        mb="md"
+        onChange={(e) => {
+          setAmount(e.currentTarget.value)
+          setPercent(0) // Reset slider if manually typing
+        }}
+        mb="xs"
       />
-      <Group justify="right">
-        <Button onClick={submit} loading={submitting}>
+
+      <TradeSlider value={percent} onChange={handleSliderChange} />
+
+      <Group justify="right" mt="md">
+        <Button onClick={submit} loading={submitting} disabled={!amount || Number(amount) <= 0}>
           Transfer
         </Button>
       </Group>
