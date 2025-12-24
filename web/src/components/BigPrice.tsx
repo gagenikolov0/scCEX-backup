@@ -57,16 +57,15 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
         return () => { mounted = false }
     }, [symbol, market])
 
-    // Update color based on Price vs Open
     useEffect(() => {
         if (price === null || openPrice === null) return
         const isDark = colorScheme === 'dark'
         if (price > openPrice) {
-            setColor(isDark ? 'green.7' : 'green.8')
+            setColor('#00b98bff')
         } else if (price < openPrice) {
-            setColor(isDark ? 'red.7' : 'red.8')
+            setColor('#ef4444')
         } else {
-            setColor(isDark ? 'white' : 'black')
+            setColor(isDark ? '#fff' : '#000')
         }
     }, [price, openPrice, colorScheme])
 

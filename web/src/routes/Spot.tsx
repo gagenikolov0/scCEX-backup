@@ -11,6 +11,7 @@ import { useAccount } from '../contexts/AccountContext'
 import { useMarket } from '../contexts/MarketContext'
 import { useIntervals } from '../lib/useIntervals'
 import BigPrice from '../components/BigPrice'
+import TradeSlider from '../components/TradeSlider'
 
 export default function Spot() {
   const { isAuthed } = useAuth()
@@ -28,9 +29,15 @@ export default function Spot() {
   const [loadingStats, setLoadingStats] = useState(false)
   const [tradeSide, setTradeSide] = useState<'buy' | 'sell'>('buy')
   const [history, setHistory] = useState<any[]>([])
+  const [percent, setPercent] = useState(0)
 
-  const { spotStats } = useMarket()
+  const { spotStats, listen, unlisten } = useMarket()
   const { positions, orders, spotAvailable, refreshOrders, refreshBalances } = useAccount()
+
+  useEffect(() => {
+    listen()
+    return () => unlisten()
+  }, [])
 
   useEffect(() => setToken(initialBase), [initialBase])
 
@@ -177,6 +184,17 @@ export default function Spot() {
                 else if (c === 'asset') val = item.asset
                 else if (c === 'available') val = getVal(item.available)
                 else if (c === 'reserved') val = getVal(item.reserved)
+                else if (c === 'value') {
+                  const asset = item.asset
+                  const available = parseFloat(getVal(item.available) || '0')
+                  if (asset === 'USDT' || asset === 'USDC') {
+                    val = `${available.toFixed(2)} ${quote}`
+                  } else {
+                    const pairStats = spotStats.find(s => s.symbol === `${asset}${quote}`)
+                    const price = parseFloat(pairStats?.lastPrice || '0')
+                    val = price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
+                  }
+                }
                 else if (c === 'updated') val = formatDate(item.updatedAt)
 
                 return <td key={col} className="py-2 pr-3">{val}</td>
@@ -330,7 +348,37 @@ export default function Spot() {
                 />
               )}
 
-              <TextInput id="qty" label="Quantity" placeholder="0.00" value={qty} onChange={(e) => setQty(e.currentTarget.value)} disabled={!isAuthed} />
+              <TextInput
+                label="Quantity"
+                placeholder="0.00"
+                value={qty}
+                onChange={(e) => setQty(e.currentTarget.value)}
+                size="xs"
+                rightSection={<Text size="xs" c="dimmed" pr="md">{token}</Text>}
+              />
+
+              <TradeSlider
+                value={percent}
+                onChange={(val) => {
+                  setPercent(val)
+                  if (tradeSide === 'buy') {
+                    const bal = parseFloat(spotAvailable[quote as keyof typeof spotAvailable] || '0')
+                    const p = parseFloat(price) || parseFloat(stats?.lastPrice || '0')
+                    if (p > 0) {
+                      setQty(((bal * val / 100) / p).toFixed(8).replace(/\.?0+$/, ''))
+                    }
+                  } else {
+                    const pos = positions.find(p => p.asset === token)
+                    const bal = parseFloat(pos?.available || '0')
+                    if (val === 100) {
+                      setQty(bal.toString())
+                    } else {
+                      setQty((bal * val / 100).toFixed(8).replace(/\.?0+$/, ''))
+                    }
+                  }
+                }}
+              />
+
               <div className="flex gap-2">
                 {tradeSide === 'buy' ? (
                   <Button
@@ -383,7 +431,7 @@ export default function Spot() {
               </Tabs.Panel>
 
               <Tabs.Panel value="positions" p="md">
-                {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Updated'], 'No assets')}
+                {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Value', 'Updated'], 'No assets')}
               </Tabs.Panel>
             </Tabs>
           </Card>
@@ -400,6 +448,6 @@ export default function Spot() {
           refreshOrders()
         }}
       />
-    </div>
+    </div >
   )
 }

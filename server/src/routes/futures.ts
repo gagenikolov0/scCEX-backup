@@ -37,12 +37,18 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
             const marginRequired = qtyUSDT / levNum
 
             const futAcc = await FuturesAccount.findOne({ userId, asset: quote }).session(session)
-            if (!futAcc || futAcc.available < marginRequired) {
+            if (!futAcc || futAcc.available < marginRequired - 0.00000001) {
                 throw new Error(`Insufficient ${quote} in Futures wallet`)
             }
 
-            futAcc.available -= marginRequired
-            if (type === 'limit') futAcc.reserved += marginRequired
+            // Clamp subtraction to prevent scientific notation negative dust
+            const finalMargin = Math.min(marginRequired, futAcc.available)
+            futAcc.available -= finalMargin
+
+            // If balance is infinitesimally small, snap to zero
+            if (futAcc.available < 0.0000000001) futAcc.available = 0
+
+            if (type === 'limit') futAcc.reserved += finalMargin
             await futAcc.save({ session })
 
             const baseQuantity = qtyUSDT / executionPrice
@@ -51,6 +57,7 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
                 userId, symbol, side, type,
                 quantity: baseQuantity,
                 leverage: levNum,
+                margin: finalMargin, // Store EXACT margin for reliable unreserve later
                 price: type === 'limit' ? Number(price) : executionPrice,
                 status: type === 'market' ? 'filled' : 'pending',
                 averagePrice: type === 'market' ? executionPrice : 0
@@ -111,11 +118,10 @@ router.delete('/orders/:id', requireAuth, async (req: AuthRequest, res: Response
 
             canceledSymbol = order.symbol
             const quote = order.symbol.endsWith('USDT') ? 'USDT' : order.symbol.endsWith('USDC') ? 'USDC' : 'USDT'
-            const marginReserved = (order.quantity * (order.price || 0)) / order.leverage
-
             const futAcc = await FuturesAccount.findOne({ userId, asset: quote }).session(session)
             if (futAcc) {
-                futAcc.reserved -= marginReserved
+                const marginReserved = order.margin || 0
+                futAcc.reserved = Math.max(0, futAcc.reserved - marginReserved)
                 futAcc.available += marginReserved
                 await futAcc.save({ session })
             }
@@ -175,11 +181,14 @@ router.post('/close-position', requireAuth, async (req: AuthRequest, res: Respon
     const session = await mongoose.startSession()
     try {
         const userId = (req as any).user?.id
-        const { symbol } = (req as any).body
+        const { symbol, quantity } = (req as any).body
 
         await session.withTransaction(async () => {
             const position = await FuturesPosition.findOne({ userId, symbol }).session(session)
             if (!position) throw new Error('Position not found')
+
+            const totalQty = position.quantity
+            const closeQty = quantity ? Math.min(parseFloat(quantity), totalQty) : totalQty
 
             const quote = symbol.endsWith('USDT') ? 'USDT' : symbol.endsWith('USDC') ? 'USDC' : 'USDT'
             let closePrice = position.entryPrice
@@ -191,8 +200,12 @@ router.post('/close-position', requireAuth, async (req: AuthRequest, res: Respon
                 ? (closePrice - position.entryPrice)
                 : (position.entryPrice - closePrice)
 
-            const pnl = position.quantity * diff
-            const amountToRefund = Math.max(0, position.margin + pnl)
+            // Calculate PnL for the CLOSED portion
+            const pnl = closeQty * diff
+
+            // Calculate proportional margin to release
+            const marginToRelease = (closeQty / totalQty) * position.margin
+            const amountToRefund = Math.max(0, marginToRelease + pnl)
 
             await FuturesAccount.updateOne(
                 { userId, asset: quote },
@@ -200,21 +213,31 @@ router.post('/close-position', requireAuth, async (req: AuthRequest, res: Respon
                 { session, upsert: true }
             )
 
-            // Record history
+            // Record history for the portion closed
             await FuturesPositionHistory.create([{
                 userId,
                 symbol: position.symbol,
                 side: position.side,
                 entryPrice: position.entryPrice,
                 exitPrice: closePrice,
-                quantity: position.quantity,
+                quantity: closeQty,
                 leverage: position.leverage,
-                margin: position.margin,
+                margin: marginToRelease,
                 realizedPnL: pnl,
                 closedAt: new Date()
             }], { session });
 
-            await FuturesPosition.deleteOne({ _id: position._id }).session(session)
+            if (closeQty >= totalQty) {
+                await FuturesPosition.deleteOne({ _id: position._id }).session(session)
+            } else {
+                // PARTIAL CLOSE: Update position numbers
+                position.quantity -= closeQty
+                position.margin -= marginToRelease
+                // entryPrice remains the same for the remaining portion
+                // liquidationPrice might need a slight tweak if rounding occurs, but formula is based on margin/qty ratio which stays same
+                position.updatedAt = new Date()
+                await position.save({ session })
+            }
         });
 
         // Sync UI

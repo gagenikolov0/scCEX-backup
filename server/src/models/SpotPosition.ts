@@ -3,8 +3,8 @@ import mongoose from 'mongoose'
 const spotPositionSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
   asset: { type: String, required: true },
-  available: { type: String, default: "0" },
-  reserved: { type: String, default: "0" },
+  available: { type: Number, default: 0 },
+  reserved: { type: Number, default: 0 },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true })
 

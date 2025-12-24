@@ -12,6 +12,7 @@ const FuturesOrderSchema = new mongoose.Schema({
     marginMode: { type: String, enum: ['isolated', 'cross'], default: 'isolated' },
     executedQuantity: { type: Number, default: 0 },
     averagePrice: { type: Number, default: 0 },
+    margin: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
 });
 

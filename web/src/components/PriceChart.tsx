@@ -223,7 +223,7 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
         lineWidth: 2,
         lineStyle: 0, // Solid
         axisLabelVisible: true,
-        title: `${p.side.toUpperCase()} POS`,
+        title: `${p.side.toUpperCase()} `,
       })
       positionLinesRef.current.push(line)
     })

@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, SegmentedControl, Modal, NumberInput, Slider } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -10,6 +10,7 @@ import BigPrice from '../components/BigPrice'
 import { useAuth } from '../contexts/AuthContext'
 import { useAccount } from '../contexts/AccountContext'
 import TransferModal from '../components/TransferModal'
+import TradeSlider from '../components/TradeSlider'
 
 export default function Futures() {
   const [search] = useSearchParams()
@@ -34,6 +35,14 @@ export default function Futures() {
   const [limitPrice, setLimitPrice] = useState('')
   const [loadingOrder, setLoadingOrder] = useState<null | 'buy' | 'sell'>(null)
   const [transferOpen, setTransferOpen] = useState(false)
+  const [tradeMode, setTradeMode] = useState<'open' | 'close'>('open')
+  const [percent, setPercent] = useState(0)
+  const [openedLeverage, setOpenedLeverage] = useState(false)
+  const [tempLeverage, setTempLeverage] = useState(leverage)
+
+  const [partialCloseData, setPartialCloseData] = useState<{ symbol: string; totalQty: number } | null>(null)
+  const [partialCloseQty, setPartialCloseQty] = useState('')
+  const [partialClosePercent, setPartialClosePercent] = useState(0)
 
   useEffect(() => setToken(initialBase), [initialBase])
 
@@ -101,6 +110,16 @@ export default function Futures() {
     fetchHistory()
   }, [isAuthed])
 
+  // Sync quantity in "Open" mode when leverage or percent changes
+  useEffect(() => {
+    if (tradeMode === 'open' && percent > 0) {
+      const max = parseFloat(available)
+      const lev = Number(leverage || 1)
+      const newQty = ((max * lev * percent) / 100).toFixed(8).replace(/\.?0+$/, '')
+      if (newQty !== qty) setQty(newQty)
+    }
+  }, [percent, leverage, tradeMode, available])
+
   const placeOrder = async (side: 'long' | 'short') => {
     if (!isAuthed || !qty) return
     setLoadingOrder(side === 'long' ? 'buy' : 'sell')
@@ -152,7 +171,7 @@ export default function Futures() {
     } catch { alert('Network error') }
   }
 
-  const closePosition = async (symbol: string) => {
+  const closePosition = async (symbol: string, quantity?: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/futures/close-position`, {
         method: 'POST',
@@ -160,11 +179,12 @@ export default function Futures() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         },
-        body: JSON.stringify({ symbol })
+        body: JSON.stringify({ symbol, quantity })
       })
       if (res.ok) {
         fetchData()
         refreshBalances()
+        setPartialCloseData(null)
         fetchHistory()
       }
       else {
@@ -228,11 +248,12 @@ export default function Futures() {
                   }
                 }
                 else if (c === 'leverage') val = `${item.leverage}x`
+                else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
                 else if (c === 'status') val = item.status
                 else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
                 else if (c === 'action') {
                   if (columns.includes('PnL')) {
-                    val = <Button size="compact-xs" color="red" variant="light" onClick={() => closePosition(item.symbol)}>Close</Button>
+                    val = <Button size="compact-xs" color="red" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
                   } else {
                     val = item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
                   }
@@ -325,7 +346,29 @@ export default function Futures() {
           <Card padding={0} radius="md" withBorder>
             <div className="p-3 border-b text-sm font-medium">Trade</div>
             <div className="p-4 grid gap-3">
-              <div className="text-xs text-neutral-500">Available: {available} {quote}</div>
+              <SegmentedControl
+                value={tradeMode}
+                onChange={(val) => setTradeMode(val as 'open' | 'close')}
+                data={[
+                  { label: 'Open', value: 'open' },
+                  { label: 'Close', value: 'close' },
+                ]}
+                size="xs"
+                color="blue"
+              />
+
+              {tradeMode === 'open' ? (
+                <div className="text-xs text-neutral-500">Available: {available} {quote}</div>
+              ) : (
+                <div className="text-xs text-neutral-500">
+                  Position Available: {
+                    (() => {
+                      const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
+                      return pos ? `${pos.quantity} ${token}` : `0 ${token}`
+                    })()
+                  }
+                </div>
+              )}
 
               <div className="flex gap-1 p-1 bg-neutral-100 rounded">
                 <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} className="flex-1">Market</Button>
@@ -336,33 +379,127 @@ export default function Futures() {
                 <TextInput label="Limit Price" placeholder="0.00" value={limitPrice} onChange={(e) => setLimitPrice(e.currentTarget.value)} size="xs" />
               )}
 
-              <TextInput label="Quantity (USDT)" placeholder="0.00" value={qty} onChange={(e) => setQty(e.currentTarget.value)} size="xs" />
-
               <TextInput
-                label="Leverage"
-                value={leverage}
-                onChange={(e) => {
-                  const val = e.currentTarget.value.replace(/\D/g, '')
-                  if (val === '' || (Number(val) >= 1 && Number(val) <= 100)) {
-                    setLeverage(val)
-                  }
-                }}
-                placeholder="10"
+                label={tradeMode === 'open' ? "Quantity (USDT)" : `Quantity (${token})`}
+                placeholder="0.00"
+                value={qty}
+                onChange={(e) => setQty(e.currentTarget.value)}
                 size="xs"
-                description="Max 100x"
               />
 
-              <Group gap={4} grow>
-                {['10', '20', '50', '100'].map(lv => (
-                  <Button key={lv} size="compact-xs" variant="outline" color="gray" onClick={() => setLeverage(lv)}>
-                    {lv}x
+              <TradeSlider
+                value={percent}
+                onChange={(val) => {
+                  setPercent(val)
+                  if (tradeMode === 'close') {
+                    const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
+                    if (pos) {
+                      if (val === 100) {
+                        setQty(pos.quantity.toString())
+                      } else {
+                        setQty(((pos.quantity * val) / 100).toFixed(8).replace(/\.?0+$/, ''))
+                      }
+                    }
+                  }
+                }}
+              />
+
+              {tradeMode === 'open' && (
+                <>
+                  <Button
+                    variant="default"
+                    fullWidth
+                    size="sm"
+                    justify="space-between"
+                    onClick={() => {
+                      setTempLeverage(leverage)
+                      setOpenedLeverage(true)
+                    }}
+                    rightSection={<Text size="xs" c="dimmed">Isolated</Text>}
+                  >
+                    {leverage}x
                   </Button>
-                ))}
-              </Group>
+
+                  <Modal
+                    opened={openedLeverage}
+                    onClose={() => setOpenedLeverage(false)}
+                    title="Adjust Leverage"
+                    centered
+                    size="xs"
+                  >
+                    <div className="flex flex-col gap-6">
+                      <NumberInput
+                        label="Leverage"
+                        value={Number(tempLeverage)}
+                        onChange={(val) => setTempLeverage(String(val))}
+                        max={500}
+                        min={1}
+                        size="md"
+                        suffix="x"
+                      />
+
+                      <Group gap={4} grow>
+                        {['10', '20', '50', '100', '500'].map(lv => (
+                          <Button
+                            key={lv}
+                            size="compact-sm"
+                            variant={tempLeverage === lv ? "filled" : "outline"}
+                            color={tempLeverage === lv ? "blue" : "gray"}
+                            onClick={() => setTempLeverage(lv)}
+                          >
+                            {lv}x
+                          </Button>
+                        ))}
+                      </Group>
+
+                      <Slider
+                        value={Number(tempLeverage)}
+                        onChange={(val) => setTempLeverage(String(val))}
+                        max={500}
+                        min={1}
+                        step={1}
+                        label={(val) => `${val}x`}
+                        marks={[
+                          { value: 1, label: '1x' },
+                          { value: 250, label: '250x' },
+                          { value: 500, label: '500x' },
+                        ]}
+                        mb="xl"
+                      />
+
+                      <Group grow mt="md">
+                        <Button variant="light" color="gray" onClick={() => setOpenedLeverage(false)}>
+                          Cancel
+                        </Button>
+                        <Button color="blue" onClick={() => {
+                          setLeverage(tempLeverage)
+                          setOpenedLeverage(false)
+                        }}>
+                          Confirm
+                        </Button>
+                      </Group>
+                    </div>
+                  </Modal>
+                </>
+              )}
 
               <div className="flex gap-2">
-                <Button className="flex-1" color="teal" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
-                <Button className="flex-1" color="red" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
+                {tradeMode === 'open' ? (
+                  <>
+                    <Button className="flex-1" color="teal" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
+                    <Button className="flex-1" color="red" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
+                  </>
+                ) : (
+                  <Button
+                    className="flex-1"
+                    color="red"
+                    variant="filled"
+                    onClick={() => closePosition(`${token}_${quote}`, qty)}
+                    disabled={!isAuthed || !qty}
+                  >
+                    Close Position
+                  </Button>
+                )}
               </div>
 
               <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
@@ -383,7 +520,7 @@ export default function Futures() {
               </Tabs.List>
 
               <Tabs.Panel value="positions" p="md">
-                {renderTable(futuresPositions, ['Symbol', 'Side', 'Size', 'Entry', 'Liq. Price', 'PnL', 'Leverage', 'Action'], 'No active positions')}
+                {renderTable(futuresPositions, ['Symbol', 'Side', 'Size', 'Entry', 'Margin', 'Liq. Price', 'PnL', 'Leverage', 'Action'], 'No active positions')}
               </Tabs.Panel>
 
               <Tabs.Panel value="orders" p="md">
@@ -391,12 +528,57 @@ export default function Futures() {
               </Tabs.Panel>
 
               <Tabs.Panel value="history" p="md">
-                {renderTable(history, ['Symbol', 'Side', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time'], 'No history found')}
+                {renderTable(history, ['Symbol', 'Side', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time'], 'No trade history')}
               </Tabs.Panel>
             </Tabs>
           </Card>
         </Grid.Col>
       </Grid>
+
+      <Modal
+        opened={!!partialCloseData}
+        onClose={() => setPartialCloseData(null)}
+        title={`Close Position: ${partialCloseData?.symbol}`}
+        centered
+        size="sm"
+      >
+        <div className="grid gap-4 py-2">
+          <div className="text-sm text-neutral-500">
+            Available to close: <span className="font-semibold text-neutral-800">{partialCloseData?.totalQty}</span>
+          </div>
+
+          <TextInput
+            label="Quantity to Close"
+            placeholder="0.00"
+            value={partialCloseQty}
+            onChange={(e) => setPartialCloseQty(e.currentTarget.value)}
+            rightSection={<Text size="xs" c="dimmed" pr="md">{token}</Text>}
+          />
+
+          <TradeSlider
+            value={partialClosePercent}
+            onChange={(val) => {
+              setPartialClosePercent(val)
+              if (partialCloseData) {
+                if (val === 100) {
+                  setPartialCloseQty(partialCloseData.totalQty.toString())
+                } else {
+                  setPartialCloseQty(((partialCloseData.totalQty * val) / 100).toFixed(8).replace(/\.?0+$/, ''))
+                }
+              }
+            }}
+          />
+
+          <Button
+            color="red"
+            fullWidth
+            onClick={() => closePosition(partialCloseData!.symbol, partialCloseQty)}
+            disabled={!partialCloseQty || parseFloat(partialCloseQty) <= 0}
+          >
+            Confirm Close
+          </Button>
+        </div>
+      </Modal>
 
       <TransferModal
         opened={transferOpen}

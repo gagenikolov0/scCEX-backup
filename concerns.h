@@ -4,7 +4,8 @@ Missing ideas:
 🟡 Icons for assets bro
 🟡 Isolated and Cross
 🟡 In the future we are gonna want Unrealized PNL, close position button and liquidation on chart
-
+🟡 The asset selector should appear on hover. And you should make it when hovering thats when ws updadtes
+ come same one that shows everything in market page litrally everything the same just smaller UI obviously
 
 🟡Partial closing bro. When i close position i get deduction and all that ws messages fast and power saving.
 when we click on the close button in position we should get a small popup asking to enter amount 
@@ -17,11 +18,16 @@ basically when we togle on close thats where we get input for how much we want t
 with the text shoing position available and lastly single close button 
 available = Margin
 
-Same slider should be in spot too, why not.
+Same slider should be in spot too oh! and in futures on open toggle, serving same functionality basicalyl
+super professional reusable component.
+
+❓According to huge CEXs like MEXC what is using toggle button and then limit means setting TP/SL?
+
 
 
 
 🟡TP and SL bro on the positions with partial closing And they should be overlays on thge chart too!!
+
 
 
 🟡 Margin (USDT/USDC) should be showed in futures position just like "Size". Margin is literally the one that used to be available balance
@@ -88,7 +94,5 @@ is that even possible
 
 
 
-
-
-
+❓There's draw mode in PriceChart but not visible in the app????
 

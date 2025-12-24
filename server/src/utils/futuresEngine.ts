@@ -68,10 +68,10 @@ class FuturesEngine {
                 order.averagePrice = fillPrice;
                 await order.save({ session });
 
-                // 3. UNLOCK FUNDS: Calculate margin and pull it out of 'reserved'
-                // When pending, money is in 'reserved'. Now it's a position, so we clear that lock.
+                // 3. UNLOCK FUNDS: Use EXACT margin stored in order to clear 'reserved'
+                // When pending, money is in 'reserved'. Now it's a position, so we clear that exact lock.
                 const quote = order.symbol.endsWith('USDT') ? 'USDT' : order.symbol.endsWith('USDC') ? 'USDC' : 'USDT';
-                const marginUsed = (order.quantity * (order.price || fillPrice)) / order.leverage;
+                const marginUsed = order.margin || (order.quantity * (order.price || fillPrice)) / order.leverage;
 
                 await FuturesAccount.updateOne(
                     { userId: order.userId, asset: quote },

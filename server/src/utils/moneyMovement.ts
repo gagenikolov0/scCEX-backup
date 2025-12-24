@@ -8,28 +8,29 @@ export async function moveMoney(
   amount: number,
   action: 'SPEND' | 'RECEIVE' | 'RESERVE' | 'UNRESERVE'
 ) {
+  const numAmount = Number(amount);
+  if (isNaN(numAmount)) throw new Error("Invalid amount: " + amount);
   let inc: any = {};
 
   if (action === 'SPEND') {
-    // We check balance FIRST before spending to avoid negatives
     const pos = await SpotPosition.findOne({ userId, asset }).session(session);
-    if (!pos || parseFloat(pos.available.toString()) < amount) {
+    if (!pos || Number(pos.available) < numAmount) {
       throw new Error(`Insufficient ${asset} balance`);
     }
-    inc = { available: -amount };
+    inc = { available: -numAmount };
   }
   else if (action === 'RECEIVE') {
-    inc = { available: amount };
+    inc = { available: numAmount };
   }
   else if (action === 'RESERVE') {
     const pos = await SpotPosition.findOne({ userId, asset }).session(session);
-    if (!pos || parseFloat(pos.available.toString()) < amount) {
+    if (!pos || Number(pos.available) < numAmount) {
       throw new Error(`Insufficient ${asset} balance`);
     }
-    inc = { available: -amount, reserved: amount };
+    inc = { available: -numAmount, reserved: numAmount };
   }
   else if (action === 'UNRESERVE') {
-    inc = { available: amount, reserved: -amount };
+    inc = { available: numAmount, reserved: -numAmount };
   }
 
   /**
@@ -44,6 +45,20 @@ export async function moveMoney(
     { $inc: inc, $set: { updatedAt: new Date() } },
     { session, upsert: true, new: true }
   );
+
+  // SNAP TO ZERO: If balance is effectively zero (scientific notation dust), clean it up
+  if (updated) {
+    let needsCleanup = false;
+    if (updated.available > 0 && updated.available < 0.0000000001) {
+      updated.available = 0;
+      needsCleanup = true;
+    }
+    if (updated.reserved > 0 && updated.reserved < 0.0000000001) {
+      updated.reserved = 0;
+      needsCleanup = true;
+    }
+    if (needsCleanup) await updated.save({ session });
+  }
 
   return {
     available: updated?.available?.toString() || '0',
