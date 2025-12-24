@@ -1,5 +1,6 @@
 /**
  * Handles 100% of the Limit Order matching logic for Spot
+ * Just a dumb engine that gets dinged every 1 second by spotTicks.ts stream to check db if any orders should be filled and it fills them
  */
 
 import mongoose from "mongoose";
@@ -7,7 +8,7 @@ import { SpotOrder } from "../models/SpotOrder";
 import { moveMoney } from "./moneyMovement";
 import { syncStableBalances, syncPosition, syncOrder } from "./emitters";
 
-export async function matchLimitOrders(symbol: string, currentPrice: number) {
+export async function matchSpotLimitOrders(symbol: string, currentPrice: number) {
   const session = await mongoose.startSession();
   try {
     const executedOrders: any[] = [];

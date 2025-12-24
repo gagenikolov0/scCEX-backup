@@ -29,14 +29,14 @@ class FuturesEngine {
     private async tick() {
         try {
             //Executes both tasks in one go
-            await this.processMatching(); // Checks limit orders
-            await this.processLiquidation(); // Checks bankrupt positions
+            await this.processLimitOrders(); // Checks limit orders
+            await this.processLiquidations(); // Checks bankrupt positions
         } catch (e) {
             console.error('[Futures Engine] Tick error:', e);
         }
     }
 
-    private async processMatching() {
+    private async processLimitOrders() {
         const pendingOrders = await FuturesOrder.find({ status: 'pending', type: 'limit' });
         for (const order of pendingOrders) {
             try {
@@ -124,7 +124,7 @@ class FuturesEngine {
     }
 
     // Runs every 2 seconds regardles of what happens, totally independent logic.
-    private async processLiquidation() {
+    private async processLiquidations() {
         // 1. Scan EVERY position in the database
         const positions = await FuturesPosition.find({});
         for (const pos of positions) {

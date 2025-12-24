@@ -1,7 +1,7 @@
 // Per-symbol spot ticks; subscribe with a symbol; polling fan-out.
 
 import { WebSocketServer } from 'ws'
-import { matchLimitOrders } from '../../utils/matchingEngine'
+import { matchSpotLimitOrders } from '../../utils/spotEngine'
 import { priceService } from '../../utils/priceService'
 
 type ClientMsg = { type: 'sub'; symbol: string } | { type: 'unsub' }
@@ -50,7 +50,7 @@ async function tick(symbol: string) {
 		 */
 		if (lastPrice !== undefined && lastPrice !== price) {
 			// TRIGGER: Only call the SPOT engine if the "sensor" sees movement
-			void matchLimitOrders(symbol, price)
+			void matchSpotLimitOrders(symbol, price)
 		}
 
 		const payload = JSON.stringify({ type: 'tick', symbol, price, open: open.price, t: now })

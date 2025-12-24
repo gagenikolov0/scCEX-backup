@@ -61,7 +61,7 @@ const start = async () => {
   const { attachMarketWSS } = await import('./ws')
   attachMarketWSS(httpServer)
 
-  const { futuresEngine } = await import('./utils/engine')
+  const { futuresEngine } = await import('./utils/futuresEngine')
   console.log('Starting Futures Engine...')
   futuresEngine.start()
 
