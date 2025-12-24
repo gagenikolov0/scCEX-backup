@@ -429,13 +429,13 @@ export default function Futures() {
               />
 
               {tradeMode === 'open' ? (
-                <div className="text-xs text-neutral-500">Available: {available} {quote}</div>
+                <div className="text-xs text-neutral-500">Available: {Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} {quote}</div>
               ) : (
                 <div className="text-xs text-neutral-500">
                   Position Available: {
                     (() => {
                       const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
-                      return pos ? `${pos.quantity} ${token}` : `0 ${token}`
+                      return pos ? `${Number(pos.quantity).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token}` : `0 ${token}`
                     })()
                   }
                 </div>

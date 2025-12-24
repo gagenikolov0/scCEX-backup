@@ -19,7 +19,6 @@ come same one that shows everything in market page litrally everything the same 
 
 
 
-git add --all; git commit --amend; git push --force
 ❓ Cant see full chart history - limited to 200 candles, but 200 candles applied to all intervals/charts?
 
 
@@ -69,8 +68,17 @@ is that even possible
 
 
 
-
-
-
 ❓There's draw mode in PriceChart but not visible in the app????
 
+
+
+
+
+❓In backend futures engine if im not mistaken, we have each function doing its own DB session
+Isnt that a lot of DB sessions instead of just one and getting things done faster? or wait,
+maybe that practice is not clean
+
+
+❓btw does each function also call each emmitter?
+or each function calls the shared emmitter?
+either way does each function call emmiter or one function for all function calls emmiter?

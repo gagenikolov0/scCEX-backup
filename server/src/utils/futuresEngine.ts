@@ -6,11 +6,6 @@ import { syncFuturesBalances, syncFuturesPosition, syncOrder } from './emitters'
 import { FuturesPositionHistory } from '../models/FuturesPositionHistory';
 import mongoose from 'mongoose';
 
-/**
- * The "Pro Engine" - Handles background tasks for Futures:
- * 1. Matching: Fills pending limit orders if price reached.
- * 2. Liquidation: Closes positions if margin is wiped out.
- */
 class FuturesEngine {
     private interval: NodeJS.Timeout | null = null;
     private running = false;
@@ -18,7 +13,7 @@ class FuturesEngine {
     start(ms = 2000) {
         if (this.running) return;
         this.running = true;
-        this.interval = setInterval(() => this.tick(), ms);
+        this.interval = setInterval(() => this.tick(), ms); // tick called
         console.log('[Futures Engine] Started');
     }
 
@@ -27,12 +22,16 @@ class FuturesEngine {
         this.running = false;
     }
 
+
+    /**
+     * Hartbeat of the engine. Calls all the Engine functions every 2 seconds.
+     */
     private async tick() {
         try {
             //Executes both tasks in one go
-            await this.processLimitOrders(); // Checks limit orders
-            await this.processTPSL(); // Checks Take-Profit and Stop-Loss
-            await this.processLiquidations(); // Checks bankrupt positions
+            await this.processLimitOrders();  // Checks for limit fills
+            await this.processTPSL();         // 2. Check for TP/SL Triggers
+            await this.processLiquidations(); // 3. Check for Bankruptcies
         } catch (e) {
             console.error('[Futures Engine] Tick error:', e);
         }
@@ -56,7 +55,6 @@ class FuturesEngine {
         }
     }
 
-    //When an order is "Pending", the money is locked in 'reserved'. Once it fills and becomes a Position, we MUST pull that money out of 'reserved'.
     private async fillOrder(orderId: string, fillPrice: number) {
         const session = await mongoose.startSession();
         try {
@@ -70,27 +68,20 @@ class FuturesEngine {
                 order.averagePrice = fillPrice;
                 await order.save({ session });
 
-                // 3. UNLOCK FUNDS: Use EXACT margin stored in order to clear 'reserved'
-                // When pending, money is in 'reserved'. Now it's a position, so we clear that exact lock.
                 const quote = order.symbol.endsWith('USDT') ? 'USDT' : order.symbol.endsWith('USDC') ? 'USDC' : 'USDT';
                 const marginUsed = order.margin || (order.quantity * (order.price || fillPrice)) / order.leverage;
 
+                // Pull that money out of 'reserved'
                 await FuturesAccount.updateOne(
                     { userId: order.userId, asset: quote },
                     { $inc: { reserved: -marginUsed }, updatedAt: new Date() },
                     { session }
                 );
 
-                // 4. Check if user already has a position on this pair
+                // Check if user already has a position on this pair
                 let position = await FuturesPosition.findOne({ userId: order.userId, symbol: order.symbol }).session(session);
-
                 if (position) {
-                    /**
-                     * ADDING TO POSITION (Just like Spot):
-                     * If you already have 1 BTC and buy 1 more, you now have 2 BTC (Size).
-                     * Since you bought more, you also had to put up more collateral (Margin).
-                     * We also recalculate the AVERAGE entry price so the PnL is accurate.
-                     */
+                    // If you already have 1 BTC and buy 1 more, you now have 2 BTC (Size).
                     const oldTotalValue = position.quantity * position.entryPrice;
                     const newBatchValue = order.quantity * fillPrice;
 
@@ -143,39 +134,30 @@ class FuturesEngine {
     }
 
     private async processTPSL() {
+        // 1. Efficiently find only active TP/SL orders (values > 0)
         const positions = await FuturesPosition.find({
             $or: [{ tpPrice: { $gt: 0 } }, { slPrice: { $gt: 0 } }]
         });
 
         for (const pos of positions) {
             try {
-                const currentPrice = await priceService.getPrice(pos.symbol);
-                let triggered = false;
-                let triggerType: 'TP' | 'SL' | null = null;
+                const price = await priceService.getPrice(pos.symbol);
+                if (!price) continue;
 
-                if (pos.side === 'long') {
-                    if (pos.tpPrice > 0 && currentPrice >= pos.tpPrice) {
-                        triggered = true;
-                        triggerType = 'TP';
-                    } else if (pos.slPrice > 0 && currentPrice <= pos.slPrice) {
-                        triggered = true;
-                        triggerType = 'SL';
-                    }
-                } else {
-                    if (pos.tpPrice > 0 && currentPrice <= pos.tpPrice) {
-                        triggered = true;
-                        triggerType = 'TP';
-                    } else if (pos.slPrice > 0 && currentPrice >= pos.slPrice) {
-                        triggered = true;
-                        triggerType = 'SL';
-                    }
-                }
+                const isLong = pos.side === 'long';
 
-                if (triggered && triggerType) {
-                    const closeQty = triggerType === 'TP' ? pos.tpQuantity : pos.slQuantity;
+                // 2. Check Triggers (Simple logic: Long wants High Price, Short wants Low Price)
+                // Note: This logic supports SL in profit (Stop Profit) or TP in loss (Limit Cut) if configured that way.
+                const hitTP = pos.tpPrice > 0 && (isLong ? price >= pos.tpPrice : price <= pos.tpPrice);
+                const hitSL = pos.slPrice > 0 && (isLong ? price <= pos.slPrice : price >= pos.slPrice);
 
-                    // Clear the trigger so it doesn't fire again
-                    if (triggerType === 'TP') {
+                if (hitTP || hitSL) {
+                    const type = hitTP ? 'TP' : 'SL';
+                    const closeQty = type === 'TP' ? pos.tpQuantity : pos.slQuantity;
+
+                    // 3. Reset Trigger to prevent loop on partial closes
+                    // (If we close 50%, we don't want the remaining 50% to trigger again in the next millisecond)
+                    if (type === 'TP') {
                         pos.tpPrice = 0;
                         pos.tpQuantity = 0;
                     } else {
@@ -184,75 +166,14 @@ class FuturesEngine {
                     }
                     await pos.save();
 
-                    await this.executePositionClose(pos._id.toString(), currentPrice, closeQty > 0 ? closeQty : undefined);
+                    await this.executePositionClose(pos._id.toString(), price, closeQty || undefined);
                 }
-            } catch { }
-        }
-    }
-
-    /**
-     * Shared logic to close a position (Manual, TP, or SL)
-     * Realizes PnL, Refunds Margin, and Records History.
-     */
-    public async executePositionClose(posId: string, exitPrice: number, closeQuantity?: number) {
-        const session = await mongoose.startSession();
-        try {
-            let userId = '', symbol = '';
-            await session.withTransaction(async () => {
-                const pos = await FuturesPosition.findById(posId).session(session);
-                if (!pos) return;
-
-                userId = pos.userId;
-                symbol = pos.symbol;
-
-                const totalQty = pos.quantity;
-                const closeQty = closeQuantity ? Math.min(closeQuantity, totalQty) : totalQty;
-                const quote = symbol.endsWith('USDT') ? 'USDT' : symbol.endsWith('USDC') ? 'USDC' : 'USDT';
-
-                const diff = pos.side === 'long' ? (exitPrice - pos.entryPrice) : (pos.entryPrice - exitPrice);
-                const realizedPnl = closeQty * diff;
-
-                const marginToRelease = (closeQty / totalQty) * pos.margin;
-                const refund = Math.max(0, marginToRelease + realizedPnl);
-
-                // Update Balance
-                await FuturesAccount.updateOne(
-                    { userId, asset: quote },
-                    { $inc: { available: refund }, updatedAt: new Date() },
-                    { session, upsert: true }
-                );
-
-                // History
-                await FuturesPositionHistory.create([{
-                    userId, symbol, side: pos.side, entryPrice: pos.entryPrice,
-                    exitPrice, quantity: closeQty, leverage: pos.leverage,
-                    margin: marginToRelease, realizedPnL: realizedPnl, closedAt: new Date()
-                }], { session });
-
-                if (closeQty >= totalQty) {
-                    await FuturesPosition.deleteOne({ _id: posId }).session(session);
-                } else {
-                    pos.quantity -= closeQty;
-                    pos.margin -= marginToRelease;
-                    pos.updatedAt = new Date();
-                    await pos.save({ session });
-                }
-            });
-
-            if (userId) {
-                (async () => {
-                    await syncFuturesBalances(userId);
-                    await syncFuturesPosition(userId, symbol);
-                })();
+            } catch (e) {
+                console.error(`[TP/SL] Error processing ${pos._id}:`, e);
             }
-        } catch (e) {
-            console.error(`[Futures Engine] Close error for ${posId}:`, e);
-        } finally {
-            await session.endSession();
         }
     }
 
-    // Runs every 2 seconds regardles of what happens, totally independent logic.
     private async processLiquidations() {
         // 1. Scan EVERY position in the database
         const positions = await FuturesPosition.find({});
@@ -324,6 +245,69 @@ class FuturesEngine {
             await session.endSession();
         }
     }
+
+    /**
+     * Shared logic to close a position (Manual, TP, or SL) Realizes PnL, Refunds Margin, and Records History.
+     */
+    public async executePositionClose(posId: string, exitPrice: number, closeQuantity?: number) {
+        const session = await mongoose.startSession();
+        try {
+            let userId = '', symbol = '';
+            await session.withTransaction(async () => {
+                const pos = await FuturesPosition.findById(posId).session(session);
+                if (!pos) return;
+
+                userId = pos.userId;
+                symbol = pos.symbol;
+
+                const totalQty = pos.quantity;
+                const closeQty = closeQuantity ? Math.min(closeQuantity, totalQty) : totalQty;
+                const quote = symbol.endsWith('USDT') ? 'USDT' : symbol.endsWith('USDC') ? 'USDC' : 'USDT';
+
+                const diff = pos.side === 'long' ? (exitPrice - pos.entryPrice) : (pos.entryPrice - exitPrice);
+                const realizedPnl = closeQty * diff;
+
+                const marginToRelease = (closeQty / totalQty) * pos.margin;
+                const refund = Math.max(0, marginToRelease + realizedPnl);
+
+                // Update Balance
+                await FuturesAccount.updateOne(
+                    { userId, asset: quote },
+                    { $inc: { available: refund }, updatedAt: new Date() },
+                    { session, upsert: true }
+                );
+
+                // History
+                await FuturesPositionHistory.create([{
+                    userId, symbol, side: pos.side, entryPrice: pos.entryPrice,
+                    exitPrice, quantity: closeQty, leverage: pos.leverage,
+                    margin: marginToRelease, realizedPnL: realizedPnl, closedAt: new Date()
+                }], { session });
+
+                if (closeQty >= totalQty) {
+                    await FuturesPosition.deleteOne({ _id: posId }).session(session);
+                } else {
+                    pos.quantity -= closeQty;
+                    pos.margin -= marginToRelease;
+                    pos.updatedAt = new Date();
+                    await pos.save({ session });
+                }
+            });
+
+            if (userId) {
+                (async () => {
+                    await syncFuturesBalances(userId); // "Hey, you have more money now"
+                    await syncFuturesPosition(userId, symbol); // "Hey, you have more positions now"
+                })();
+            }
+        } catch (e) {
+            console.error(`[Futures Engine] Close error for ${posId}:`, e);
+        } finally {
+            await session.endSession();
+        }
+    }
+
+
 }
 
 export const futuresEngine = new FuturesEngine();

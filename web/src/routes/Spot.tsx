@@ -315,7 +315,7 @@ export default function Spot() {
               </div>
 
               <div className="text-xs text-neutral-500">
-                Available: {tradeSide === 'buy' ? `${available} ${quote} ` : `${baseAvail} ${token} `}
+                Available: {tradeSide === 'buy' ? `${Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${quote} ` : `${Number(baseAvail).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token} `}
               </div>
 
               <div className="flex gap-1 p-1 bg-neutral-100 rounded">

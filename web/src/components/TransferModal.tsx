@@ -95,7 +95,7 @@ export default function TransferModal({ opened, onClose, currentSide, asset, onT
       </Group>
 
       <div className="mb-2 text-xs text-neutral-500 text-right">
-        Available: <span className="font-semibold text-neutral-800 dark:text-neutral-200">{maxAmount} {asset}</span>
+        Available: <span className="font-semibold text-neutral-800 dark:text-neutral-200">{Number(maxAmount).toLocaleString(undefined, { maximumFractionDigits: 4 })} {asset}</span>
       </div>
 
       <TextInput
