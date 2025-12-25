@@ -132,18 +132,165 @@ separated but also interfiering with each other?
 
 
 ****************
-WORKFLOW - You are supposed to explain isolated workflows with its isolated participants
-for example... futuresEngine has nothing to do with user.ts or even less with  market.ts.. so basically 
-futuresEngine is part of a one workflow with isolated participants like AccountContext, emmiters, emit helpers,
-ticks stream and user.ts  would be completely in another workflow together with some other participants
-Maybe user.ts is a shared participant
+WORKFLOWS - How Components Work Together
+****************
 
-market.ts and MarketContext are definitely isolated participants together with stats stream they form third workflow
+═══════════════════════════════════════════════════════════════════════════════
+WORKFLOW 1: FUTURES TRADING
+═══════════════════════════════════════════════════════════════════════════════
 
-now of course we have shared participants so we are gonna call them shared participants 
-for example authContext i believe is used everywhere as well as the tick stream being used in both charts
-and big price and execute price and PriceService and what not
+THE FLOW:
+1. User clicks "Buy Long" in Futures.tsx
+2. Futures.tsx calls POST /api/futures/orders from futures.ts
+3. futures.ts (POST /api/futures/orders handler) calls openPosition() from futuresEngine.ts
+4. openPosition() writes to:
+   - FuturesPosition DB (creates/updates position record)
+   - FuturesAccount DB (deducts margin from available balance)
+5. openPosition() calls syncFuturesPosition() from emitters.ts
+6. syncFuturesPosition() calls emitAccountEvent() from account.ts
+7. emitAccountEvent() sends WebSocket message to ws.onmessage from AccountContext.tsx
+8. ws.onmessage receives the message, parses JSON, calls setState() to update AccountContext state
+9. setState() triggers React to re-render all components that use AccountContext (Futures.tsx, Spot.tsx, etc.)
+
+BACKGROUND TICK LOOP:
+- Every 2 seconds, tick() from futuresEngine.ts runs automatically
+- processTPSL() from futuresEngine.ts → getPrice() from priceService.ts to check triggers
+- processLiquidations() from futuresEngine.ts → getPrice() from priceService.ts to check margin
+- If triggered: executePositionClose() from futuresEngine.ts (same flow as step 4-9)
+
+KEY INTERACTIONS:
+- processTPSL() from futuresEngine.ts → getPrice() from priceService.ts: "what's BTC price?"
+- openPosition() from futuresEngine.ts → moveMoney() from moneyMovement.ts: "move $100 from available to margin"
+- syncFuturesPosition() from emitters.ts → emitAccountEvent() from account.ts: "tell user 123 their position changed"
+- ws/streams/account.ts WebSocket → onmessage handler in AccountContext.tsx: pushes updates
 
 
-All participants should be mention and tagged as shared participants or isolated participants
+═══════════════════════════════════════════════════════════════════════════════
+WORKFLOW 2: SPOT TRADING
+═══════════════════════════════════════════════════════════════════════════════
+
+THE FLOW:
+1. User places Limit Order in Spot.tsx
+2. Spot.tsx calls POST /api/spot/orders
+3. spot.ts (POST /api/spot/orders handler) calls moveMoney() from moneyMovement.ts to reserve balance
+4. spot.ts writes to SpotOrder DB (creates pending order)
+5. spot.ts calls syncSpotPosition() from emitters.ts
+6. syncSpotPosition() calls emitAccountEvent() from account.ts
+7. emitAccountEvent() sends WebSocket message to onmessage handler in AccountContext.tsx
+8. onmessage handler in AccountContext.tsx parses message and updates state
+9. AccountContext.tsx updates state, Spot.tsx re-renders
+
+BACKGROUND PRICE MATCHING:
+- ws/streams/spotTicks.ts broadcasts new price every second
+- spotEngine.matchLimitOrders(symbol, price) runs when price changes
+- Checks SpotOrder DB for fillable orders
+- If fillable: spotEngine calls moneyMovement.moveMoney() to execute trade (same flow as step 3-9)
+
+KEY INTERACTIONS:
+- matchLimitOrders() from spotEngine.ts → getPrice() from priceService.ts: "what's ETH price?"
+- spot.ts → moveMoney() from moneyMovement.ts with action='RESERVE': "reserve $50 USDT"
+- matchLimitOrders() from spotEngine.ts → moveMoney() from moneyMovement.ts with action='UNRESERVE': "unreserve + execute trade"
+- syncSpotPosition() from emitters.ts → emitAccountEvent() from account.ts: "tell user 123 their BTC balance changed"
+
+
+═══════════════════════════════════════════════════════════════════════════════
+WORKFLOW 3: MARKET DATA
+═══════════════════════════════════════════════════════════════════════════════
+
+THE FLOW:
+1. stats.calculateStats() runs every 5 seconds (background job in stats.ts)
+2. stats.calculateStats() calls priceService.getPrice() for all pairs
+3. stats.calculateStats() calculates 24h change, volume, etc.
+4. stats.calculateStats() calls ws/streams/stats.ts broadcast() function
+5. ws/streams/stats.ts broadcasts to MarketContext.tsx WebSocket listener
+6. MarketContext.tsx updates state, Markets.tsx re-renders
+
+KEY INTERACTIONS:
+- stats.calculateStats() → priceService.getPrice(symbol): "give me all prices for all pairs"
+- ws/streams/stats.ts WebSocket → MarketContext.onmessage: broadcasts to everyone
+
+
+═══════════════════════════════════════════════════════════════════════════════
+SHARED PARTICIPANTS - How They Connect Workflows
+═══════════════════════════════════════════════════════════════════════════════
+
+priceService.getPrice() (BACKEND - utils/priceService.ts):
+  - futuresEngine.processTPSL() → priceService.getPrice(symbol)
+  - spotEngine.matchLimitOrders() → priceService.getPrice(symbol)
+  - stats.calculateStats() → priceService.getPrice(symbol)
+  - WHY SHARED: Prevents 3 separate Binance API calls, uses 1 cache
+
+emitAccountEvent() (BACKEND - ws/streams/account.ts):
+  - syncFuturesPosition() (emitters.ts) → emitAccountEvent(userId, data)
+  - syncSpotPosition() (emitters.ts) → emitAccountEvent(userId, data)
+  - syncOrder() (emitters.ts) → emitAccountEvent(userId, data)
+  - WHY SHARED: Single function that knows how to send WebSocket messages
+
+ws/streams/account.ts WebSocket (BACKEND):
+  - emitAccountEvent() → ws/streams/account.ts: passes message to send
+  - ws/streams/account.ts → Users WebSocket connection: broadcasts to specific user
+  - WHY SHARED: One WebSocket connection per user for all account updates
+
+moneyMovement.moveMoney() (BACKEND - utils/moneyMovement.ts):
+  - routes/spot.ts → moneyMovement.moveMoney(session, userId, asset, amount, action)
+  - routes/futures.ts → moneyMovement.moveMoney(session, userId, asset, amount, action)
+  - futuresEngine.executePositionClose() → moneyMovement.moveMoney(...)
+  - WHY SHARED: Atomic DB transactions, prevents race conditions
+
+AccountContext.tsx (FRONTEND - contexts/AccountContext.tsx):
+  - ws/streams/account.ts → AccountContext.onmessage handler: pushes updates via WebSocket
+  - Futures.tsx ← AccountContext.futuresPositions state: reads positions
+  - Spot.tsx ← AccountContext.positions state: reads balances
+  - WHY SHARED: Single source of truth for users money and positions
+
+PriceContext.tsx (FRONTEND - contexts/PriceContext.tsx):
+  - ws/streams/spotTicks.ts → PriceContext.onmessage handler: pushes price updates
+  - ws/streams/futuresTicks.ts → PriceContext.onmessage handler: pushes price updates
+  - PriceChart.tsx ← PriceContext.usePrice(market, symbol) hook: reads prices to draw candles
+  - BigPrice.tsx ← PriceContext.usePrice(market, symbol) hook: reads prices to display
+  - WHY SHARED: Single source of truth for current prices
+
+AuthContext.tsx (FRONTEND - contexts/AuthContext.tsx):
+  - All pages ← AuthContext.accessToken state: read login state
+  - WHY SHARED: Login state needs to be global
+
+
+═══════════════════════════════════════════════════════════════════════════════
+HOW WORKFLOWS INTERACT WITH EACH OTHER
+═══════════════════════════════════════════════════════════════════════════════
+
+1. FUTURES + SPOT SHARE NOTHING (Except Shared Participants)
+   - They have separate DB tables (FuturesAccount vs SpotPosition)
+   - They have separate engines (futuresEngine.ts vs spotEngine.ts)
+   - They have separate API routes (routes/futures.ts vs routes/spot.ts)
+   - ONLY connection: Both → emitAccountEvent() → both update AccountContext
+
+2. TRANSFER BRIDGES THE TWO WORKFLOWS
+   - User clicks "Transfer" in Futures.tsx or Spot.tsx
+   - TransferModal.tsx → routes/transfer.ts: POST /api/transfer
+   - routes/transfer.ts → moneyMovement.moveMoney() TWICE:
+     * Subtract from SpotPosition DB
+     * Add to FuturesAccount DB
+   - routes/transfer.ts → syncSpotPosition() + syncFuturesBalances() (both from emitters.ts)
+   - Both helpers → emitAccountEvent() → AccountContext updates both wallets
+
+3. MARKET DATA IS COMPLETELY ISOLATED
+   - stats.calculateStats() doesnt call futuresEngine or spotEngine functions
+   - stats.calculateStats() → priceService.getPrice() only
+   - stats → MarketContext via WebSocket
+   - Futures.tsx ← MarketContext.futuresStats state: reads 24h stats
+   - Spot.tsx ← MarketContext.spotStats state: reads 24h stats
+   - But stats.calculateStats() never writes to FuturesPosition or SpotPosition
+
+4. PRICE SERVICE CONNECTS ALL THREE
+   - futuresEngine.processTPSL() → priceService.getPrice('BTC_USDT')
+   - spotEngine.matchLimitOrders() → priceService.getPrice('ETH_USDT')
+   - stats.calculateStats() → priceService.getPrice(allSymbols)
+   - priceService.getPrice() ↔ Binance API: fetches once, caches, serves to all three
+
+5. USER.TS IS OUTSIDE ALL WORKFLOWS
+   - Futures.tsx → GET /api/user/profile on page load: gets initial balances
+   - Spot.tsx → GET /api/user/profile on page load: gets initial balances
+   - routes/user.ts → DB.find(): reads and returns JSON (no engine/emitter calls)
+   - After page load: AccountContext (WebSocket) handles all updates
 ****************

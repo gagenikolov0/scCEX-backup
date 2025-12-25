@@ -45,7 +45,7 @@ export async function syncFuturesBalances(userId: string) {
 }
 
 /**
- * Emits updated position (including reserved) to the user.
+ * Emits updated position (including reserved) to the user in DB.
  */
 export async function syncSpotPosition(userId: string, asset: string) {
     if (['USDT', 'USDC'].includes(asset)) {
@@ -68,7 +68,7 @@ export async function syncSpotPosition(userId: string, asset: string) {
 }
 
 /**
- * Emits updated futures position to the user.
+ * Emits updated futures position to the user in DB
  */
 export async function syncFuturesPosition(userId: string, symbol: string) {
     try {
@@ -87,7 +87,8 @@ export async function syncFuturesPosition(userId: string, symbol: string) {
                 tpPrice: pos.tpPrice,
                 slPrice: pos.slPrice,
                 tpQuantity: pos.tpQuantity,
-                slQuantity: pos.slQuantity
+                slQuantity: pos.slQuantity,
+                realizedPnL: pos.realizedPnL || 0
             } : null
         });
     } catch (e) {

@@ -24,6 +24,7 @@ function addSocket(userId: string, ws: WebSocket) {
   if (!set) { set = new Set(); userSockets.set(userId, set) }
   set.add(ws)
 }
+
 function removeSocket(ws: WebSocket) {
   for (const [uid, set] of userSockets) {
     if (set.delete(ws) && set.size === 0) {

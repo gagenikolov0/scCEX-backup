@@ -13,6 +13,7 @@ const FuturesPositionSchema = new mongoose.Schema({
     tpQuantity: { type: Number, default: 0 }, // 0 means 100%
     slPrice: { type: Number, default: 0 },
     slQuantity: { type: Number, default: 0 }, // 0 means 100%
+    realizedPnL: { type: Number, default: 0 }, // Cumulative realized profit/loss from partial closes
     updatedAt: { type: Date, default: Date.now }
 });
 

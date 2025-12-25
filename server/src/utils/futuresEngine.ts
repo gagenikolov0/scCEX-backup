@@ -287,8 +287,10 @@ class FuturesEngine {
                 if (closeQty >= totalQty) {
                     await FuturesPosition.deleteOne({ _id: posId }).session(session);
                 } else {
+                    // Partial close: accumulate realized PnL and reduce position
                     pos.quantity -= closeQty;
                     pos.margin -= marginToRelease;
+                    pos.realizedPnL = (pos.realizedPnL || 0) + realizedPnl; // Accumulate realized PnL
                     pos.updatedAt = new Date();
                     await pos.save({ session });
                 }

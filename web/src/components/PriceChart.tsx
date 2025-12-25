@@ -280,21 +280,24 @@ export default function PriceChart(props: Props) {
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="w-full" />
+      <div ref={containerRef} className="w-full" style={{ pointerEvents: 'none' }} />
 
       {/* Top Right Controls */}
-      <div className="absolute top-2 right-2 flex gap-2 z-10">
+      <div className="absolute top-2 right-2 flex gap-2 z-10" style={{ pointerEvents: 'auto' }}>
         {activePosition && props.onClosePosition && (
           <button
             onClick={() => props.onClosePosition && props.onClosePosition(activePosition)}
-            className="px-2 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
+            className="px-3 py-1.5 text-xs font-medium rounded bg-red-500 text-white hover:bg-red-600 transition-colors shadow-md border border-red-600"
           >
             Close Position
           </button>
         )}
         <button
           onClick={() => setDrawMode(!drawMode)}
-          className={`px-2 py-1 text-xs rounded ${drawMode ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors shadow-sm`}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors shadow-md ${drawMode
+              ? 'bg-blue-500 text-white hover:bg-blue-600 border border-blue-600'
+              : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
+            }`}
         >
           {drawMode ? 'Cancel' : 'Draw'}
         </button>

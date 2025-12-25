@@ -250,37 +250,52 @@ export default function Futures() {
                 else if (c === 'exit') val = item.exitPrice
                 else if (c === 'price') val = item.price
                 else if (c === 'liq. price') val = <Text size="xs" color="#e8590c" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
-                else if (c === 'pnl' || c === 'realized pnl') {
-                  // BUG FIX: Use the specific symbol's price from futuresStats, not just the page-level stats.
+                else if (c === 'pnl') {
+                  // Unrealized PnL (live calculation)
                   const itemStats = futuresStats.find(s => s.symbol === item.symbol)
                   const lastPrice = Number(itemStats?.lastPrice || 0)
                   const entryPrice = Number(item.entryPrice || 0)
                   const qty = Number(item.quantity || 0)
                   const margin = Number(item.margin || 0)
 
-                  let pnlValue = item.realizedPnL
-                  if (pnlValue === undefined && lastPrice > 0) {
+                  let pnlValue = 0
+                  if (lastPrice > 0) {
                     pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
                   }
 
-                  if (pnlValue !== undefined) {
-                    const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
-                    val = (
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1">
-                          <Text size="xs" color={pnlValue >= 0 ? 'teal' : 'red'} fw={600}>
-                            {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
-                          </Text>
-                          {item.note === 'Liquidated' && (
-                            <Badge color="red" size="xs" variant="filled">LIQ</Badge>
-                          )}
-                        </div>
-                        <Text size="10px" color={pnlValue >= 0 ? 'teal' : 'red'}>
-                          ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                  const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
+                  val = (
+                    <div className="flex flex-col">
+                      <Text size="xs" color={pnlValue >= 0 ? 'teal' : 'red'} fw={600}>
+                        {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
+                      </Text>
+                      <Text size="10px" color={pnlValue >= 0 ? 'teal' : 'red'}>
+                        ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                      </Text>
+                    </div>
+                  )
+                }
+                else if (c === 'realized pnl') {
+                  // Realized PnL (from partial closes or history)
+                  const realizedPnl = Number(item.realizedPnL || 0)
+                  const margin = Number(item.margin || item.marginToRelease || 0)
+                  const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
+
+                  val = (
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1">
+                        <Text size="xs" color={realizedPnl >= 0 ? '#0BBA74' : '#FF4761'} fw={600}>
+                          {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                         </Text>
+                        {item.note === 'Liquidated' && (
+                          <Badge color="red" size="xs" variant="filled">LIQ</Badge>
+                        )}
                       </div>
-                    )
-                  }
+                      <Text size="10px" color={realizedPnl >= 0 ? '#0BBA74' : '#FF4761'}>
+                        ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                      </Text>
+                    </div>
+                  )
                 }
                 else if (c === 'leverage') val = `${item.leverage}x`
                 else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
@@ -592,7 +607,7 @@ export default function Futures() {
               </Tabs.List>
 
               <Tabs.Panel value="positions" p="md">
-                {renderTable(futuresPositions, ['Symbol', 'Side', 'Size', 'Entry', 'Margin', 'Liq. Price', 'PnL', 'TP/SL', 'Leverage', 'Action'], 'No active positions')}
+                {renderTable(futuresPositions, ['Symbol', 'Side', 'Size', 'Entry', 'Margin', 'Liq. Price', 'PnL', 'Realized PnL', 'TP/SL', 'Leverage', 'Action'], 'No active positions')}
               </Tabs.Panel>
 
               <Tabs.Panel value="orders" p="md">
