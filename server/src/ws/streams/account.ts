@@ -5,7 +5,7 @@ import { calculateTotalPortfolioUSD } from '../../utils/portfolio'
 
 type AccountEvent =
   | { kind: 'balance'; spotAvailable: { USDT: string; USDC: string } }
-  | { kind: 'position'; asset: string; available: string; reserved: string }
+  | { kind: 'spotPosition'; asset: string; available: string; reserved: string }
   | { kind: 'order'; order: any }
   | { kind: 'futuresBalance'; futuresAvailable: { USDT: string; USDC: string } }
   | { kind: 'futuresPosition'; symbol: string; position: any }

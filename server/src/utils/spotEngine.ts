@@ -6,7 +6,7 @@
 import mongoose from "mongoose";
 import { SpotOrder } from "../models/SpotOrder";
 import { moveMoney } from "./moneyMovement";
-import { syncStableBalances, syncPosition, syncOrder } from "./emitters";
+import { syncStableBalances, syncSpotPosition, syncOrder } from "./emitters";
 
 export async function matchSpotLimitOrders(symbol: string, currentPrice: number) {
   const session = await mongoose.startSession();
@@ -51,7 +51,7 @@ export async function matchSpotLimitOrders(symbol: string, currentPrice: number)
       (async () => {
         try {
           await syncStableBalances(order.userId);
-          await syncPosition(order.userId, order.asset);
+          await syncSpotPosition(order.userId, order.asset);
           syncOrder(order.userId, { id: order.id, status: "filled" });
         } catch { }
       })();

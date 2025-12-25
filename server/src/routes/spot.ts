@@ -7,7 +7,7 @@ import SpotPosition from "../models/SpotPosition";
 import { emitAccountEvent } from "../ws/streams/account";
 import { moveMoney } from "../utils/moneyMovement";
 import { priceService } from "../utils/priceService";
-import { syncStableBalances, syncPosition, syncOrder } from "../utils/emitters";
+import { syncStableBalances, syncSpotPosition, syncOrder } from "../utils/emitters";
 
 const router = Router();
 
@@ -87,7 +87,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
     (async () => {
       try {
         await syncStableBalances(userId);
-        await syncPosition(userId, base);
+        await syncSpotPosition(userId, base);
         syncOrder(userId, orderRes);
       } catch { }
     })();
@@ -174,7 +174,7 @@ router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response
     (async () => {
       try {
         await syncStableBalances(userId);
-        await syncPosition(userId, orderBaseAsset);
+        await syncSpotPosition(userId, orderBaseAsset);
         syncOrder(userId, { id: orderIdToEmit, status: 'rejected' });
       } catch { }
     })();

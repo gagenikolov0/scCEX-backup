@@ -65,7 +65,7 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
         } else if (price < openPrice) {
             setColor('#FF4761')
         } else {
-            setColor(isDark ? '#F2F4F6' : '#374151')
+            setColor(isDark ? '#F2F4F6' : '#374151') // 'Neutral' textcolor of BigPrice
         }
     }, [price, openPrice, colorScheme])
 

@@ -1,21 +1,19 @@
-Missing ideas:
 🟡 Share PNL bro
+
 🟡 Slider for available amount in futures and spot right below input
+
 🟡 Icons for assets bro
+
 🟡 Isolated and Cross
+
 🟡 In the future we are gonna want Unrealized PNL, close position button and liquidation on chart
+
 🟡 The asset selector should appear on hover. And you should make it when hovering thats when ws updadtes
 come same one that shows everything in market page litrally everything the same just smaller UI obviously
 
 
 
 ❓According to huge CEXs like MEXC what is using toggle button and then limit means setting TP/SL?
-
-
-
-
-🟡TP and SL bro on the positions with partial closing And they should be overlays on the chart too!!
-
 
 
 
@@ -67,52 +65,39 @@ is that even possible
 
 
 
-
 ❓There's draw mode in PriceChart but not visible in the app????
 
 
 
 
 
-❓In backend futures engine if im not mistaken, we have each function doing its own DB session
-Isnt that a lot of DB sessions instead of just one and getting things done faster? or wait,
-maybe that practice is not clean
+❓Close button and draw button still not visible on chart
 
 
 
 
+❓Realiezd pnl should be shown in position table right next to Unrealized so when person closes e.g. 50%, 
+50% of unrealized should become realized just like in futures history (which is perfect btw) only it 
+should also be shown in position table, simple.
 
 
-❓btw does each function also call each emmitter?
-or each function calls the shared emmitter?
-either way does each function call emmiter or one function for all function calls emmiter?
 
-✅ It runs cleaner than that.
+
+###########    ENGINE -> HELPERS -> EmitAccountEvent EMITTER -> AccountContext
+
 The Engine (Logic) calls a specific helper like 
 syncFuturesPosition
 
 That helper uses the Shared Emitter (emitAccountEvent) to actually push the data to the correct user.
-So: Engine -> syncHelper -> SharedEmitter.
+So: Engine -> syncHelper -> SharedEmitter. ❓Shared emmitter is EmitAccountEvent right?
 
 ❓oh wait and account even then is connected to frontend through AccountContext?
 i thought Frontend is displaying every backend update indirectly because you know every 10 minutes or 
 on focus frontend calls user/account and updates the context because user.ts pulls everything from db
 exactly where engine updates because engine works with db only.
 
-
-
-
-
-
-❓So wait in MoneyMove which is in backend there still is tp/sl calculation there except its not live 
-every tick its just once so basically backend does tp/sl calculation as well
-
-✅ YES. This is critical.
-Live Tick (Every 2 seconds): The backend checks every single position against the current price.
-If Price hits TP, the Backend executes the trade.
-The Frontend checks are visual only (to capture your attention). 
-The Backend check is the one that actually moves the money.
-❓okay then if im perfectly right then, i wanna see exactly where the pnl logic is specifically for tp/sl
+❓Wait does user.ts have anything to do with AccountContext and engine and stuff and if not how are they 
+separated but also interfiering with each other?
 
 
 
@@ -122,4 +107,43 @@ The Backend check is the one that actually moves the money.
 
 
 
-❓ what the hell do we need scripts in backend for isnt that completely useless?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+****************
+WORKFLOW - You are supposed to explain isolated workflows with its isolated participants
+for example... futuresEngine has nothing to do with user.ts or even less with  market.ts.. so basically 
+futuresEngine is part of a one workflow with isolated participants like AccountContext, emmiters, emit helpers,
+ticks stream and user.ts  would be completely in another workflow together with some other participants
+Maybe user.ts is a shared participant
+
+market.ts and MarketContext are definitely isolated participants together with stats stream they form third workflow
+
+now of course we have shared participants so we are gonna call them shared participants 
+for example authContext i believe is used everywhere as well as the tick stream being used in both charts
+and big price and execute price and PriceService and what not
+
+
+All participants should be mention and tagged as shared participants or isolated participants
+****************

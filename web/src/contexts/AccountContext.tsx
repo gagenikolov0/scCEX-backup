@@ -177,7 +177,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             setSpotAvailable(msg.spotAvailable)
           } else if (msg.kind === 'futuresBalance' && msg.futuresAvailable) {
             setFuturesAvailable(msg.futuresAvailable)
-          } else if (msg.kind === 'position') {
+          } else if (msg.kind === 'spotPosition') {
             setPositions(prev => {
               const idx = prev.findIndex(p => p.asset === msg.asset)
               if (idx === -1) {

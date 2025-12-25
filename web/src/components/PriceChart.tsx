@@ -222,8 +222,8 @@ export default function PriceChart(props: Props) {
       if (!isNaN(entryPrice)) {
         const line = seriesRef.current.createPriceLine({
           price: entryPrice,
-          color: p.side === 'long' ? '#099268' : '#e03131',
-          lineWidth: 2,
+          color: p.side === 'long' ? '#099268' : '#e03131', // colors of futures position lines
+          lineWidth: 1,
           lineStyle: 0, // Solid
           axisLabelVisible: true,
           title: `${p.side.charAt(0).toUpperCase() + p.side.slice(1)} Entry`,
@@ -283,7 +283,7 @@ export default function PriceChart(props: Props) {
       <div ref={containerRef} className="w-full" />
 
       {/* Top Right Controls */}
-      <div className="absolute top-2 right-2 flex gap-2">
+      <div className="absolute top-2 right-2 flex gap-2 z-10">
         {activePosition && props.onClosePosition && (
           <button
             onClick={() => props.onClosePosition && props.onClosePosition(activePosition)}

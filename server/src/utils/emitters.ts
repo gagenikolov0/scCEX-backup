@@ -47,7 +47,7 @@ export async function syncFuturesBalances(userId: string) {
 /**
  * Emits updated position (including reserved) to the user.
  */
-export async function syncPosition(userId: string, asset: string) {
+export async function syncSpotPosition(userId: string, asset: string) {
     if (['USDT', 'USDC'].includes(asset)) {
         return syncStableBalances(userId);
     }
@@ -56,7 +56,7 @@ export async function syncPosition(userId: string, asset: string) {
         const pos = await SpotPosition.findOne({ userId, asset }).lean();
         if (pos) {
             emitAccountEvent(userId, {
-                kind: 'position',
+                kind: 'spotPosition',
                 asset: pos.asset,
                 available: pos.available?.toString() ?? '0',
                 reserved: pos.reserved?.toString() ?? '0'

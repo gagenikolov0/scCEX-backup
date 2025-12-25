@@ -249,7 +249,7 @@ export default function Futures() {
                 else if (c === 'entry') val = item.entryPrice
                 else if (c === 'exit') val = item.exitPrice
                 else if (c === 'price') val = item.price
-                else if (c === 'liq. price') val = <Text size="xs" color="orange" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
+                else if (c === 'liq. price') val = <Text size="xs" color="#e8590c" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
                 else if (c === 'pnl' || c === 'realized pnl') {
                   // BUG FIX: Use the specific symbol's price from futuresStats, not just the page-level stats.
                   const itemStats = futuresStats.find(s => s.symbol === item.symbol)
