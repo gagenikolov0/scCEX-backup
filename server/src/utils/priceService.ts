@@ -10,7 +10,7 @@ class PriceService extends EventEmitter {
   private prices = new Map<string, PriceUpdate>();
   private readonly MAX_AGE = 2000; // 2 seconds max age
 
-  // Update price from external source (like spotTicks)
+  // Called by streams to fill the bucket
   updatePrice(symbol: string, price: number) {
     const update: PriceUpdate = {
       symbol,
@@ -21,17 +21,15 @@ class PriceService extends EventEmitter {
     this.emit('price', update);
   }
 
-  // Get current price - uses cache if fresh, otherwise fetches fresh
+  // Call this to use the bucket
   async getPrice(symbol: string): Promise<number> {
     const cached = this.prices.get(symbol);
     const now = Date.now();
 
-    // Use cached price if it's less than 1 second old
     if (cached && (now - cached.timestamp) < 1000) {
       return cached.price;
     }
 
-    // Fetch fresh price
     try {
       const freshPrice = await this.fetchSpotPrice(symbol);
       this.updatePrice(symbol, freshPrice);
@@ -47,18 +45,11 @@ class PriceService extends EventEmitter {
   }
 
   /**
-   * ISSUE 2 FIX: MEXC Symbol Normalization.
-   * TRIGGER: Happens right before any price check by the Engines or UI.
-   * RATIONALE: PriceService acts as a unified "Hot Cache" fed by WebSockets. 
-   * We strip underscores so it can look up the correct symbol in its memory 
-   * or fall back to HTTP if the WebSocket isn't yet active.
-   */
-
-  /**
    * Why the api.mexc link exists (The "Safety Net")
-   * If the Liquidation Engine needs to check the price of ETH_USDT, but no user is currently watching the ETH chart, then 
-   * spotTicks.ts is asleep. It's not feeding the bucket.
-   */
+   * If the Liquidation Engine needs to check the price of ETH_USDT, but no user is currently watching the ETH chart, 
+   * then spotTicks.ts is asleep!!! It's not feeding the bucket.
+   * This prevents escape so now the only escape of liquidation is if server crashes and fetchSpotPrice() can't call MEXC API.
+  */
   private async fetchSpotPrice(symbol: string): Promise<number> {
     const normalized = symbol.replace('_', '').toUpperCase();
     const url = `https://api.mexc.com/api/v3/ticker/price?symbol=${normalized}`;
@@ -80,15 +71,6 @@ class PriceService extends EventEmitter {
   }
 }
 
-// Global instance
 export const priceService = new PriceService();
-
-
-
-
-
-
-
-
-
-// Who uses PriceService?? - Every other part of the server(the Engines, the API Routes, etc.) just asks this one service: "Hey, what's the price of BTC?"
+// If you didn't do new PriceService(), you'd have to do "export const priceService = new PriceService();"
+// which will create new instance of PriceService. Basically we created Context in backend.

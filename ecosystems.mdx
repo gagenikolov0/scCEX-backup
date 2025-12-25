@@ -1,0 +1,774 @@
+<pre>
+═════════════════════
+MARKET DATA ECOSYSTEM, in market, in futures/spot's Asset selector and Header
+═════════════════════
+✅
+<b>FILES:</b>
+<a href="server/src/ws/streams/spotStats.ts">spotStats.ts</a>, 
+<a href="server/src/ws/streams/futuresStats.ts">futuresStats.ts</a>, 
+<a href="server/src/ws/streams/markets.ts">markets.ts</a>, 
+
+
+<a href="web/src/contexts/MarketContext.tsx">MarketContext.tsx</a>, 
+<a href="web/src/routes/Markets.tsx">Markets.tsx</a>
+
+<a href="web/src/components/BigPrice.tsx">BigPrice.tsx</a>
+<a href="web/src/components/PriceChart.tsx">PriceChart.tsx</a>
+
+<a href="web/src/routes/Spot.tsx">Spot.tsx</a>
+<a href="web/src/routes/Futures.tsx">Futures.tsx</a>
+
+
+
+<b>SUBSCRIPTION (Frontend → Backend)</b>
+   Frontend sends JSON: <code>{ type: 'sub', symbol: 'BTCUSDT' }</code>
+   Backend adds ws to Map: <code>subs.get('BTCUSDT').add(ws)</code>
+   <a href="server/src/ws/streams/spotStats.ts#L80">spotStats.ts:80</a> | <a href="server/src/ws/streams/futuresStats.ts#L85">futuresStats.ts:85</a>
+
+<b>DATA FETCH & BROADCAST (Backend Loop)</b>
+   Every 5s (Stats) or 1s (Ticks):
+       ↓
+   Fetch MEXC API
+       ↓
+   Iterate Subscribers (The "Fan-Out"):
+   <a href="server/src/ws/streams/spotStats.ts#L54">spotStats.ts:54</a> | <a href="server/src/ws/streams/futuresStats.ts#L59">futuresStats.ts:59</a>
+       ↓
+
+
+
+<b>CONSUMPTION (Frontend)</b>
+   WebSocket receives message → MarketContext.onmessage
+       ↓
+   MarketContext.setState() //where????
+       ↓
+   Components re-render:
+   ├─→ <a href="web/src/routes/Markets.tsx#L13">Markets.tsx:13</a> (Market list)
+   ├─→ <a href="web/src/routes/Futures.tsx#L71">Futures.tsx:71</a> (Header stats)
+   └─→ <a href="web/src/routes/Spot.tsx#L63">Spot.tsx:63</a> (Header stats)
+
+
+
+
+BigPrice.tsx
+    ↓
+fetch klines 
+
+
+</pre>
+
+
+
+
+
+
+
+
+
+
+
+<pre>
+═════════════════════════════
+FUTURES ECOSYSTEM
+═════════════════════════════
+
+<b>FILES:</b> 
+<a href="web/src/routes/Futures.tsx">Futures.tsx</a>, 
+<a href="server/src/routes/futures.ts">routes/futures.ts</a>, 
+<a href="server/src/utils/futuresEngine.ts">futuresEngine.ts</a>, 
+<a href="server/src/utils/priceService.ts">priceService.ts</a>, 
+<a href="server/src/utils/emitters.ts">emitters.ts</a>, 
+<a href="web/src/contexts/AccountContext.tsx">AccountContext.tsx</a>, 
+<a href="web/src/contexts/AuthContext.tsx">AuthContext.tsx</a>, 
+<a href="server/src/middleware/auth.ts">middleware/auth.ts</a>
+
+
+<b>OPERATION 1: Open Position</b>
+User clicks "Buy/Long" button (Visible only if isAuthed)
+<a href="web/src/routes/Futures.tsx#L576">Futures.tsx:576</a>
+    ↓
+placeOrder('long') function
+<a href="web/src/routes/Futures.tsx#L127">Futures.tsx:127</a>
+    ↓
+if (!isAuthed) return (Guard Clause)
+<a href="web/src/routes/Futures.tsx#L128">Futures.tsx:128</a>
+    ↓
+fetch() → POST /api/futures/orders (Header: Authorization: Bearer ...)
+<a href="server/src/routes/futures.ts#L16">routes/futures.ts:16</a>
+    ↓
+Middleware requireAuth() verifies token & attaches user
+<a href="server/src/middleware/auth.ts#L16">middleware/auth.ts:16</a>
+    ↓
+Handler writes to DB (IN PARALLEL):
+    ├─→ FuturesAccount.updateOne() - deduct margin <a href="server/src/routes/futures.ts#L53">routes/futures.ts:53</a>
+    ├─→ FuturesOrder.create() - create order record <a href="server/src/routes/futures.ts#L57">routes/futures.ts:57</a>
+    └─→ FuturesPosition.updateOne() - create/update position <a href="server/src/routes/futures.ts#L80">routes/futures.ts:80</a>
+    ↓
+Handler calls sync functions (IN PARALLEL) <a href="server/src/routes/futures.ts#L94">L94-95</a>:
+    ├─→ syncFuturesBalances(userId) <a href="server/src/utils/emitters.ts#L30">emitters.ts:30</a>
+    │       ├─→ FuturesAccount.find() - read balances from DB
+    │       └─→ emitAccountEvent(userId, {kind: 'futuresBalance', futuresAvailable: {...}})
+    │   
+    └─→ syncFuturesPosition(userId, symbol) <a href="server/src/utils/emitters.ts#L45">emitters.ts:45</a>
+            ↓
+        FuturesPosition.find() - read positions from DB
+            ↓
+        emitAccountEvent(userId, {kind: 'futuresPosition', symbol, position: {...}})
+            ↓
+        emitAccountEvent() <a href="server/src/ws/streams/account.ts#L19">account.ts:19</a>
+            ↓
+        ws.send(JSON.stringify(data)) - sends WebSocket message to user's connection
+            ↓
+        ws.onmessage handler <a href="web/src/contexts/AccountContext.tsx#L169">AccountContext.tsx:169</a>
+            ↓
+        JSON.parse(event.data) - parse message <a href="web/src/contexts/AccountContext.tsx#L172">L172</a>
+            ↓
+        if (msg.kind === 'futuresBalance') <a href="web/src/contexts/AccountContext.tsx#L178">L178</a>:
+            setFuturesAvailable(msg.futuresAvailable) - React setState
+            ↓
+        if (msg.kind === 'futuresPosition') <a href="web/src/contexts/AccountContext.tsx#L200">L200</a>:
+            setFuturesPositions(prev => [...]) - React setState <a href="web/src/contexts/AccountContext.tsx#L201">L201-212</a>
+            ↓
+        React re-renders all components using AccountContext:
+            ├─→ Futures.tsx re-renders <a href="web/src/routes/Futures.tsx#L26">L26</a>
+            │       ↓
+            │   futuresPositions prop changes
+            │       ↓
+            │   PriceChart receives new positions prop <a href="web/src/components/PriceChart.tsx#L18">L18</a>
+            │       ↓
+            │   useEffect triggers <a href="web/src/components/PriceChart.tsx#L194">L194</a>
+            │       ↓
+            │   positions.forEach() - loop through positions <a href="web/src/components/PriceChart.tsx#L219">L219</a>
+            │       ↓
+            │   seriesRef.current.createPriceLine() - draw entry line on chart <a href="web/src/components/PriceChart.tsx#L223">L223</a>
+            │       ↓
+            │   Chart shows position entry line
+            │
+            ├─→ Spot.tsx re-renders (if open)
+            └─→ Wallet.tsx re-renders (if open)
+
+
+<b>OPERATION 2: Close Position</b>
+User clicks "Close" button on chart
+<a href="web/src/components/PriceChart.tsx#L288">PriceChart.tsx:288</a>
+    ↓
+props.onClosePosition(activePosition) callback
+    ↓
+Futures.tsx handleClosePosition() function
+    ↓
+fetch() → POST /api/futures/close-position (with Bearer Token)
+<a href="server/src/routes/futures.ts#L181">routes/futures.ts:181</a>
+    ↓
+Middleware requireAuth() verifies token
+<a href="server/src/middleware/auth.ts">middleware/auth.ts</a>
+    ↓
+Handler calls futuresEngine.executePositionClose(posId, exitPrice)
+<a href="server/src/routes/futures.ts#L194">routes/futures.ts:194</a>
+    ↓
+executePositionClose()
+<a href="server/src/utils/futuresEngine.ts#L249">futuresEngine.ts:249</a>
+    ↓
+    mongoose.startSession() - start DB transaction
+    ↓
+    session.withTransaction(async () => {
+        ↓
+        FuturesPosition.findById(posId) - read position from DB
+        ↓
+        Calculate (IN PARALLEL):
+            ├─→ diff = side === 'long' ? (exitPrice - entryPrice) : (entryPrice - exitPrice)
+            ├─→ realizedPnl = closeQty * diff
+            ├─→ marginToRelease = (closeQty / totalQty) * pos.margin
+            └─→ refund = Math.max(0, marginToRelease + realizedPnl)
+        ↓
+        FuturesAccount.updateOne() - add refund to available balance <a href="server/src/utils/futuresEngine.ts#L273">L273</a>
+        ↓
+        FuturesPositionHistory.create() - save history record <a href="server/src/utils/futuresEngine.ts#L279">L279</a>
+        ↓
+        if (closeQty >= totalQty):
+            FuturesPosition.deleteOne() - delete position <a href="server/src/utils/futuresEngine.ts#L286">L286</a>
+        else:
+            pos.quantity -= closeQty <a href="server/src/utils/futuresEngine.ts#L289">L289</a>
+            pos.margin -= marginToRelease
+            pos.realizedPnL += realizedPnl
+            pos.save() - update position in DB
+    })
+    ↓
+    session.endSession() - commit transaction
+    ↓
+    syncFuturesBalances(userId) <a href="server/src/utils/futuresEngine.ts#L300">L300</a>
+    syncFuturesPosition(userId, symbol) <a href="server/src/utils/futuresEngine.ts#L301">L301</a>
+    ↓
+    (Same WebSocket flow as Operation 1)
+    ↓
+    AccountContext.setFuturesPositions() updates
+    ↓
+    PriceChart re-renders:
+        ├─→ if position deleted: removes all price lines from chart
+        └─→ if partial close: updates position line with new quantity
+
+
+<b>OPERATION 3: Set TP / SL</b>
+User sets TP/SL in modal
+    ↓
+POST /api/futures/positions/tpsl
+<a href="server/src/routes/futures.ts#L203">routes/futures.ts:203</a>
+    ↓
+Handler updates FuturesPosition <a href="server/src/routes/futures.ts#L211">L211-214</a>:
+    ├─→ tpPrice
+    ├─→ slPrice
+    ├─→ tpQuantity
+    └─→ slQuantity
+    ↓
+syncFuturesPosition() → emitAccountEvent() → WebSocket → UI updates
+
+<b>OPERATION 4: Cancel Limit Order</b>
+User clicks "Cancel"
+    ↓
+DELETE /api/futures/orders/:id
+<a href="server/src/routes/futures.ts#L109">routes/futures.ts:109</a>
+    ↓
+Handler does (IN PARALLEL):
+    ├─→ Unreserve margin in FuturesAccount
+    └─→ Mark FuturesOrder as cancelled
+    ↓
+syncFuturesBalances() + syncOrder() → emitAccountEvent() → WebSocket → UI updates
+
+
+<b>PRICE DATA FLOW</b>
+futuresTicks.ts (every 1s)
+<a href="server/src/ws/streams/futuresTicks.ts#L19">futuresTicks.ts:19</a>
+    ↓
+Fetch MEXC API and call 
+    ↓
+call priceService.updatePrice() <a href="server/src/ws/streams/futuresTicks.ts#L37">futuresTicks.ts:37</a>
+    ↓
+priceService hot cache
+    ↓
+Consumed by (IN PARALLEL):
+    ├─→ futuresEngine.processTPSL()
+    ├─→ futuresEngine.processLiquidations()
+    ├─→ futuresEngine.processLimitOrders()
+    ├─→ routes/futures.ts handlers
+    ├─→ spotEngine
+    └─→ stats.calculateStats()
+    ↓
+If cache stale: fallback to direct MEXC API call
+
+
+<b>BACKGROUND PROCESSES (Every 2s)</b>
+futuresEngine.tick()
+<a href="server/src/utils/futuresEngine.ts#L26">futuresEngine.ts:26</a>
+    ↓
+Runs 3 processes IN PARALLEL:
+    ├─→ processLimitOrders() <a href="server/src/utils/futuresEngine.ts#L40">L40</a>
+    │       ↓
+    │   priceService.getPrice() ← Check if limit orders should fill
+    │       ↓
+    │   If match: fillOrder() → Create/update position → Emit updates
+    │
+    ├─→ processTPSL() <a href="server/src/utils/futuresEngine.ts#L136">L136</a>
+    │       ↓
+    │   priceService.getPrice() ← Check if TP/SL triggered
+    │       ↓
+    │   If triggered: executePositionClose() → Emit updates
+    │
+    └─→ processLiquidations() <a href="server/src/utils/futuresEngine.ts#L177">L177</a>
+            ↓
+        priceService.getPrice() ← Check if position should liquidate
+            ↓
+        If triggered: liquidatePosition() → Emit updates
+</pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<pre>
+══════════════════════════
+SPOT ECOSYSTEM
+══════════════════════════
+
+<b>FILES:</b>
+<a href="web/src/routes/Spot.tsx">Spot.tsx</a>, 
+<a href="server/src/routes/spot.ts">routes/spot.ts</a>, 
+<a href="server/src/utils/spotEngine.ts">spotEngine.ts</a>, 
+<a href="server/src/utils/moneyMovement.ts">moneyMovement.ts</a>, 
+<a href="server/src/utils/priceService.ts">priceService.ts</a>, 
+<a href="server/src/utils/emitters.ts">emitters.ts</a>, 
+<a href="web/src/contexts/AccountContext.tsx">AccountContext.tsx</a>, 
+<a href="server/src/middleware/auth.ts">middleware/auth.ts</a>
+
+
+<b>OPERATION 1: Place Market Order</b>
+User clicks "Buy" or "Sell" button (Visible only if isAuthed)
+    ↓
+button calls placeOrder('buy')
+    ↓
+if placeOrder('buy') holds valid token in localStorage runs fetch 
+<a href="web/src/routes/Spot.tsx#L19">Spot.tsx:19</a>
+    ↓
+POST /api/spot/orders (with Bearer Token)
+<a href="server/src/routes/spot.ts#L19">routes/spot.ts:19</a>
+    ↓
+Middleware requireAuth() verifies token
+<a href="server/src/middleware/auth.ts#L8">middleware/auth.ts:8</a>
+    ↓
+Route Callback (Anonymous Function) does (IN PARALLEL):
+    ├─→ Get current price from priceService
+    <a href="server/src/utils/priceService.ts#L19">priceService.ts:19</a>
+    ├─→ Calculate trade amounts
+    └─→ moneyMovement.moveMoney() (Atomic DB Update via $inc)
+    <a href="server/src/utils/moneyMovement.ts#L19">moneyMovement.ts:19</a>
+    ↓
+syncSpotPosition() → emitAccountEvent() → WebSocket → UI updates
+
+
+<b>OPERATION 2: Place Limit Order</b>
+User clicks "Buy" or "Sell" (limit)
+    ↓
+POST /api/spot/orders
+    ↓
+Handler does (IN PARALLEL):
+    ├─→ Reserve balance in SpotPosition
+    └─→ Create SpotOrder with status='pending'
+    ↓
+syncSpotPosition() → emitAccountEvent() → WebSocket → UI updates
+
+
+<b>OPERATION 3: Cancel Limit Order</b>
+User clicks "Cancel"
+    ↓
+DELETE /api/spot/orders/:id
+    ↓
+Handler does (IN PARALLEL):
+    ├─→ Unreserve balance in SpotPosition
+    └─→ Mark SpotOrder as cancelled
+    ↓
+syncSpotPosition() → emitAccountEvent() → WebSocket → UI updates
+
+
+══════════════════════════
+BACKGROUND PROCESS (When price changes)
+══════════════════════════
+spotTicks.ts (every 1s)
+<a href="server/src/ws/streams/spotTicks.ts#L20">spotTicks.ts:20</a>
+    ↓
+Fetch MEXC API
+    ↓
+Get previous price from priceService cache
+<a href="server/src/ws/streams/spotTicks.ts#L37">L37</a>
+    ↓
+priceService.updatePrice()
+<a href="server/src/ws/streams/spotTicks.ts#L43">L43</a>
+    ↓
+If price changed
+<a href="server/src/ws/streams/spotTicks.ts#L51">L51</a>
+    ↓
+matchSpotLimitOrders(symbol, price)
+<a href="server/src/ws/streams/spotTicks.ts#L53">L53</a>
+    ↓
+Check pending SpotOrders in DB
+    ↓
+For each fillable order (IN PARALLEL):
+    ├─→ Unreserve balance
+    ├─→ Execute trade (update SpotPosition)
+    ├─→ Mark SpotOrder as filled
+    └─→ Emit updates via syncSpotPosition()
+</pre>
+
+
+
+
+
+
+
+
+
+
+
+<pre>
+══════════════════════
+PRICE Service
+══════════════════════
+
+<b>FILES:</b>
+<a href="server/src/ws/streams/spotTicks.ts">spotTicks.ts</a>, 
+<a href="server/src/ws/streams/futuresTicks.ts">futuresTicks.ts</a>, 
+<a href="server/src/utils/priceService.ts">priceService.ts</a>, 
+<a href="web/src/contexts/PriceContext.tsx">PriceContext.tsx</a>, 
+<a href="web/src/components/PriceChart.tsx">PriceChart.tsx</a>, 
+<a href="web/src/components/BigPrice.tsx">BigPrice.tsx</a>
+
+
+<b>COMPLETE FLOW:</b>
+DATA COLLECTION (every 1s):
+    spotTicks.ts / futuresTicks.ts → MEXC API
+            ↓
+    ┌───────┴───────┐
+    ↓               ↓
+UPDATE CACHE    BROADCAST TO FRONTEND
+    ↓               ↓
+priceService    WebSocket streams:
+    ↓           ├─→ /ws/spot-ticks.ts
+BACKEND USE     └─→ /ws/futures-ticks.ts
+    ↓               ↓
+Consumed by:    PriceContext.onmessage
+├─ futuresEngine    ↓
+├─ spotEngine   PriceContext.setState()
+├─ stats            ↓
+└─ Handlers     Components re-render:
+                ├─→ PriceChart (via usePrice hook)
+                └─→ BigPrice (via usePrice hook)
+</pre>
+
+
+
+
+
+
+
+
+
+
+
+<pre>
+══════════════════════
+MARKET DEPTH ECOSYSTEM (ORDER BOOK)
+══════════════════════
+
+<b>FILES:</b>
+<a href="server/src/ws/streams/spotDepth.ts">spotDepth.ts</a>, 
+<a href="server/src/ws/streams/futuresDepth.ts">futuresDepth.ts</a>, 
+<a href="web/src/components/OrderBook.tsx">OrderBook.tsx</a>
+
+<b>COMPLETE FLOW:</b>
+COMPONENT MOUNT (OrderBook.tsx):
+    ↓
+    useEffect() connects to WebSocket:
+    ├─→ /ws/spot-depth (if market='spot')
+    └─→ /ws/futures-depth (if market='futures')
+            ↓
+    Sends subscription message:
+    { type: 'sub', symbol: 'BTCUSDT', depth: 20 }
+            ↓
+    BACKEND (spotDepth.ts / futuresDepth.ts):
+            ↓
+    Receives 'sub' message
+            ↓
+    Starts Interval (every 1s) for that symbol/depth:
+            ↓
+    Fetch MEXC API (/api/v3/depth)
+            ↓
+    Broadcast JSON { bids: [...], asks: [...] } to subscribers
+            ↓
+    FRONTEND (OrderBook.tsx):
+            ↓
+    Receives 'depth' message
+            ↓
+    setBids(), setAsks() → Re-render Order Book UI
+</pre>
+
+
+
+
+
+
+
+
+
+
+
+<pre>
+══════════════════════════
+BIGPRICE HYBRID ECOSYSTEM
+══════════════════════════
+
+<b>FILES:</b>
+<a href="web/src/components/BigPrice.tsx">BigPrice.tsx</a>, 
+<a href="server/src/routes/markets.ts">routes/markets.ts</a>, 
+<a href="web/src/contexts/PriceContext.tsx">PriceContext.tsx</a>
+
+
+<b>UNIQUE CIRCULATION (The "Instant + Live" Loop):</b>
+
+COMPONENT MOUNT (BigPrice.tsx):
+    ↓
+    Two parallel streams start:
+    
+    STREAM A (Instant Snapshot):
+    useEffect() → fetch('/api/markets/spot/klines') <a href="web/src/components/BigPrice.tsx#L32">BigPrice.tsx:32</a>
+        ↓
+    GET /api/markets/spot/klines <a href="server/src/routes/markets.ts">routes/markets.ts</a>
+        ↓
+    Returns latest candle [Open, Close]
+        ↓
+    setOpenPrice(o), setPrice(c) → INSTANT RENDER (No waiting for WS)
+
+    STREAM B (Live Updates):
+    usePrice() hook <a href="web/src/components/BigPrice.tsx#L19">BigPrice.tsx:19</a>
+        ↓
+    Subscribes to PriceContext
+        ↓
+    Receives WebSocket ticks from Price Distribution Eco
+        ↓
+    setPrice(tick.price) → LIVE RE-RENDERS
+
+
+<b>VISUAL LOGIC:</b>
+Compare (price vs openPrice):
+    ├─→ price > openPrice: Green (#0BBA74)
+    ├─→ price < openPrice: Red (#FF4761)
+    └─→ price == openPrice: Neutral
+</pre>
+
+
+
+
+
+
+
+
+
+
+
+<pre>
+══════════════════════
+ACCOUNT SYNC ECOSYSTEM
+══════════════════════
+
+<b>FILES:</b>
+<a href="server/src/utils/emitters.ts">emitters.ts</a>, 
+<a href="server/src/ws/streams/account.ts">ws/streams/account.ts</a>, 
+<a href="server/src/utils/portfolio.ts">portfolio.ts</a>, 
+<a href="web/src/contexts/AccountContext.tsx">AccountContext.tsx</a>
+
+
+<b>COMPLETE FLOW 1: Event-Driven Sync (The "Live Wire")</b>
+ANY DB CHANGE (position, balance, order):
+    ↓
+Sync function called from emitters.ts:
+    ├─→ syncFuturesPosition(userId, symbol)
+    ├─→ syncFuturesBalances(userId)
+    ├─→ syncSpotPosition(userId, asset)
+    └─→ syncOrder(userId, orderData)
+            ↓
+    All call emitAccountEvent(userId, data)
+            ↓
+    ws/streams/account.ts sends WebSocket to specific user
+            ↓
+    AccountContext.onmessage receives update
+            ↓
+    AccountContext.setState() updates:
+    ├─→ futuresPositions
+    ├─→ futuresAvailable
+    ├─→ spotPositions
+    ├─→ spotAvailable
+    └─→ orders
+            ↓
+    All consuming components re-render (IN PARALLEL):
+    ├─→ Futures.tsx
+    ├─→ Spot.tsx
+    ├─→ Wallet.tsx
+    └─→ Any other component using AccountContext
+
+
+<b>COMPLETE FLOW 2: Portfolio Broadcast Loop (The "Heartbeat")</b>
+ws/streams/account.ts (every 2s per user)
+    ↓
+calls portfolio.calculateTotalPortfolioUSD(userId)
+    ↓
+Aggregates: Spot Balances + Futures Balances + Futures Unrealized PnL
+    ↓
+Emits { kind: 'portfolio', totalPortfolioUSD: ... } via WebSocket
+    ↓
+Frontend updates "Total Balance" display
+
+
+<b>INITIAL LOAD:</b>
+    ↓
+GET /api/user/profile (on page load)
+    ↓
+Returns initial balances/positions
+    ↓
+After that: WebSocket handles all real-time updates
+    ↓
+Polling fallback: Refresh every 10s + on window focus
+</pre>
+
+
+
+
+
+
+
+
+
+
+
+<pre>
+═══════════════
+USER PROFILE POLLING ECOSYSTEM (ISOLATED)
+═══════════════
+
+<b>FILES:</b>
+<a href="server/src/routes/user.ts">routes/user.ts</a>, 
+<a href="server/src/utils/portfolio.ts">portfolio.ts</a>, 
+<a href="web/src/contexts/AccountContext.tsx">AccountContext.tsx</a>
+
+
+<b>COMPLETE FLOW:</b>
+TRIGGER (any of these):
+    ├─→ Page load
+    ├─→ Every 10 seconds (polling interval)
+    └─→ Window focus event
+        ↓
+GET /api/user/profile <a href="server/src/routes/user.ts#L16">routes/user.ts:16</a>
+        ↓
+Handler reads DB (IN PARALLEL) <a href="server/src/routes/user.ts#L22-L26">L22-26</a>:
+    ├─→ User.findById()
+    ├─→ SpotPosition.find()
+    ├─→ FuturesAccount.find()
+    └─→ FuturesPosition.find()
+        ↓
+Calculate totalPortfolioUSD (via portfolio.ts) <a href="server/src/routes/user.ts#L42">L42</a>
+        ↓
+Return JSON response <a href="server/src/routes/user.ts#L44-L65">L44-65</a>:
+    ├─→ user info
+    ├─→ spotAvailable (USDT/USDC)
+    ├─→ futuresAvailable (USDT/USDC)
+    ├─→ positions array
+    └─→ futuresPositions array
+        ↓
+AccountContext receives HTTP response
+        ↓
+AccountContext.setState() updates state
+        ↓
+UI re-renders
+
+
+
+
+
+
+
+
+
+
+
+<b>DIFFERENCE VS ACCOUNT SYNC ECOSYSTEM:</b>
+&gt; <b>Polling Eco (Safety Net)</b>: PULL model. Runs on timer/load. Fetches <i>entire</i> state. Recovers from connection drops.
+&gt; <b>Account Sync Eco (Live Wire)</b>: PUSH model. Runs on DB events. Pushes <i>deltas</i>. Provides instant feedback.
+</pre>
+
+
+
+
+
+
+
+
+
+
+
+<pre>
+════════════════════════
+AUTHENTICATION ECOSYSTEM
+════════════════════════
+
+<b>FILES:</b>
+<a href="web/src/contexts/AuthContext.tsx">AuthContext.tsx</a>, 
+<a href="server/src/routes/auth.ts">routes/auth.ts</a>, 
+<a href="server/src/middleware/auth.ts">middleware/auth.ts</a>, 
+<a href="server/src/utils/jwt.ts">jwt.ts</a>
+
+
+<b>OPERATION 1: Login / Register</b>
+User submits form
+    ↓
+AuthContext.login() / register()
+    ↓
+POST /api/auth/login OR /register <a href="server/src/routes/auth.ts">routes/auth.ts</a>
+    ↓
+Handler:
+    ├─→ Verify credentials / Create User (DB)
+    ├─→ Generate Access Token (short-lived)
+    ├─→ Generate Refresh Token (long-lived)
+    └─→ Set HTTP-Only Cookie (refresh_token)
+    ↓
+Return JSON { accessToken }
+    ↓
+AuthContext.persist(accessToken) → Updates State → App becomes "Authed"
+
+
+<b>OPERATION 2: Silent Refresh (The "Heartbeat")</b>
+AuthContext.useEffect (Interval 10m OR Window Focus) <a href="web/src/contexts/AuthContext.tsx#L94">AuthContext.tsx:94</a>
+    ↓
+refresh() function
+    ↓
+POST /api/auth/refresh <a href="server/src/routes/auth.ts#L85">routes/auth.ts:85</a>
+    ↓
+Handler:
+    ├─→ Read cookie
+    ├─→ Verify Refresh Token (jwt.ts)
+    ├─→ Check User DB (version match)
+    └─→ Issue NEW Access Token + Rotate Refresh Token
+    ↓
+AuthContext receives new Access Token
+    ↓
+verify() → GET /api/user/profile (Ensures token actually works)
+
+
+<b>OPERATION 3: Protected Route Access</b>
+User navigates to /futures
+    ↓
+Component makes API call (e.g., POST /order)
+    ↓
+Request Header: Authorization: Bearer &lt;accessToken&gt;
+    ↓
+Express Middleware (authenticate) <a href="server/src/middleware/auth.ts">middleware/auth.ts</a>
+    ↓
+Verify Access Token
+    ├─→ Valid: req.user set, next() called
+    └─→ Invalid: 401 Unauthorized → Frontend triggers refresh or logout
+
+
+<b>OPERATION 4: Client-Side Protection (No Server Request)</b>
+1. Protected Routes <a href="web/src/App.tsx#L52">App.tsx:52</a>
+   User tries to access /wallet
+       ↓
+   &lt;Protected&gt; component checks isAuthed
+       ↓
+   if (!isAuthed) &lt;Navigate to="/login" /&gt; (Redirects immediately)
+
+2. UI Conditional Rendering <a href="web/src/components/Header.tsx#L94">Header.tsx:94</a>
+   Header component checks isAuthed
+       ↓
+   if (isAuthed) Show "Wallet", "Settings"
+   else Show "Login", "Sign up"
+
+
+<b>OPERATION 5: WebSocket Handshake (Server Request)</b>
+AccountContext connects to /ws/account <a href="web/src/contexts/AccountContext.tsx#L151">AccountContext.tsx:151</a>
+    ↓
+Sends ?token=&lt;accessToken&gt; in URL
+    ↓
+Server extracts & verifies token <a href="server/src/ws/streams/account.ts#L114">ws/streams/account.ts:114</a>
+    ↓
+If valid: Connection upgraded, user added to broadcast list
+If invalid: Connection closed immediately
+</pre>
+

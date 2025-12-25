@@ -42,14 +42,14 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false
       ; (async () => {
         try {
-          const res = await fetch(`${API_BASE}/api/markets/spot/24h`)
+          const res = await fetch(`${API_BASE}/api/markets/spot/24h`) //without symbol calls the expensive all symbols
           const data = await res.json().catch(() => [])
           if (!cancelled && Array.isArray(data)) setSpotStats(data)
         } catch { }
       })()
       ; (async () => {
         try {
-          const res = await fetch(`${API_BASE}/api/markets/futures/24h`)
+          const res = await fetch(`${API_BASE}/api/markets/futures/24h`) //without symbol calls the expensive all symbols
           const j = await res.json().catch(() => ({}))
           const arr = Array.isArray(j?.data) ? j.data : []
           if (!cancelled) setFuturesStats(arr)

@@ -280,7 +280,7 @@ export default function PriceChart(props: Props) {
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="w-full" style={{ pointerEvents: 'none' }} />
+      <div ref={containerRef} className="w-full" />
 
       {/* Top Right Controls */}
       <div className="absolute top-2 right-2 flex gap-2 z-10" style={{ pointerEvents: 'auto' }}>
@@ -295,8 +295,8 @@ export default function PriceChart(props: Props) {
         <button
           onClick={() => setDrawMode(!drawMode)}
           className={`px-3 py-1.5 text-xs font-medium rounded transition-colors shadow-md ${drawMode
-              ? 'bg-blue-500 text-white hover:bg-blue-600 border border-blue-600'
-              : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
+            ? 'bg-blue-500 text-white hover:bg-blue-600 border border-blue-600'
+            : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
             }`}
         >
           {drawMode ? 'Cancel' : 'Draw'}

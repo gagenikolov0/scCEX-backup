@@ -19,10 +19,11 @@ router.get('/spot/24h', async (req: Request, res: Response) => {
   try {
     const symbol = String(req.query.symbol || '')
     const key = symbol ? `spot:24h:${symbol}` : 'spot:24h:all'
+
     const data = await fromCache(key, 2000, async () => {
       const url = symbol
-        ? `https://api.mexc.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`
-        : `https://api.mexc.com/api/v3/ticker/24hr`
+        ? `https://api.mexc.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}` // fetct one symbol
+        : `https://api.mexc.com/api/v3/ticker/24hr` // fetch all symbols: if you dont provide symbol
       const upstream = await fetch(url)
       if (!upstream.ok) {
         const text = await upstream.text().catch(() => '')
