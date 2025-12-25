@@ -79,6 +79,47 @@ Isnt that a lot of DB sessions instead of just one and getting things done faste
 maybe that practice is not clean
 
 
+
+
+
+
 ❓btw does each function also call each emmitter?
 or each function calls the shared emmitter?
 either way does each function call emmiter or one function for all function calls emmiter?
+
+✅ It runs cleaner than that.
+The Engine (Logic) calls a specific helper like 
+syncFuturesPosition
+
+That helper uses the Shared Emitter (emitAccountEvent) to actually push the data to the correct user.
+So: Engine -> syncHelper -> SharedEmitter.
+
+❓oh wait and account even then is connected to frontend through AccountContext?
+i thought Frontend is displaying every backend update indirectly because you know every 10 minutes or 
+on focus frontend calls user/account and updates the context because user.ts pulls everything from db
+exactly where engine updates because engine works with db only.
+
+
+
+
+
+
+❓So wait in MoneyMove which is in backend there still is tp/sl calculation there except its not live 
+every tick its just once so basically backend does tp/sl calculation as well
+
+✅ YES. This is critical.
+Live Tick (Every 2 seconds): The backend checks every single position against the current price.
+If Price hits TP, the Backend executes the trade.
+The Frontend checks are visual only (to capture your attention). 
+The Backend check is the one that actually moves the money.
+❓okay then if im perfectly right then, i wanna see exactly where the pnl logic is specifically for tp/sl
+
+
+
+
+
+
+
+
+
+❓ what the hell do we need scripts in backend for isnt that completely useless?

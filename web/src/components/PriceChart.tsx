@@ -11,9 +11,11 @@ type Props = {
   market?: 'spot' | 'futures'
   orders?: any[]
   positions?: any[]
+  onClosePosition?: (position: any) => void
 }
 
-export default function PriceChart({ symbol, height = 420, interval = '1m', market = 'spot', orders = [], positions = [] }: Props) {
+export default function PriceChart(props: Props) {
+  const { symbol, height = 420, interval = '1m', market = 'spot', orders = [], positions = [] } = props
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<any>(null)
@@ -220,11 +222,25 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
       if (!isNaN(entryPrice)) {
         const line = seriesRef.current.createPriceLine({
           price: entryPrice,
-          color: p.side === 'long' ? '#099264ff' : '#e03131',
+          color: p.side === 'long' ? '#099268' : '#e03131',
           lineWidth: 2,
           lineStyle: 0, // Solid
           axisLabelVisible: true,
           title: `${p.side.charAt(0).toUpperCase() + p.side.slice(1)} Entry`,
+        })
+        positionLinesRef.current.push(line)
+      }
+
+      // Liquidation Line (NEW)
+      const liqPrice = parseFloat(p.liquidationPrice)
+      if (!isNaN(liqPrice) && liqPrice > 0) {
+        const line = seriesRef.current.createPriceLine({
+          price: liqPrice,
+          color: '#e8590c', // Orange (amber-500)
+          lineWidth: 1,
+          lineStyle: 0, // Solid
+          axisLabelVisible: true,
+          title: 'Liq. Price',
         })
         positionLinesRef.current.push(line)
       }
@@ -260,13 +276,25 @@ export default function PriceChart({ symbol, height = 420, interval = '1m', mark
 
   }, [orders, positions, symbol, market])
 
+  const activePosition = positions.find(p => p.symbol === symbol || p.symbol === deUnderscore(normalizeFuturesSymbol(symbol)))
+
   return (
     <div className="relative">
       <div ref={containerRef} className="w-full" />
+
+      {/* Top Right Controls */}
       <div className="absolute top-2 right-2 flex gap-2">
+        {activePosition && props.onClosePosition && (
+          <button
+            onClick={() => props.onClosePosition && props.onClosePosition(activePosition)}
+            className="px-2 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
+          >
+            Close Position
+          </button>
+        )}
         <button
           onClick={() => setDrawMode(!drawMode)}
-          className={`px-2 py-1 text-xs rounded ${drawMode ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-2 py-1 text-xs rounded ${drawMode ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} transition-colors shadow-sm`}
         >
           {drawMode ? 'Cancel' : 'Draw'}
         </button>

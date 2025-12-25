@@ -399,6 +399,7 @@ export default function Futures() {
                 market="futures"
                 orders={recentOrders.filter((o: any) => o.symbol === `${token}_${quote}` && o.status === 'pending')}
                 positions={futuresPositions.filter((p: any) => p.symbol === `${token}_${quote}`)}
+                onClosePosition={(pos) => setPartialCloseData({ symbol: pos.symbol, totalQty: Number(pos.quantity) })}
               />
             </div>
           </Card>
