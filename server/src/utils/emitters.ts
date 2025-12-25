@@ -83,7 +83,11 @@ export async function syncFuturesPosition(userId: string, symbol: string) {
                 entryPrice: pos.entryPrice,
                 leverage: pos.leverage,
                 margin: pos.margin,
-                liquidationPrice: pos.liquidationPrice
+                liquidationPrice: pos.liquidationPrice,
+                tpPrice: pos.tpPrice,
+                slPrice: pos.slPrice,
+                tpQuantity: pos.tpQuantity,
+                slQuantity: pos.slQuantity
             } : null
         });
     } catch (e) {
