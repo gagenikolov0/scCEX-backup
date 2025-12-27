@@ -219,11 +219,14 @@ export default function Futures() {
     } catch { alert('Network error') }
   }
 
-  const renderTable = (data: any[], columns: string[], emptyMessage: string) => (
+  const renderTable = (data: any[], columns: (string | { label: string, key: string })[], emptyMessage: string) => (
     <table className="w-full text-sm">
       <thead className="text-neutral-500">
         <tr className="text-left border-b">
-          {columns.map(col => <th key={col} className="py-2 pr-3">{col}</th>)}
+          {columns.map(col => {
+            const label = typeof col === 'string' ? col : col.label
+            return <th key={label} className="py-2 pr-3">{label}</th>
+          })}
         </tr>
       </thead>
       <tbody>
@@ -234,9 +237,10 @@ export default function Futures() {
         ) : (
           data.map((item, idx) => (
             <tr key={item._id || idx} className="border-b last:border-0 hover:bg-neutral-50/50">
-              {columns.map(col => {
+              {columns.map(column => {
                 let val: any = '-'
-                const c = col.toLowerCase()
+                const key = typeof column === 'string' ? column : column.key
+                const c = key.toLowerCase()
 
                 if (c === 'symbol') {
                   const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
@@ -263,7 +267,6 @@ export default function Futures() {
                 else if (c === 'price') val = item.price
                 else if (c === 'liq. price') val = <Text size="xs" color="#e8590c" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
                 else if (c === 'pnl') {
-                  // Unrealized PnL (live calculation)
                   const itemStats = futuresStats.find(s => s.symbol === item.symbol)
                   const lastPrice = Number(itemStats?.lastPrice || 0)
                   const entryPrice = Number(item.entryPrice || 0)
@@ -288,7 +291,6 @@ export default function Futures() {
                   )
                 }
                 else if (c === 'realized pnl') {
-                  // Realized PnL (from partial closes or history)
                   const realizedPnl = Number(item.realizedPnL || 0)
                   const margin = Number(item.margin || item.marginToRelease || 0)
                   const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
@@ -300,7 +302,7 @@ export default function Futures() {
                           {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                         </Text>
                         {item.note === 'Liquidated' && (
-                          <Badge color="red" size="xs" variant="filled">LIQ</Badge>
+                          <Badge color="red" size="xs" variant="filled" style={{ marginLeft: '3px' }}>LIQ</Badge>
                         )}
                       </div>
                       <Text size="10px" color={realizedPnl >= 0 ? '#0bba74' : '#FF4761'}>
@@ -350,14 +352,18 @@ export default function Futures() {
                 else if (c === 'status') val = item.status
                 else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
                 else if (c === 'action') {
-                  if (columns.includes('PnL')) {
+                  const isPosTable = columns.some(col => {
+                    const l = typeof col === 'string' ? col : col.label
+                    return l === 'PnL'
+                  })
+                  if (isPosTable) {
                     val = <Button size="compact-xs" color="red" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
                   } else {
                     val = item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
                   }
                 }
 
-                return <td key={col} className="py-2 pr-3">{val}</td>
+                return <td key={typeof column === 'string' ? column : column.label} className="py-2 pr-3">{val}</td>
               })}
             </tr>
           ))
@@ -368,12 +374,13 @@ export default function Futures() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-center gap-3">
-        <Menu shadow="md" width={260} position="bottom-start" withinPortal>
+      <div className="flex items-center gap-6 py-2">
+        <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
-            <Button variant="outline" size="compact-md" className="h-10">
-              <div className="leading-tight text-left">
-                <div className="text-sm font-medium">{token}/{quote}</div>
+            <Button variant="transparent" size="lg" className="h-14 px-2 !bg-transparent hover:!bg-transparent focus:!bg-transparent active:!bg-transparent data-[expanded]:!bg-transparent">
+              <div className="flex flex-col items-start leading-tight">
+                <div className="text-xl font-bold tracking-tight">{token}{quote}</div>
+                <div className="text-[10px] text-neutral-500 font-medium uppercase tracking-wider">Perpetual</div>
               </div>
             </Button>
           </Menu.Target>
@@ -389,20 +396,42 @@ export default function Futures() {
           </Menu.Dropdown>
         </Menu>
 
-
-        <Group gap="md" className="ml-1" wrap="wrap">
+        <div className="flex items-center w-fit header-divider">
           {loadingStats ? <Loader size="xs" /> : (
             <>
-              <Text size="sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                Price: <BigPrice symbol={`${token}_${quote}`} market="futures" />
-              </Text>
-              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : '#FF4761'}>
-                24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}%` : '-'}
-              </Text>
-              <Text size="sm">High: {stats?.high24h ?? '-'} Low: {stats?.low24h ?? '-'} Vol: {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</Text>
+              <div style={{ marginRight: '24px' }} className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}></Text>
+                <div className="text-lg font-bold">
+                  <BigPrice symbol={`${token}_${quote}`} market="futures" />
+                </div>
+              </div>
+
+              <div style={{ marginRight: '24px' }} className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={600}>24h Change</Text>
+                <Text style={{ fontSize: '13px' }} fw={500} c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
+                  {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
+                </Text>
+              </div>
+
+              <div style={{ marginRight: '24px' }} className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h High</Text>
+                <Text style={{ fontSize: '13px' }} fw={600}>{stats?.high24h ?? '-'}</Text>
+              </div>
+
+              <div style={{ marginRight: '24px' }} className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h Low</Text>
+                <Text style={{ fontSize: '13px' }} fw={600}>{stats?.low24h ?? '-'}</Text>
+              </div>
+
+              <div className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h Volume</Text>
+                <Text style={{ fontSize: '13px' }} fw={600}>
+                  {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
+                </Text>
+              </div>
             </>
           )}
-        </Group>
+        </div>
       </div>
 
       <Grid gutter="md">
@@ -596,7 +625,7 @@ export default function Futures() {
             </div>
           </Card>
         </Grid.Col>
-      </Grid>
+      </Grid >
 
       <Grid gutter="md">
         <Grid.Col span={12}>
@@ -605,7 +634,7 @@ export default function Futures() {
               <Tabs.List className="px-3 pt-1">
                 <Tabs.Tab value="positions">Positions</Tabs.Tab>
                 <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
-                <Tabs.Tab value="history" onClick={fetchHistory}>History</Tabs.Tab>
+                <Tabs.Tab value="history" onClick={fetchHistory}>Position History</Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="positions" p="md">
@@ -735,6 +764,6 @@ export default function Futures() {
           </Group>
         </div>
       </Modal>
-    </div>
+    </div >
   )
 }

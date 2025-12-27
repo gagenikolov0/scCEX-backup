@@ -379,11 +379,34 @@ export default function PriceChart(props: Props) {
     <div className="relative w-full" style={{ height: `${height}px`, minHeight: `${height}px` }}>
       <div ref={containerRef} className="w-full h-full" style={{ cursor: 'crosshair' }} />
 
-      {/* Top Left: Controls (Draw + Intervals) */}
+      {/* Top Left: Intervals */}
       <div
-        className="absolute z-[10] flex items-center gap-2"
+        className="absolute z-[10] flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-full shadow-2xl border border-gray-200"
         style={{
           top: 8,
+          left: 8,
+          pointerEvents: 'auto'
+        }}
+      >
+        {(props.availableIntervals || ['1m', '5m', '15m', '1h', '4h', '1d']).map((iv) => (
+          <button
+            key={iv}
+            onClick={() => props.onIntervalChange && props.onIntervalChange(iv)}
+            className={`px-2 py-1 text-[10px] font-bold rounded-full transition-all ${interval === iv
+              ? 'bg-gray-900 text-white'
+              : 'text-gray-600 hover:bg-gray-100'
+              }`}
+          >
+            {iv}
+          </button>
+        ))}
+      </div>
+
+      {/* Left Sidebar: Drawing Tools */}
+      <div
+        className="absolute z-[10] flex flex-col gap-2"
+        style={{
+          top: 60,
           left: 8,
           pointerEvents: 'auto'
         }}
@@ -398,22 +421,6 @@ export default function PriceChart(props: Props) {
         >
           {drawMode ? <PencilOff size={18} /> : <Pencil size={18} />}
         </button>
-
-        {/* Intervals */}
-        <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-full shadow-2xl border border-gray-200">
-          {(props.availableIntervals || ['1m', '5m', '15m', '1h', '4h', '1d']).map((iv) => (
-            <button
-              key={iv}
-              onClick={() => props.onIntervalChange && props.onIntervalChange(iv)}
-              className={`px-2 py-1 text-[10px] font-bold rounded-full transition-all ${interval === iv
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
-            >
-              {iv}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Dynamic: Close Position Button (on the entry line) */}
@@ -433,6 +440,7 @@ export default function PriceChart(props: Props) {
             <div
               className="px-2 py-0.5 text-[11px]"
               style={{
+                padding: '1px 4px 2px 4px',
                 backgroundColor: (activePosition.side === 'long' ? tick.price >= activePosition.entryPrice : tick.price <= activePosition.entryPrice) ? '#0bba74' : '#ff4761',
                 color: '#ffffff'
               }}

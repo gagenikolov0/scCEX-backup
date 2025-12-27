@@ -1,5 +1,5 @@
 
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -230,13 +230,13 @@ export default function Spot() {
 
   return (
     <div className="grid gap-4">
-      {/* Header Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-6 py-2 border-b">
         <Menu shadow="md" width={260} position="bottom-start" withinPortal>
           <Menu.Target>
-            <Button variant="outline" size="compact-md" className="h-10">
-              <div className="leading-tight text-left">
-                <div className="text-sm font-medium">{token}/{quote}</div>
+            <Button variant="subtle" size="lg" className="h-14 px-2 hover:bg-neutral-100 transition-colors">
+              <div className="flex flex-col items-start leading-tight">
+                <div className="text-xl font-bold tracking-tight">{token}{quote}</div>
+                <div className="text-[10px] text-neutral-500 font-medium uppercase tracking-wider">Spot</div>
               </div>
             </Button>
           </Menu.Target>
@@ -252,32 +252,43 @@ export default function Spot() {
           </Menu.Dropdown>
         </Menu>
 
-
-
-
-
-
-
-
-
-
-
-
-        <Group gap="md" className="ml-1" wrap="wrap">
+        <div className="flex items-center gap-8">
           {loadingStats ? <Loader size="xs" /> : (
             <>
-              <Text size="sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                Price: <BigPrice symbol={`${token}${quote}`} market="spot" />
-              </Text>
-              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
-                24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}% ` : '-'}
-              </Text>
-              <Text size="sm">High: {stats?.high24h ?? '-'} Low: {stats?.low24h ?? '-'} Vol: {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
-              </Text>
+              <div className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>Price</Text>
+                <div className="text-lg font-bold">
+                  <BigPrice symbol={`${token}${quote}`} market="spot" />
+                </div>
+              </div>
+
+              <div className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h Change</Text>
+                <Text size="sm" fw={700} c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
+                  {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
+                </Text>
+              </div>
+
+              <div className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h High</Text>
+                <Text size="sm" fw={600}>{stats?.high24h ?? '-'}</Text>
+              </div>
+
+              <div className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h Low</Text>
+                <Text size="sm" fw={600}>{stats?.low24h ?? '-'}</Text>
+              </div>
+
+              <div className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h Volume</Text>
+                <Text size="sm" fw={600}>
+                  {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
+                </Text>
+              </div>
             </>
           )}
-        </Group>
-      </div >
+        </div>
+      </div>
 
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, lg: 7 }}>
@@ -285,7 +296,6 @@ export default function Spot() {
             <PriceChart
               onIntervalChange={setInterval}
               availableIntervals={availableIntervals}
-
               key={`${token}${quote}-${interval}-spot`}
               symbol={`${token}${quote}`}
               interval={interval}
@@ -425,7 +435,6 @@ export default function Spot() {
         </Grid.Col>
       </Grid>
 
-      {/* Simplified Tabs */}
       <Grid gutter="md">
         <Grid.Col span={12}>
           <Card radius="md" withBorder padding={0}>
@@ -438,12 +447,10 @@ export default function Spot() {
 
               <Tabs.Panel value="history" p="md">
                 {renderTable(history, ['Symbol', 'Quantity', 'Price', 'Quote Amount', 'Time'], 'No trade history')}
-
               </Tabs.Panel>
 
               <Tabs.Panel value="pending" p="md">
                 {renderTable(pendingOrders, ['Symbol', 'Quantity', 'Price', 'Status', 'Time'], 'No open orders', true)}
-
               </Tabs.Panel>
 
               <Tabs.Panel value="positions" p="md">
@@ -464,6 +471,6 @@ export default function Spot() {
           refreshOrders()
         }}
       />
-    </div >
+    </div>
   )
 }

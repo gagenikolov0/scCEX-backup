@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { IconHome2, IconUser } from '@tabler/icons-react'
+import { IconHome2, IconUser, IconSun, IconMoon } from '@tabler/icons-react'
 import {
   Anchor,
   Box,
@@ -12,6 +12,7 @@ import {
   HoverCard,
   ScrollArea,
   ActionIcon,
+  useMantineColorScheme,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
@@ -19,6 +20,8 @@ import classes from './HeaderMegaMenu.module.css'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Header() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme()
+  const toggleTheme = () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')
   const { isAuthed } = useAuth()
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] = useDisclosure(false)
   const [futuresOpen, { toggle: toggleFutures }] = useDisclosure(false)
@@ -96,6 +99,9 @@ export default function Header() {
               <NavLink to="/wallet" className={({ isActive }) => `${classes.trigger} ${classes.pill} ${isActive ? classes.pillActive : ''}`}>Wallet</NavLink>
               <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
                 <IconUser size={18} />
+              </ActionIcon>
+              <ActionIcon onClick={toggleTheme} variant="subtle" radius="xl" size="lg" aria-label="Toggle theme">
+                {colorScheme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
               </ActionIcon>
             </>
           ) : (
