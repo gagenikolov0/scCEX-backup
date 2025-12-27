@@ -84,7 +84,6 @@ export default function Spot() {
   const fetchHistory = async () => {
     if (!isAuthed) return
     try {
-      // URL FIX: Removed erroneous spaces in API path
       const res = await fetch(`${API_BASE}/api/spot/history`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
       })
@@ -103,7 +102,6 @@ export default function Spot() {
     if (orderType === 'limit' && (!price || Number(price) <= 0)) return
     setPlacing(side)
     try {
-      // URL FIX: Removed erroneous spaces in API path
       const res = await fetch(`${API_BASE}/api/spot/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
@@ -131,7 +129,6 @@ export default function Spot() {
 
   const cancelOrder = async (orderId: string) => {
     try {
-      // URL FIX: Removed erroneous spaces in API path
       const res = await fetch(`${API_BASE}/api/spot/orders/${orderId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
@@ -174,8 +171,21 @@ export default function Spot() {
                   return v
                 }
 
-                if (c === 'symbol') val = item.symbol
-                else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'teal' : 'red'} fw={600} className="uppercase">{item.side}</Text>
+                if (c === 'symbol') {
+                  const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
+                  val = (
+                    <div className="flex flex-col leading-tight">
+                      <Text size="xs" fw={700}>{cleanSymbol}</Text>
+                      {item.side && (
+                        <Text size="10px" color={item.side === 'buy' ? '#0bba74' : '#ff4761'} fw={700} className="uppercase">
+                          {item.side}
+                        </Text>
+                      )}
+                    </div>
+                  )
+                }
+
+                else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? '#0bba74' : '#ff4761'} fw={600} className="uppercase">{item.side}</Text>
                 else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
                 else if (c === 'price') val = getVal(item.price || item.priceQuote)
                 else if (c === 'total' || c === 'quote amount') {
@@ -242,16 +252,16 @@ export default function Spot() {
           </Menu.Dropdown>
         </Menu>
 
-        <Menu shadow="md" width={180} position="bottom-start" withinPortal>
-          <Menu.Target>
-            <Button variant="outline" size="compact-md" className="h-10">{interval}</Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {availableIntervals.map((iv) => (
-              <Menu.Item key={iv} onClick={() => setInterval(iv)}>{iv}</Menu.Item>
-            ))}
-          </Menu.Dropdown>
-        </Menu>
+
+
+
+
+
+
+
+
+
+
 
         <Group gap="md" className="ml-1" wrap="wrap">
           {loadingStats ? <Loader size="xs" /> : (
@@ -259,7 +269,7 @@ export default function Spot() {
               <Text size="sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Price: <BigPrice symbol={`${token}${quote}`} market="spot" />
               </Text>
-              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? 'teal' : '#FF4761'}>
+              <Text size="sm" c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
                 24h: {stats?.change24h != null ? `${Number(stats.change24h).toFixed(2)}% ` : '-'}
               </Text>
               <Text size="sm">High: {stats?.high24h ?? '-'} Low: {stats?.low24h ?? '-'} Vol: {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
@@ -267,19 +277,20 @@ export default function Spot() {
             </>
           )}
         </Group>
-      </div>
+      </div >
 
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <Card padding={0} radius="md" withBorder>
-            <div className="p-2">
-              <PriceChart
-                key={`${token}${quote}-${interval}-spot`}
-                symbol={`${token}${quote}`}
-                interval={interval}
-                orders={orders.filter((o: any) => o.symbol === `${token}${quote}` && o.status === 'pending')}
-              />
-            </div>
+            <PriceChart
+              onIntervalChange={setInterval}
+              availableIntervals={availableIntervals}
+
+              key={`${token}${quote}-${interval}-spot`}
+              symbol={`${token}${quote}`}
+              interval={interval}
+              orders={orders.filter((o: any) => o.symbol === `${token}${quote}` && o.status === 'pending')}
+            />
           </Card>
         </Grid.Col>
 
@@ -294,13 +305,13 @@ export default function Spot() {
 
         <Grid.Col span={{ base: 12, lg: 2 }}>
           <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Trade</div>
+            <div className="p-3 border-b text-sm font-medium">Spot</div>
             <div className="p-4 grid gap-3">
               <div className="flex gap-1 p-1 bg-neutral-100 rounded">
                 <Button
                   size="xs"
                   variant={tradeSide === 'buy' ? 'filled' : 'subtle'}
-                  color="teal"
+                  color="#0bba74"
                   onClick={() => setTradeSide('buy')}
                   className="flex-1"
                 >
@@ -309,7 +320,7 @@ export default function Spot() {
                 <Button
                   size="xs"
                   variant={tradeSide === 'sell' ? 'filled' : 'subtle'}
-                  color="red"
+                  color="#ff4761"
                   onClick={() => setTradeSide('sell')}
                   className="flex-1"
                 >
@@ -387,7 +398,7 @@ export default function Spot() {
                   <Button
                     className="flex-1"
                     variant="filled"
-                    color="teal"
+                    color="#0bba74"
                     loading={placing === 'buy'}
                     disabled={!isAuthed}
                     onClick={() => placeOrder('buy')}
@@ -398,7 +409,7 @@ export default function Spot() {
                   <Button
                     className="flex-1"
                     variant="filled"
-                    color="red"
+                    color="#ff4761"
                     loading={placing === 'sell'}
                     disabled={!isAuthed}
                     onClick={() => placeOrder('sell')}
@@ -426,11 +437,13 @@ export default function Spot() {
               </Tabs.List>
 
               <Tabs.Panel value="history" p="md">
-                {renderTable(history, ['Symbol', 'Side', 'Quantity', 'Price', 'Quote Amount', 'Time'], 'No trade history')}
+                {renderTable(history, ['Symbol', 'Quantity', 'Price', 'Quote Amount', 'Time'], 'No trade history')}
+
               </Tabs.Panel>
 
               <Tabs.Panel value="pending" p="md">
-                {renderTable(pendingOrders, ['Symbol', 'Side', 'Quantity', 'Price', 'Status', 'Time'], 'No open orders', true)}
+                {renderTable(pendingOrders, ['Symbol', 'Quantity', 'Price', 'Status', 'Time'], 'No open orders', true)}
+
               </Tabs.Panel>
 
               <Tabs.Panel value="positions" p="md">

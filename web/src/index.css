@@ -129,4 +129,8 @@
   }
 }
 
-@layer utilities {}
+@layer utilities {
+  #tv-attr-logo {
+    display: none !important;
+  }
+}

@@ -238,8 +238,25 @@ export default function Futures() {
                 let val: any = '-'
                 const c = col.toLowerCase()
 
-                if (c === 'symbol') val = item.symbol
-                else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? 'teal' : 'red'} fw={600} className="uppercase">{item.side}</Text>
+                if (c === 'symbol') {
+                  const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
+                  val = (
+                    <div className="flex flex-col leading-tight">
+                      <Text size="xs" fw={700}>{cleanSymbol}</Text>
+                      {(item.leverage || item.side) && (
+                        <div className="flex items-center gap-1">
+                          {item.leverage && <Text size="10px" c="dimmed" fw={500}>{item.leverage}x</Text>}
+                          {item.side && (
+                            <Text size="10px" color={item.side === 'long' ? '#0bba74' : '#FF4761'} fw={700} className="uppercase">
+                              {item.side}
+                            </Text>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+                else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? '#0bba74' : '#FF4761'} fw={600} className="uppercase">{item.side}</Text>
                 else if (c === 'size') val = Number(item.quantity).toFixed(4)
                 else if (c === 'entry') val = item.entryPrice
                 else if (c === 'exit') val = item.exitPrice
@@ -261,10 +278,10 @@ export default function Futures() {
                   const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
                   val = (
                     <div className="flex flex-col">
-                      <Text size="xs" color={pnlValue >= 0 ? 'teal' : 'red'} fw={600}>
+                      <Text size="xs" color={pnlValue >= 0 ? '#0bba74' : '#FF4761'} fw={600}>
                         {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
                       </Text>
-                      <Text size="10px" color={pnlValue >= 0 ? 'teal' : 'red'}>
+                      <Text size="10px" color={pnlValue >= 0 ? '#0bba74' : '#FF4761'}>
                         ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                       </Text>
                     </div>
@@ -279,14 +296,14 @@ export default function Futures() {
                   val = (
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1">
-                        <Text size="xs" color={realizedPnl >= 0 ? '#0BBA74' : '#FF4761'} fw={600}>
+                        <Text size="xs" color={realizedPnl >= 0 ? '#0bba74' : '#FF4761'} fw={600}>
                           {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                         </Text>
                         {item.note === 'Liquidated' && (
                           <Badge color="red" size="xs" variant="filled">LIQ</Badge>
                         )}
                       </div>
-                      <Text size="10px" color={realizedPnl >= 0 ? '#0BBA74' : '#FF4761'}>
+                      <Text size="10px" color={realizedPnl >= 0 ? '#0bba74' : '#FF4761'}>
                         ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                       </Text>
                     </div>
@@ -372,16 +389,6 @@ export default function Futures() {
           </Menu.Dropdown>
         </Menu>
 
-        <Menu shadow="md" width={180} position="bottom-start" withinPortal>
-          <Menu.Target>
-            <Button variant="outline" size="compact-md" className="h-10">{interval}</Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {availableIntervals.map((iv) => (
-              <Menu.Item key={iv} onClick={() => setInterval(iv)}>{iv}</Menu.Item>
-            ))}
-          </Menu.Dropdown>
-        </Menu>
 
         <Group gap="md" className="ml-1" wrap="wrap">
           {loadingStats ? <Loader size="xs" /> : (
@@ -401,17 +408,17 @@ export default function Futures() {
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <Card padding={0} radius="md" withBorder>
-            <div className="p-2">
-              <PriceChart
-                key={`${token}_${quote}-${interval}-futures`}
-                symbol={`${token}_${quote}`}
-                interval={interval}
-                market="futures"
-                orders={recentOrders.filter((o: any) => o.symbol === `${token}_${quote}` && o.status === 'pending')}
-                positions={futuresPositions.filter((p: any) => p.symbol === `${token}_${quote}`)}
-                onClosePosition={(pos) => setPartialCloseData({ symbol: pos.symbol, totalQty: Number(pos.quantity) })}
-              />
-            </div>
+            <PriceChart
+              key={`${token}_${quote}-${interval}-futures`}
+              symbol={`${token}_${quote}`}
+              interval={interval}
+              market="futures"
+              orders={recentOrders.filter((o: any) => o.symbol === `${token}_${quote}` && o.status === 'pending')}
+              positions={futuresPositions.filter((p: any) => p.symbol === `${token}_${quote}`)}
+              onClosePosition={(pos) => setPartialCloseData({ symbol: pos.symbol, totalQty: Number(pos.quantity) })}
+              onIntervalChange={setInterval}
+              availableIntervals={availableIntervals}
+            />
           </Card>
         </Grid.Col>
 
@@ -568,13 +575,13 @@ export default function Futures() {
               <div className="flex gap-2">
                 {tradeMode === 'open' ? (
                   <>
-                    <Button className="flex-1" color="teal" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
-                    <Button className="flex-1" color="red" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
+                    <Button className="flex-1" color="#0bba74" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
+                    <Button className="flex-1" color="#ff4761" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
                   </>
                 ) : (
                   <Button
                     className="flex-1"
-                    color="red"
+                    color="#ff4761"
                     variant="filled"
                     onClick={() => closePosition(`${token}_${quote}`, qty)}
                     disabled={!isAuthed || !qty}
@@ -602,15 +609,15 @@ export default function Futures() {
               </Tabs.List>
 
               <Tabs.Panel value="positions" p="md">
-                {renderTable(futuresPositions, ['Symbol', 'Side', 'Size', 'Entry', 'Margin', 'Liq. Price', 'PnL', 'Realized PnL', 'TP/SL', 'Leverage', 'Action'], 'No active positions')}
+                {renderTable(futuresPositions, ['Symbol', 'Size', 'Entry', 'Margin', 'Liq. Price', 'PnL', 'Realized PnL', 'TP/SL', 'Action'], 'No active positions')}
               </Tabs.Panel>
 
               <Tabs.Panel value="orders" p="md">
-                {renderTable(recentOrders.filter(o => o.symbol?.includes('_')), ['Symbol', 'Side', 'Size', 'Price', 'Status', 'Time', 'Action'], 'No recent orders')}
+                {renderTable(recentOrders.filter(o => o.symbol?.includes('_')), ['Symbol', 'Size', 'Price', 'Status', 'Time', 'Action'], 'No recent orders')}
               </Tabs.Panel>
 
               <Tabs.Panel value="history" p="md">
-                {renderTable(history, ['Symbol', 'Side', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time'], 'No trade history')}
+                {renderTable(history, ['Symbol', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time'], 'No trade history')}
               </Tabs.Panel>
             </Tabs>
           </Card>
@@ -652,7 +659,7 @@ export default function Futures() {
           />
 
           <Button
-            color="red"
+            color="#ff4761"
             fullWidth
             onClick={() => closePosition(partialCloseData!.symbol, partialCloseQty)}
             disabled={!partialCloseQty || parseFloat(partialCloseQty) <= 0}
@@ -674,7 +681,7 @@ export default function Futures() {
 
       <Modal opened={!!tpslData} onClose={() => setTpslData(null)} title={`TP/SL Settings - ${tpslData?.symbol}`} centered size="sm">
         <div className="flex flex-col gap-6">
-          <div className="grid gap-4 p-3 border rounded-md bg-neutral-50/50">
+          <div className="grid gap-4 p-3 rounded-md bg-neutral-50/50">
             <Text size="sm" fw={600} color="teal">Take Profit (TP)</Text>
             <TextInput
               label="Trigger Price"
@@ -698,8 +705,8 @@ export default function Futures() {
             />
           </div>
 
-          <div className="grid gap-4 p-3 border rounded-md bg-neutral-50/50">
-            <Text size="sm" fw={600} color="red">Stop Loss (SL)</Text>
+          <div className="grid gap-4 p-3 rounded-md bg-neutral-50/50">
+            <Text size="sm" fw={600} color="#ff4761">Stop Loss (SL)</Text>
             <TextInput
               label="Trigger Price"
               placeholder="0.00"

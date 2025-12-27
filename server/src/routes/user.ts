@@ -75,7 +75,7 @@ router.get("/address-group", requireAuth, async (req: AuthRequest, res: Response
   const group = await AddressGroup.findById(user.addressGroupId).lean();
   if (!group) return res.status(404).json({ error: "Group not found" });
   return res.json({
-    ethAddress: group.ethAddress ?? null, //❓why null?
+    ethAddress: group.ethAddress ?? null,
     tronAddress: group.tronAddress ?? null,
     bscAddress: group.bscAddress ?? null,
     solAddress: group.solAddress ?? null,

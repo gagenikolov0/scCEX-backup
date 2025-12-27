@@ -22,6 +22,7 @@ Should have assets divided into Futures and then optionally into 2 MORE - USDT a
 
 ❓So we call user/account every 10 seconds and we call user/account on focus.
 If we are in home page or market page i dont think i should be calling user/account
+Also, everytime a logged in user refreshes page the server receives HTTP???? if people keep refreshing the page the server will die
 
 
 
@@ -30,14 +31,9 @@ scrollbars appear
 
 
 
-❓There's draw mode in PriceChart but not visible in the app????
-❓Close button and draw button still not visible on chart
+❌ When opening a position with limit order on the pair that already is in postition instead of normally wait for price to become limit price and than just add the margin, it actually only deducts the available balance and nothing happens.
+When opening market position on a pair that we already have position it works well it just adds the marin instantly.
 
-
-
-❓Realiezd pnl should be shown in position table right next to Unrealized so when person closes e.g. 50%, 
-50% of unrealized should become realized just like in futures history (which is perfect btw) only it 
-should also be shown in position table, simple.
 
 
 

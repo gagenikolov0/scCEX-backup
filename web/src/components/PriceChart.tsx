@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts'
+import { Pencil, PencilOff } from 'lucide-react'
 import { API_BASE } from '../config/api'
 import { usePrice } from '../contexts/PriceContext'
 import type { IChartApi, Time } from 'lightweight-charts'
@@ -12,6 +13,8 @@ type Props = {
   orders?: any[]
   positions?: any[]
   onClosePosition?: (position: any) => void
+  onIntervalChange?: (interval: any) => void
+  availableIntervals?: string[]
 }
 
 export default function PriceChart(props: Props) {
@@ -23,6 +26,13 @@ export default function PriceChart(props: Props) {
   const lineSeriesRef = useRef<any[]>([])
   const [drawMode, setDrawMode] = useState(false)
   const drawStartRef = useRef<{ time: Time; price: number } | null>(null)
+  const [closeBtnTop, setCloseBtnTop] = useState<number | null>(null)
+  const positionsRef = useRef(positions)
+  const previewSeriesRef = useRef<any>(null)
+
+  useEffect(() => {
+    positionsRef.current = positions
+  }, [positions])
 
   function intervalToSeconds(iv: string): number {
     switch (iv) {
@@ -61,14 +71,23 @@ export default function PriceChart(props: Props) {
       grid: { horzLines: { color: 'rgba(0,0,0,0.1)' }, vertLines: { color: 'rgba(0,0,0,0.1)' } },
       timeScale: { rightOffset: 6, barSpacing: 8, fixLeftEdge: true },
       rightPriceScale: { borderVisible: false },
+      crosshair: {
+        mode: 0,
+        vertLine: { width: 1, color: '#4b5563', style: 2, labelVisible: true },
+        horzLine: { width: 1, color: '#4b5563', style: 2, labelVisible: true },
+      },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
+      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
     })
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: '#16a34a',
-      downColor: '#ef4444',
-      borderUpColor: '#16a34a',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#16a34a',
-      wickDownColor: '#ef4444',
+      upColor: '#0aa869',
+      downColor: '#fe445c',
+      borderUpColor: '#0aa869',
+      borderDownColor: '#fe445c',
+      wickUpColor: '#0aa869',
+      wickDownColor: '#fe445c',
+      priceLineStyle: 1, // Dashed
+      priceLineWidth: 2,
     })
     chartRef.current = chart
     seriesRef.current = series
@@ -84,7 +103,44 @@ export default function PriceChart(props: Props) {
     const ro = new ResizeObserver(onResize)
     ro.observe(containerRef.current)
 
-    // drawing: handle click-to-place two points
+    // Sync Close Button Position
+    const updateCloseBtnPos = () => {
+      if (!seriesRef.current || !chartRef.current) return
+      const activePos = positionsRef.current.find(p => p.symbol === symbol || p.symbol === deUnderscore(normalizeFuturesSymbol(symbol)))
+      if (activePos) {
+        const y = seriesRef.current.priceToCoordinate(parseFloat(activePos.entryPrice))
+        setCloseBtnTop(y)
+      } else {
+        setCloseBtnTop(null)
+      }
+    }
+
+    chart.timeScale().subscribeVisibleLogicalRangeChange(updateCloseBtnPos)
+
+    let rafId: number
+    const loop = () => {
+      updateCloseBtnPos()
+      rafId = requestAnimationFrame(loop)
+    }
+    rafId = requestAnimationFrame(loop)
+
+    return () => {
+      ro.disconnect()
+      disposed = true
+      cancelAnimationFrame(rafId)
+      try { chart.remove() } catch { }
+      chartRef.current = null
+      seriesRef.current = null
+      lastBarRef.current = null
+      drawStartRef.current = null
+      lineSeriesRef.current = []
+    }
+  }, [height, symbol])
+
+  // drawing: handle click-to-place two points + preview
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current) return
+
     const clickHandler = (param: any) => {
       if (!drawMode || !param?.point || !chartRef.current || !seriesRef.current) return
       const { x, y } = param.point
@@ -100,33 +156,76 @@ export default function PriceChart(props: Props) {
       const start = drawStartRef.current
       if (!start) {
         drawStartRef.current = { time: tSec, price }
+        // Create preview series
+        if (!previewSeriesRef.current) {
+          previewSeriesRef.current = chartRef.current.addSeries(LineSeries, {
+            color: '#0084ffff', // preview color
+            lineWidth: 1,
+            lineStyle: 1, // Dashed
+            lastValueVisible: false,
+            priceLineVisible: false,
+          })
+        }
       } else {
         // create a new line series for this trendline
         try {
-          const ls = chart.addSeries(LineSeries, { color: '#60a5fa', lineWidth: 2 })
+          const ls = chartRef.current.addSeries(LineSeries, {
+            color: '#0084ffff', // trendline color
+            lineWidth: 2,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          })
           ls.setData([
             { time: start.time, value: start.price },
             { time: tSec, value: price },
           ])
           lineSeriesRef.current.push(ls)
         } catch { }
+
+        // Cleanup preview
+        if (previewSeriesRef.current) {
+          chartRef.current.removeSeries(previewSeriesRef.current)
+          previewSeriesRef.current = null
+        }
         drawStartRef.current = null
         setDrawMode(false)
       }
     }
-    chart.subscribeClick(clickHandler)
 
-    return () => {
-      ro.disconnect()
-      disposed = true
-      try { chart.remove() } catch { }
-      chartRef.current = null
-      seriesRef.current = null
-      lastBarRef.current = null
-      drawStartRef.current = null
-      lineSeriesRef.current = []
+    let rafId: number | null = null
+    const moveHandler = (param: any) => {
+      if (!drawMode || !drawStartRef.current || !previewSeriesRef.current || !param?.point) return
+      if (rafId) cancelAnimationFrame(rafId)
+
+      rafId = requestAnimationFrame(() => {
+        if (!chartRef.current || !seriesRef.current || !previewSeriesRef.current || !drawStartRef.current) return
+        const { x, y } = param.point
+        const ts = chartRef.current.timeScale().coordinateToTime(x)
+        const p = seriesRef.current.coordinateToPrice(y)
+        if (ts !== null && ts !== undefined && p !== null && p !== undefined) {
+          const tSec = Math.floor(Number(ts)) as unknown as Time
+          previewSeriesRef.current.setData([
+            { time: drawStartRef.current.time, value: drawStartRef.current.price },
+            { time: tSec, value: Number(p) },
+          ])
+        }
+      })
     }
-  }, [height, drawMode])
+
+    chartRef.current.subscribeClick(clickHandler)
+    chartRef.current.subscribeCrosshairMove(moveHandler)
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+      if (chartRef.current) {
+        chartRef.current.unsubscribeClick(clickHandler)
+        chartRef.current.unsubscribeCrosshairMove(moveHandler)
+        if (previewSeriesRef.current) {
+          try { chartRef.current.removeSeries(previewSeriesRef.current) } catch { }
+          previewSeriesRef.current = null
+        }
+      }
+    }
+  }, [drawMode])
 
   useEffect(() => {
     let cancelled = false
@@ -137,7 +236,6 @@ export default function PriceChart(props: Props) {
     } catch { }
     ; (async () => {
       try {
-        // Temporarily use spot klines for futures to avoid upstream 502; WS still uses futures ticks
         const path = 'spot/klines'
         const sym = market === 'futures' ? deUnderscore(normalizeFuturesSymbol(symbol)) : symbol
         const url = `${API_BASE}/api/markets/${path}?symbol=${sym}&interval=${interval}&limit=200`
@@ -169,7 +267,6 @@ export default function PriceChart(props: Props) {
     const prev = lastBarRef.current
 
     if (!prev || prev.time < candleTime) {
-      // Use the official open from the server if it's a 1m chart to match BigPrice logic
       const open = (interval === '1m' && tick.open) ? tick.open : (prev?.close ?? price)
       const newBar = { time: candleTime, open, high: Math.max(open, price), low: Math.min(open, price), close: price }
       try { seriesRef.current.update(newBar) } catch { }
@@ -200,13 +297,13 @@ export default function PriceChart(props: Props) {
     orderLinesRef.current = []
     positionLinesRef.current = []
 
-    // Draw Orders
+    // Draw Limit Orders
     orders.forEach(o => {
       const price = parseFloat(o.price)
       if (isNaN(price)) return
       const line = seriesRef.current.createPriceLine({
         price,
-        color: o.side === 'buy' ? '#16a34a' : '#ef4444',
+        color: o.side === 'buy' ? '#16a34a' : '#e03131',
         lineWidth: 1,
         lineStyle: 2, // Dotted
         axisLabelVisible: true,
@@ -215,28 +312,28 @@ export default function PriceChart(props: Props) {
       orderLinesRef.current.push(line)
     })
 
-    // Draw Positions
+    // Draw Futures Positions
     positions.forEach(p => {
       // Entry Line
       const entryPrice = parseFloat(p.entryPrice)
       if (!isNaN(entryPrice)) {
         const line = seriesRef.current.createPriceLine({
           price: entryPrice,
-          color: p.side === 'long' ? '#099268' : '#e03131', // colors of futures position lines
+          color: p.side === 'long' ? '#0aa769' : '#fe445c',
           lineWidth: 1,
-          lineStyle: 0, // Solid
+          lineStyle: 2, // Dotted/Dashed
           axisLabelVisible: true,
-          title: `${p.side.charAt(0).toUpperCase() + p.side.slice(1)} Entry`,
+          title: `${p.side.charAt(0).toUpperCase() + p.side.slice(1)}`,
         })
         positionLinesRef.current.push(line)
       }
 
-      // Liquidation Line (NEW)
+      // Liquidation Line
       const liqPrice = parseFloat(p.liquidationPrice)
       if (!isNaN(liqPrice) && liqPrice > 0) {
         const line = seriesRef.current.createPriceLine({
           price: liqPrice,
-          color: '#e8590c', // Orange (amber-500)
+          color: '#e8590c',
           lineWidth: 1,
           lineStyle: 0, // Solid
           axisLabelVisible: true,
@@ -250,7 +347,7 @@ export default function PriceChart(props: Props) {
       if (!isNaN(tpPrice) && tpPrice > 0) {
         const line = seriesRef.current.createPriceLine({
           price: tpPrice,
-          color: '#10b981', // green-600
+          color: '#fe445c', // TP color
           lineWidth: 1,
           lineStyle: 1, // Dashed
           axisLabelVisible: true,
@@ -264,7 +361,7 @@ export default function PriceChart(props: Props) {
       if (!isNaN(slPrice) && slPrice > 0) {
         const line = seriesRef.current.createPriceLine({
           price: slPrice,
-          color: '#ef4444', // red-500
+          color: '#fe445c', // SL color
           lineWidth: 1,
           lineStyle: 1, // Dashed
           axisLabelVisible: true,
@@ -279,31 +376,86 @@ export default function PriceChart(props: Props) {
   const activePosition = positions.find(p => p.symbol === symbol || p.symbol === deUnderscore(normalizeFuturesSymbol(symbol)))
 
   return (
-    <div className="relative">
-      <div ref={containerRef} className="w-full" />
+    <div className="relative w-full" style={{ height: `${height}px`, minHeight: `${height}px` }}>
+      <div ref={containerRef} className="w-full h-full" style={{ cursor: 'crosshair' }} />
 
-      {/* Top Right Controls */}
-      <div className="absolute top-2 right-2 flex gap-2 z-10" style={{ pointerEvents: 'auto' }}>
-        {activePosition && props.onClosePosition && (
-          <button
-            onClick={() => props.onClosePosition && props.onClosePosition(activePosition)}
-            className="px-3 py-1.5 text-xs font-medium rounded bg-red-500 text-white hover:bg-red-600 transition-colors shadow-md border border-red-600"
-          >
-            Close Position
-          </button>
-        )}
+      {/* Top Left: Controls (Draw + Intervals) */}
+      <div
+        className="absolute z-[10] flex items-center gap-2"
+        style={{
+          top: 8,
+          left: 8,
+          pointerEvents: 'auto'
+        }}
+      >
         <button
           onClick={() => setDrawMode(!drawMode)}
-          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors shadow-md ${drawMode
-            ? 'bg-blue-500 text-white hover:bg-blue-600 border border-blue-600'
-            : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
+          className={`p-2 rounded-full transition-all shadow-2xl border-2 flex items-center justify-center ${drawMode
+            ? 'bg-blue-600 text-white border-blue-400 scale-110'
+            : 'bg-white text-gray-900 border-gray-400 hover:bg-gray-50'
             }`}
+          title={drawMode ? 'Cancel Draw' : 'Draw Trendline'}
         >
-          {drawMode ? 'Cancel' : 'Draw'}
+          {drawMode ? <PencilOff size={18} /> : <Pencil size={18} />}
         </button>
+
+        {/* Intervals */}
+        <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-full shadow-2xl border border-gray-200">
+          {(props.availableIntervals || ['1m', '5m', '15m', '1h', '4h', '1d']).map((iv) => (
+            <button
+              key={iv}
+              onClick={() => props.onIntervalChange && props.onIntervalChange(iv)}
+              className={`px-2 py-1 text-[10px] font-bold rounded-full transition-all ${interval === iv
+                ? 'bg-gray-900 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
+            >
+              {iv}
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Dynamic: Close Position Button (on the entry line) */}
+      {activePosition && props.onClosePosition && closeBtnTop !== null && closeBtnTop >= 0 && closeBtnTop <= height && (
+        <div
+          className="absolute z-[10] flex items-center gap-2"
+          style={{
+            top: closeBtnTop,
+            left: 8,
+            transform: 'translateY(-50%)',
+            pointerEvents: 'auto',
+            display: 'flex'
+          }}
+        >
+          {/* Unrealized PNL */}
+          {tick && (
+            <div
+              className="px-2 py-0.5 text-[11px]"
+              style={{
+                backgroundColor: (activePosition.side === 'long' ? tick.price >= activePosition.entryPrice : tick.price <= activePosition.entryPrice) ? '#0bba74' : '#ff4761',
+                color: '#ffffff'
+              }}
+            >PNL&nbsp;
+              {(() => {
+                const lastPrice = tick.price
+                const entryPrice = parseFloat(activePosition.entryPrice)
+                const qty = parseFloat(activePosition.quantity)
+                const pnl = activePosition.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
+                return `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}`
+              })()}
+            </div>
+          )}
+
+          <button
+            onClick={() => props.onClosePosition && props.onClosePosition(activePosition)}
+            className="px-2 py-0.5 text-[11px] font-bold rounded bg-red-600 text-white hover:bg-red-700 transition-colors shadow-2xl border border-red-700 uppercase"
+            title="Close Position"
+          >
+            Close
+          </button>
+        </div>
+      )}
+    </div >
   )
 }
-
-
