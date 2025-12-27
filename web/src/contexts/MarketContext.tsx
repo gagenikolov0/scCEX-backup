@@ -58,7 +58,7 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true }
   }, [])
 
-  // Connect to spot stats WebSocket (bulk)
+  // Connect to spot stats WebSocket (bulk) 
   useEffect(() => {
     if (listenerCount === 0) return
 

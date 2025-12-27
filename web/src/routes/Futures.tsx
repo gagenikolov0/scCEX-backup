@@ -67,7 +67,7 @@ export default function Futures() {
     market: 'futures'
   })
 
-  // WebSocket for Stats in Header (selected pair)
+  // For Futures Header (selected pair)
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
@@ -75,7 +75,7 @@ export default function Futures() {
     const sym = `${token}_${quote}`
     let stopped = false
 
-    ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym }))
+    ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym })) // why per syb?
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data as string)
@@ -88,17 +88,15 @@ export default function Futures() {
     return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
   }, [token, quote])
 
+
+
   const available = (futuresAvailable as any)?.[quote] ?? '0'
 
-  const fetchData = async () => {
-    if (!isAuthed) return
-    try {
-      await refreshBalances();
-    } catch { }
-  }
+
 
   const [history, setHistory] = useState<any[]>([])
 
+  // HTTP POST for history
   const fetchHistory = async () => {
     if (!isAuthed) return
     try {
@@ -110,7 +108,7 @@ export default function Futures() {
   }
 
   useEffect(() => {
-    fetchData()
+
     fetchHistory()
   }, [isAuthed])
 
@@ -145,7 +143,6 @@ export default function Futures() {
       })
       if (res.ok) {
         setQty('')
-        fetchData()
         refreshBalances()
       } else {
         const j = await res.json()
@@ -165,7 +162,6 @@ export default function Futures() {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
       })
       if (res.ok) {
-        fetchData()
         refreshBalances()
       }
       else {
@@ -186,7 +182,6 @@ export default function Futures() {
         body: JSON.stringify({ symbol, quantity })
       })
       if (res.ok) {
-        fetchData()
         refreshBalances()
         setPartialCloseData(null)
         fetchHistory()
@@ -674,7 +669,6 @@ export default function Futures() {
         asset={quote as 'USDT' | 'USDC'}
         onTransferred={() => {
           refreshBalances()
-          fetchData()
         }}
       />
 

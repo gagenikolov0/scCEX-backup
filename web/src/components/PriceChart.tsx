@@ -5,9 +5,9 @@ import { usePrice } from '../contexts/PriceContext'
 import type { IChartApi, Time } from 'lightweight-charts'
 
 type Props = {
-  symbol: string // e.g. BTCUSDT or BTC_USDT (normalized internally)
+  symbol: string
   height?: number
-  interval?: string // e.g. '1m','5m','1h','1d'
+  interval?: string
   market?: 'spot' | 'futures'
   orders?: any[]
   positions?: any[]
@@ -156,7 +156,7 @@ export default function PriceChart(props: Props) {
     return () => { cancelled = true }
   }, [symbol, interval, market])
 
-  // Live updates via centralized PriceContext
+
   const tick = usePrice(market, symbol)
   const bucketSec = intervalToSeconds(interval)
 

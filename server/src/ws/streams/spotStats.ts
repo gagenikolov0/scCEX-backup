@@ -33,7 +33,7 @@ async function send() {
 			baseVolume: raw.volume ?? null,
 		}))
 
-		// Update central price service
+		// Fill the bucket from spot stats
 		for (const d of data) {
 			const price = parseFloat(d.lastPrice);
 			if (Number.isFinite(price)) priceService.updatePrice(d.symbol, price);

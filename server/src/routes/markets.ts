@@ -174,7 +174,7 @@ router.get('/futures/klines', async (req: Request, res: Response) => {
   }
 })
 
-// Futures: available intervals for a symbol (fallback to spot if futures unavailable)
+// Futures: available intervals for a symbol (with fallback to spot if futures unavailable)
 router.get('/futures/intervals', async (req: Request, res: Response) => {
   try {
     let symbol = String(req.query.symbol || '')
@@ -218,7 +218,7 @@ router.get('/futures/intervals', async (req: Request, res: Response) => {
   }
 })
 
-// Futures: 24h stats for symbol(s)
+
 router.get('/futures/24h', async (req: Request, res: Response) => {
   try {
     const symbol = String(req.query.symbol || '')

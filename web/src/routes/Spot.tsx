@@ -59,7 +59,7 @@ export default function Spot() {
   const available = (spotAvailable as any)?.[quote] ?? '0'
   const baseAvail = positions.find((r: any) => (r?.asset || '').toUpperCase() === token.toUpperCase())?.available ?? '0'
 
-  // WebSocket for Stats in Header (selected pair)
+  // For Spot Header (selected pair)
   useEffect(() => {
     setStats(null)
     setLoadingStats(true)
@@ -80,6 +80,7 @@ export default function Spot() {
     return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
   }, [token, quote])
 
+  // Necessary HTTP Post server 
   const fetchHistory = async () => {
     if (!isAuthed) return
     try {
@@ -91,9 +92,11 @@ export default function Spot() {
     } catch { }
   }
 
+
   useEffect(() => {
     if (isAuthed) fetchHistory()
   }, [isAuthed])
+
 
   const placeOrder = async (side: 'buy' | 'sell') => {
     if (!qty || Number(qty) <= 0 || !localStorage.getItem('accessToken')) return

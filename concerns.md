@@ -1,37 +1,26 @@
-🟡 Share PNL bro
-
-🟡 Slider for available amount in futures and spot right below input
-
-🟡 Icons for assets bro
-
-🟡 Isolated and Cross
-
-🟡 In the future we are gonna want Unrealized PNL, close position button and liquidation on chart
-
-🟡 The asset selector should appear on hover. And you should make it when hovering thats when ws updadtes
-come same one that shows everything in market page litrally everything the same just smaller UI obviously
+❓According to huge CEXs like MEXC, what should  under 'close' toggle closing with limit do?? same as setting TP/SL?
 
 
 
-❓According to huge CEXs like MEXC what is using toggle button and then limit means setting TP/SL?
+❓ Shouldn't the app refresh after token is removed when logged out, not only remove the refresh token and that's it?
 
 
 
 ❓ Cant see full chart history - limited to 200 candles, but 200 candles applied to all intervals/charts?
-
+Also when chart loads it only shows the last candle before i have to zoom out to see the rest 200 candles or pull to the right
 
 
 ❓ Which css file is for wallet.tsx?
 
 
 
-🟡 Favorite assets inside market page and asset selector as separate toggle
+🟡 Implementation: Favorite assets inside market page and asset selector as separate toggle
 Should have assets divided into Futures and then optionally into 2 MORE - USDT and USDC lists
 ❓If we split spot and futures into USDT and USDC, would that save a lot of energy or just a bit?
 
 
 
-❌So we call user/account every 10 seconds and we call user/account on focus.
+❓So we call user/account every 10 seconds and we call user/account on focus.
 If we are in home page or market page i dont think i should be calling user/account
 
 
@@ -41,15 +30,7 @@ scrollbars appear
 
 
 
-❓I wanna know exactly where priceService is fed by both ticks and stats at the same time and how
-is that even possible
-
-
-
 ❓There's draw mode in PriceChart but not visible in the app????
-
-
-
 ❓Close button and draw button still not visible on chart
 
 
@@ -61,3 +42,8 @@ should also be shown in position table, simple.
 
 
 ❓Futures total price doesn't work well not accurate
+
+
+
+❓in position table after we set TP/SL what does TP/SL show right next to our price? its some percentage
+but i dont get what percentage of what 

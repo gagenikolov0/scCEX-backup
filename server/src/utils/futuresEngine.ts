@@ -28,10 +28,10 @@ class FuturesEngine {
      */
     private async tick() {
         try {
-            //Executes both tasks in one go
-            await this.processLimitOrders();  // Checks for limit fills
-            await this.processTPSL();         // 2. Check for TP/SL Triggers
-            await this.processLiquidations(); // 3. Check for Bankruptcies
+            // Engine functions:
+            await this.processLimitOrders();
+            await this.processTPSL();
+            await this.processLiquidations();
         } catch (e) {
             console.error('[Futures Engine] Tick error:', e);
         }
@@ -54,6 +54,75 @@ class FuturesEngine {
             }
         }
     }
+
+    private async processTPSL() {
+        // 1. Efficiently find only active TP/SL orders (values > 0)
+        const positions = await FuturesPosition.find({
+            $or: [{ tpPrice: { $gt: 0 } }, { slPrice: { $gt: 0 } }]
+        });
+
+        for (const pos of positions) {
+            try {
+                const price = await priceService.getPrice(pos.symbol);
+                if (!price) continue;
+
+                const isLong = pos.side === 'long';
+
+                // 2. Check Triggers (Simple logic: Long wants High Price, Short wants Low Price)
+                // Note: This logic supports SL in profit (Stop Profit) or TP in loss (Limit Cut) if configured that way.
+                const hitTP = pos.tpPrice > 0 && (isLong ? price >= pos.tpPrice : price <= pos.tpPrice);
+                const hitSL = pos.slPrice > 0 && (isLong ? price <= pos.slPrice : price >= pos.slPrice);
+
+                if (hitTP || hitSL) {
+                    const type = hitTP ? 'TP' : 'SL';
+                    const closeQty = type === 'TP' ? pos.tpQuantity : pos.slQuantity;
+
+                    // 3. Reset Trigger to prevent loop on partial closes
+                    // (If we close 50%, we don't want the remaining 50% to trigger again in the next millisecond)
+                    if (type === 'TP') {
+                        pos.tpPrice = 0;
+                        pos.tpQuantity = 0;
+                    } else {
+                        pos.slPrice = 0;
+                        pos.slQuantity = 0;
+                    }
+                    await pos.save();
+
+                    await this.executePositionClose(pos._id.toString(), price, closeQty || undefined);
+                }
+            } catch (e) {
+                console.error(`[TP/SL] Error processing ${pos._id}:`, e);
+            }
+        }
+    }
+
+    private async processLiquidations() {
+        // 1. Scan EVERY position in the database
+        const positions = await FuturesPosition.find({});
+        for (const pos of positions) {
+            try {
+                // 2. THE PULL: It "asks" for the price, doesn't wait for a stream
+                const currentPrice = await priceService.getPrice(pos.symbol);
+                const diff = pos.side === 'long'
+                    ? (currentPrice - pos.entryPrice)
+                    : (pos.entryPrice - currentPrice);
+                const unrealizedPnL = pos.quantity * diff;
+
+                // Liquidation Threshold: If PnL wipes out 90% of margin
+                const equity = pos.margin + unrealizedPnL;
+                const marginRatio = equity / pos.margin;
+
+                if (marginRatio <= 0) { // 100% loss of margin = Liquidated
+                    // 4. If they are "Bankrupt", DELETE the position
+                    await this.liquidatePosition(pos._id.toString(), currentPrice);
+                }
+            } catch {
+                // Price not ready
+            }
+        }
+    }
+
+
 
     private async fillOrder(orderId: string, fillPrice: number) {
         const session = await mongoose.startSession();
@@ -130,73 +199,6 @@ class FuturesEngine {
             console.error(`[Futures Engine] Fill error for order ${orderId}:`, e);
         } finally {
             await session.endSession();
-        }
-    }
-
-    private async processTPSL() {
-        // 1. Efficiently find only active TP/SL orders (values > 0)
-        const positions = await FuturesPosition.find({
-            $or: [{ tpPrice: { $gt: 0 } }, { slPrice: { $gt: 0 } }]
-        });
-
-        for (const pos of positions) {
-            try {
-                const price = await priceService.getPrice(pos.symbol);
-                if (!price) continue;
-
-                const isLong = pos.side === 'long';
-
-                // 2. Check Triggers (Simple logic: Long wants High Price, Short wants Low Price)
-                // Note: This logic supports SL in profit (Stop Profit) or TP in loss (Limit Cut) if configured that way.
-                const hitTP = pos.tpPrice > 0 && (isLong ? price >= pos.tpPrice : price <= pos.tpPrice);
-                const hitSL = pos.slPrice > 0 && (isLong ? price <= pos.slPrice : price >= pos.slPrice);
-
-                if (hitTP || hitSL) {
-                    const type = hitTP ? 'TP' : 'SL';
-                    const closeQty = type === 'TP' ? pos.tpQuantity : pos.slQuantity;
-
-                    // 3. Reset Trigger to prevent loop on partial closes
-                    // (If we close 50%, we don't want the remaining 50% to trigger again in the next millisecond)
-                    if (type === 'TP') {
-                        pos.tpPrice = 0;
-                        pos.tpQuantity = 0;
-                    } else {
-                        pos.slPrice = 0;
-                        pos.slQuantity = 0;
-                    }
-                    await pos.save();
-
-                    await this.executePositionClose(pos._id.toString(), price, closeQty || undefined);
-                }
-            } catch (e) {
-                console.error(`[TP/SL] Error processing ${pos._id}:`, e);
-            }
-        }
-    }
-
-    private async processLiquidations() {
-        // 1. Scan EVERY position in the database
-        const positions = await FuturesPosition.find({});
-        for (const pos of positions) {
-            try {
-                // 2. THE PULL: It "asks" for the price, doesn't wait for a stream
-                const currentPrice = await priceService.getPrice(pos.symbol);
-                const diff = pos.side === 'long'
-                    ? (currentPrice - pos.entryPrice)
-                    : (pos.entryPrice - currentPrice);
-                const unrealizedPnL = pos.quantity * diff;
-
-                // Liquidation Threshold: If PnL wipes out 90% of margin
-                const equity = pos.margin + unrealizedPnL;
-                const marginRatio = equity / pos.margin;
-
-                if (marginRatio <= 0) { // 100% loss of margin = Liquidated
-                    // 4. If they are "Bankrupt", DELETE the position
-                    await this.liquidatePosition(pos._id.toString(), currentPrice);
-                }
-            } catch {
-                // Price not ready
-            }
         }
     }
 
@@ -309,7 +311,11 @@ class FuturesEngine {
         }
     }
 
-
 }
 
 export const futuresEngine = new FuturesEngine();
+
+
+
+
+// You see this file has engine functions that are called every 2 seconds and functions that are shared across backend routes

@@ -38,7 +38,7 @@ async function send() {
 			}
 		})
 
-		// Update central price service
+		// Fill The bucket from futures stats
 		for (const d of data) {
 			const price = Number((d as any).lastPrice);
 			if (Number.isFinite(price) && (d as any).symbol) priceService.updatePrice((d as any).symbol, price);

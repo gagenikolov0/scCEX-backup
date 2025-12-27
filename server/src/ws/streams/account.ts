@@ -60,7 +60,7 @@ export function emitAccountEvent(userId: string, event: AccountEvent) {
   if (!sockets) return;
 
   const payload = JSON.stringify({
-    type: 'account',   // tells the client what kind of data it is
+    type: 'account',   // tells THE CLIENT what kind of data it is
     ...event,          // e.g. {kind:'balance', spotAvailable:{USDT:'10'}}
     t: Date.now()      // timestamp
   });

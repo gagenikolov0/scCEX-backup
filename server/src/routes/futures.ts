@@ -42,18 +42,19 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
                 throw new Error(`Insufficient ${quote} in Futures wallet`)
             }
 
-            // Clamp subtraction to prevent scientific notation negative dust
-            const finalMargin = Math.min(marginRequired, futAcc.available)
+            const finalMargin = Math.min(marginRequired, futAcc.available) // Clamp subtraction to prevent scientific notation negative dust
+
             futAcc.available -= finalMargin
 
-            // If balance is infinitesimally small, snap to zero
-            if (futAcc.available < 0.0000000001) futAcc.available = 0
+            if (futAcc.available < 0.0000000001) futAcc.available = 0  // If balance is infinitesimally small, snap to zero
 
             if (type === 'limit') futAcc.reserved += finalMargin
+            // 1. Deduct money
             await futAcc.save({ session })
 
             const baseQuantity = qtyUSDT / executionPrice
 
+            // 2. Create the order record
             const order = await FuturesOrder.create([{
                 userId, symbol, side, type,
                 quantity: baseQuantity,
@@ -71,11 +72,12 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
                     position.quantity += baseQuantity
                     position.margin += marginRequired
                     position.updatedAt = new Date()
+                    // 3. Update the position
                     await position.save({ session })
                 } else {
                     const liqPrice = side === 'long'
                         ? executionPrice - (0.9 * marginRequired / baseQuantity)
-                        : executionPrice + (0.9 * marginRequired / baseQuantity);
+                        : executionPrice + (0.9 * marginRequired / baseQuantity)
 
                     await FuturesPosition.create([{
                         userId, symbol, side, entryPrice: executionPrice,
