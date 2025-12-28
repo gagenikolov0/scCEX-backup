@@ -13,6 +13,7 @@ import {
   ScrollArea,
   ActionIcon,
   useMantineColorScheme,
+  Stack,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useEffect, useState } from 'react'
@@ -66,10 +67,10 @@ export default function Header() {
                 </span>
               </HoverCard.Target>
               <HoverCard.Dropdown>
-                <div className="grid gap-2">
+                <Stack gap="xs">
                   <Anchor component={Link} to="/futures?quote=USDT">USDT Perps</Anchor>
                   <Anchor component={Link} to="/futures?quote=USDC">USDC Perps</Anchor>
-                </div>
+                </Stack>
               </HoverCard.Dropdown>
             </HoverCard>
 
@@ -83,10 +84,10 @@ export default function Header() {
                 </span>
               </HoverCard.Target>
               <HoverCard.Dropdown>
-                <div className="grid gap-2">
+                <Stack gap="xs">
                   <Anchor component={Link} to="/spot?quote=USDT">USDT</Anchor>
                   <Anchor component={Link} to="/spot?quote=USDC">USDC</Anchor>
-                </div>
+                </Stack>
               </HoverCard.Dropdown>
             </HoverCard>
           </Group>
@@ -124,18 +125,18 @@ export default function Header() {
 
           <Button variant="subtle" className={classes.link} onClick={toggleFutures}>Futures</Button>
           <Collapse in={futuresOpen}>
-            <div className="grid gap-1 pl-4">
+            <Stack gap="xs" pl="xl">
               <NavLink to="/futures?quote=USDT" onClick={closeDrawer}>USDT Perps</NavLink>
               <NavLink to="/futures?quote=USDC" onClick={closeDrawer}>USDC Perps</NavLink>
-            </div>
+            </Stack>
           </Collapse>
 
           <Button variant="subtle" className={classes.link} onClick={toggleSpot}>Spot</Button>
           <Collapse in={spotOpen}>
-            <div className="grid gap-1 pl-4">
+            <Stack gap="xs" pl="xl">
               <NavLink to="/spot?quote=USDT" onClick={closeDrawer}>USDT</NavLink>
               <NavLink to="/spot?quote=USDC" onClick={closeDrawer}>USDC</NavLink>
-            </div>
+            </Stack>
           </Collapse>
 
           <Divider my="sm" />

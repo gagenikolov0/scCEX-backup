@@ -333,7 +333,7 @@ export default function PriceChart(props: Props) {
       if (!isNaN(liqPrice) && liqPrice > 0) {
         const line = seriesRef.current.createPriceLine({
           price: liqPrice,
-          color: '#e8590c',
+          color: 'var(--liq)',
           lineWidth: 1,
           lineStyle: 0, // Solid
           axisLabelVisible: true,

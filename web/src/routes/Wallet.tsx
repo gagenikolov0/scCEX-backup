@@ -52,9 +52,9 @@ export default function Wallet() {
       case 'futures':
         return (
           <>
-            <Paper withBorder p="lg" radius="md" mb="md" bg="dark.0">
+            <Paper withBorder p="lg" radius="md" mb="md" bg="var(--background)">
               <Text size="sm" c="dimmed">Total Futures Value</Text>
-              <Text size="2xl" fw={700} c="blue">{formatUSD(totalFuturesValue)}</Text>
+              <Text size="2xl" fw={700} c="var(--secondary)">{formatUSD(totalFuturesValue)}</Text>
             </Paper>
             <Grid gutter="md">
               {['USDT', 'USDC'].map(asset => {
@@ -65,7 +65,7 @@ export default function Wallet() {
                       <Stack gap="xs">
                         <Group justify="space-between">
                           <Text size="sm" c="dimmed">{asset} Futures</Text>
-                          <Badge color="blue" variant="light">Isolated</Badge>
+                          <Badge color="var(--secondary)" variant="light">Isolated</Badge>
                         </Group>
                         <Text size="xl" fw={600}>{formatBalance(available)}</Text>
                       </Stack>
@@ -80,9 +80,9 @@ export default function Wallet() {
       case 'spot':
         return (
           <>
-            <Paper withBorder p="lg" radius="md" mb="md" bg="dark.0">
+            <Paper withBorder p="lg" radius="md" mb="md" bg="var(--background)">
               <Text size="sm" c="dimmed">Total Spot Value</Text>
-              <Text size="2xl" fw={700} c="green">{formatUSD(totalPortfolioUSD - totalFuturesValue)}</Text>
+              <Text size="2xl" fw={700} c="var(--green)">{formatUSD(totalPortfolioUSD - totalFuturesValue)}</Text>
             </Paper>
             <Grid gutter="md">
               {['USDT', 'USDC'].map(asset => {
@@ -94,7 +94,7 @@ export default function Wallet() {
                       <Stack gap="xs">
                         <Group justify="space-between">
                           <Text size="sm" c="dimmed">{asset} Balance</Text>
-                          <Badge color={asset === 'USDT' ? 'green' : 'blue'} variant="light">Stable</Badge>
+                          <Badge color={asset === 'USDT' ? 'var(--green)' : 'var(--secondary)'} variant="light">Stable</Badge>
                         </Group>
                         <Text size="xl" fw={600}>{formatBalance(spotAvailable[asset as keyof typeof spotAvailable])}</Text>
                         {parseFloat(reserved) > 0 && (

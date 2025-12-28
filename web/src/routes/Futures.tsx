@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, SegmentedControl, Modal, NumberInput, Slider, Badge } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, SegmentedControl, Modal, NumberInput, Slider, Badge, Flex, Box } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -221,23 +221,23 @@ export default function Futures() {
   }
 
   const renderTable = (data: any[], columns: (string | { label: string, key: string })[], emptyMessage: string) => (
-    <table className="w-full text-sm">
-      <thead className="text-neutral-500">
-        <tr className="text-left border-b">
+    <Box component="table" style={{ width: '100%', fontSize: 'var(--mantine-font-size-sm)' }}>
+      <thead>
+        <Box component="tr" style={{ textAlign: 'left', borderBottom: '1px solid var(--mantine-color-default-border)' }}>
           {columns.map(col => {
             const label = typeof col === 'string' ? col : col.label
-            return <th key={label} className="py-2 pr-3">{label}</th>
+            return <Box component="th" key={label} style={{ padding: '8px 12px 8px 0', color: 'var(--mantine-color-dimmed)', fontWeight: 500 }}>{label}</Box>
           })}
-        </tr>
+        </Box>
       </thead>
       <tbody>
         {data.length === 0 ? (
-          <tr>
-            <td className="py-4 text-center text-neutral-400" colSpan={columns.length}>{emptyMessage}</td>
-          </tr>
+          <Box component="tr">
+            <Box component="td" style={{ padding: '16px 0', textAlign: 'center', color: 'var(--mantine-color-dimmed)' }} colSpan={columns.length}>{emptyMessage}</Box>
+          </Box>
         ) : (
           data.map((item, idx) => (
-            <tr key={item._id || idx} className="border-b last:border-0 hover:bg-neutral-50/50">
+            <Box component="tr" key={item._id || idx} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
               {columns.map(column => {
                 let val: any = '-'
                 const key = typeof column === 'string' ? column : column.key
@@ -246,27 +246,27 @@ export default function Futures() {
                 if (c === 'symbol') {
                   const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
                   val = (
-                    <div className="flex flex-col leading-tight">
-                      <Text size="xs" fw={700}>{cleanSymbol}</Text>
+                    <Flex direction="column" style={{ lineHeight: 1.2 }}>
+                      <Text fw={700} size="sm">{cleanSymbol}</Text>
                       {(item.leverage || item.side) && (
-                        <div className="flex items-center gap-1">
-                          {item.leverage && <Text size="10px" c="dimmed" fw={500}>{item.leverage}x</Text>}
+                        <Group gap={4}>
+                          {item.leverage && <Text size="xs" c="dimmed" fw={500}>{item.leverage}x</Text>}
                           {item.side && (
-                            <Text size="10px" color={item.side === 'long' ? '#0bba74' : '#FF4761'} fw={700} className="uppercase">
+                            <Text size="xs" color={item.side === 'long' ? 'green' : 'red'} fw={700} style={{ textTransform: 'uppercase' }}>
                               {item.side}
                             </Text>
                           )}
-                        </div>
+                        </Group>
                       )}
-                    </div>
+                    </Flex>
                   )
                 }
-                else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? '#0bba74' : '#FF4761'} fw={600} className="uppercase">{item.side}</Text>
+                else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? 'green' : 'red'} fw={600} style={{ textTransform: 'uppercase' }}>{item.side}</Text>
                 else if (c === 'size') val = Number(item.quantity).toFixed(4)
                 else if (c === 'entry') val = item.entryPrice
                 else if (c === 'exit') val = item.exitPrice
                 else if (c === 'price') val = item.price
-                else if (c === 'liq. price') val = <Text size="xs" color="#e8590c" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
+                else if (c === 'liq. price') val = <Text size="sm" color="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
                 else if (c === 'pnl') {
                   const itemStats = futuresStats.find(s => s.symbol === item.symbol)
                   const lastPrice = Number(itemStats?.lastPrice || 0)
@@ -281,14 +281,14 @@ export default function Futures() {
 
                   const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
                   val = (
-                    <div className="flex flex-col">
-                      <Text size="xs" color={pnlValue >= 0 ? '#0bba74' : '#FF4761'} fw={600}>
+                    <Flex direction="column" style={{ lineHeight: 1.2 }}>
+                      <Text size="xs" color={pnlValue >= 0 ? 'green' : 'red'} fw={600}>
                         {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
                       </Text>
-                      <Text size="10px" color={pnlValue >= 0 ? '#0bba74' : '#FF4761'}>
+                      <Text size="xs" color={pnlValue >= 0 ? 'green' : 'red'} style={{ fontSize: '10px' }}>
                         ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                       </Text>
-                    </div>
+                    </Flex>
                   )
                 }
                 else if (c === 'realized pnl') {
@@ -297,27 +297,27 @@ export default function Futures() {
                   const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
 
                   val = (
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1">
-                        <Text size="xs" color={realizedPnl >= 0 ? '#0bba74' : '#FF4761'} fw={600}>
+                    <Flex direction="column" style={{ lineHeight: 1.2 }}>
+                      <Group gap={4}>
+                        <Text size="xs" color={realizedPnl >= 0 ? 'green' : 'red'} fw={600}>
                           {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                         </Text>
                         {item.note === 'Liquidated' && (
-                          <Badge color="red" size="xs" variant="filled" style={{ marginLeft: '4px', paddingBottom: '2px' }}>LIQ</Badge>
+                          <Badge color="red" size="xs" variant="filled">LIQ</Badge>
                         )}
-                      </div>
-                      <Text size="10px" color={realizedPnl >= 0 ? '#0bba74' : '#FF4761'}>
+                      </Group>
+                      <Text size="xs" color={realizedPnl >= 0 ? 'green' : 'red'} style={{ fontSize: '10px' }}>
                         ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                       </Text>
-                    </div>
+                    </Flex>
                   )
                 }
                 else if (c === 'leverage') val = `${item.leverage}x`
                 else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
                 else if (c === 'tp/sl') {
                   val = (
-                    <div className="flex flex-col gap-0.5 min-w-[80px]">
-                      <Text size="10px" color="teal" className="cursor-pointer hover:underline" onClick={() => {
+                    <Flex direction="column" gap={2} style={{ minWidth: '80px', lineHeight: 1 }}>
+                      <Text size="xs" color="teal" style={{ fontSize: '10px', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
                         setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
                         setTpslPrices({
                           tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
@@ -332,7 +332,7 @@ export default function Futures() {
                       }}>
                         TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
                       </Text>
-                      <Text size="10px" color="red" className="cursor-pointer hover:underline" onClick={() => {
+                      <Text size="xs" color="red" style={{ fontSize: '10px', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
                         setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
                         setTpslPrices({
                           tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
@@ -347,7 +347,7 @@ export default function Futures() {
                       }}>
                         SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
                       </Text>
-                    </div>
+                    </Flex>
                   )
                 }
                 else if (c === 'status') val = item.status
@@ -364,25 +364,25 @@ export default function Futures() {
                   }
                 }
 
-                return <td key={typeof column === 'string' ? column : column.label} className="py-2 pr-3">{val}</td>
+                return <Box component="td" key={typeof column === 'string' ? column : column.label} style={{ padding: '8px 12px 8px 0' }}>{val}</Box>
               })}
-            </tr>
+            </Box>
           ))
         )}
       </tbody>
-    </table>
+    </Box>
   )
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-center gap-6 py-2">
+    <Box>
+      <Flex align="center" gap="xl" py="sm">
         <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
-            <Button variant="transparent" size="lg" className="h-14 px-2 !bg-transparent hover:!bg-transparent focus:!bg-transparent active:!bg-transparent data-[expanded]:!bg-transparent active:scale-100">
-              <div className="flex flex-col items-start leading-tight">
-                <div className="text-xl font-bold tracking-tight asset-selector-text">{token}{quote}</div>
-                <div className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">Perpetual</div>
-              </div>
+            <Button variant="transparent" size="lg" h={56} px="xs" style={{ background: 'transparent' }}>
+              <Flex direction="column" align="flex-start" style={{ lineHeight: 1.2 }}>
+                <Text size="xl" fw={700} className="asset-selector-text">{token}{quote}</Text>
+                <Text size="xs" c="dimmed" fw={500} style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10px' }}>Perpetual</Text>
+              </Flex>
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
@@ -397,43 +397,42 @@ export default function Futures() {
           </Menu.Dropdown>
         </Menu>
 
-        <div className="flex items-center w-fit header-divider">
+        <Flex align="center" className="header-divider" style={{ borderLeft: '1px solid var(--mantine-color-default-border)', paddingLeft: '24px' }}>
           {loadingStats ? <Loader size="xs" /> : (
-            <>
-              <div style={{ marginRight: '24px' }} className="flex flex-col">
-                <Text size="xs" c="dimmed" fw={500}></Text>
+            <Group gap={24}>
+              <Box>
                 <div className="text-lg font-bold">
                   <BigPrice symbol={`${token}${quote}`} market="futures" />
                 </div>
-              </div>
+              </Box>
 
-              <div style={{ marginRight: '24px' }} className="flex flex-col">
+              <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={600}>24h Change</Text>
-                <Text style={{ fontSize: '12px' }} fw={500} c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
+                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'green' : 'red'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
-              </div>
+              </Flex>
 
-              <div style={{ marginRight: '24px' }} className="flex flex-col">
+              <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h High</Text>
-                <Text style={{ fontSize: '12px' }} fw={600}>{stats?.high24h ?? '-'}</Text>
-              </div>
+                <Text size="xs" fw={600}>{stats?.high24h ?? '-'}</Text>
+              </Flex>
 
-              <div style={{ marginRight: '24px' }} className="flex flex-col">
+              <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h Low</Text>
-                <Text style={{ fontSize: '12px' }} fw={600}>{stats?.low24h ?? '-'}</Text>
-              </div>
+                <Text size="xs" fw={600}>{stats?.low24h ?? '-'}</Text>
+              </Flex>
 
-              <div className="flex flex-col">
+              <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h Volume</Text>
-                <Text style={{ fontSize: '12px' }} fw={600}>
+                <Text size="xs" fw={600}>
                   {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
                 </Text>
-              </div>
-            </>
+              </Flex>
+            </Group>
           )}
-        </div>
-      </div>
+        </Flex>
+      </Flex>
 
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, lg: 7 }}>
@@ -462,9 +461,11 @@ export default function Futures() {
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, lg: 2 }}>
-          <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Trade</div>
-            <div className="p-4 grid gap-3">
+          <Card padding={0}>
+            <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+              <Text size="sm" fw={500}>Trade</Text>
+            </Box>
+            <Flex direction="column" gap="md" p="md">
               <SegmentedControl
                 value={tradeMode}
                 onChange={(val) => setTradeMode(val as 'open' | 'close')}
@@ -477,22 +478,22 @@ export default function Futures() {
               />
 
               {tradeMode === 'open' ? (
-                <div className="text-xs text-neutral-500">Available: {Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} {quote}</div>
+                <Text size="xs" c="dimmed">Available: {Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} {quote}</Text>
               ) : (
-                <div className="text-xs text-neutral-500">
+                <Text size="xs" c="dimmed">
                   Position Available: {
                     (() => {
                       const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
                       return pos ? `${Number(pos.quantity).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token}` : `0 ${token}`
                     })()
                   }
-                </div>
+                </Text>
               )}
 
-              <div className="flex gap-1 p-1 bg-neutral-100 rounded">
-                <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} className="flex-1">Market</Button>
-                <Button size="xs" variant={orderType === 'limit' ? 'filled' : 'subtle'} onClick={() => setOrderType('limit')} className="flex-1">Limit</Button>
-              </div>
+              <Group gap={4} p={4} style={{ background: 'var(--mantine-color-dark-filled)', borderRadius: 'var(--mantine-radius-md)' }}>
+                <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} flex={1}>Market</Button>
+                <Button size="xs" variant={orderType === 'limit' ? 'filled' : 'subtle'} onClick={() => setOrderType('limit')} flex={1}>Limit</Button>
+              </Group>
 
               {orderType === 'limit' && (
                 <TextInput label="Limit Price" placeholder="0.00" value={limitPrice} onChange={(e) => setLimitPrice(e.currentTarget.value)} size="xs" />
@@ -602,16 +603,16 @@ export default function Futures() {
                 </>
               )}
 
-              <div className="flex gap-2">
+              <Flex gap="md">
                 {tradeMode === 'open' ? (
                   <>
-                    <Button className="flex-1" color="#0bba74" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
-                    <Button className="flex-1" color="#ff4761" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
+                    <Button flex={1} color="green" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
+                    <Button flex={1} color="red" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
                   </>
                 ) : (
                   <Button
-                    className="flex-1"
-                    color="#ff4761"
+                    flex={1}
+                    color="red"
                     variant="filled"
                     onClick={() => closePosition(`${token}_${quote}`, qty)}
                     disabled={!isAuthed || !qty}
@@ -619,20 +620,20 @@ export default function Futures() {
                     Close Position
                   </Button>
                 )}
-              </div>
+              </Flex>
 
               <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
-              {!isAuthed && <div className="text-xs text-neutral-500">Login to trade and see your balances.</div>}
-            </div>
+              {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
+            </Flex>
           </Card>
         </Grid.Col>
-      </Grid >
+      </Grid>
 
       <Grid gutter="md">
         <Grid.Col span={12}>
-          <Card radius="md" withBorder padding={0}>
+          <Card padding={0}>
             <Tabs defaultValue="positions" variant="outline">
-              <Tabs.List className="px-3 pt-1">
+              <Tabs.List style={{ padding: '4px 12px 0 12px' }}>
                 <Tabs.Tab value="positions">Positions</Tabs.Tab>
                 <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
                 <Tabs.Tab value="history" onClick={fetchHistory}>Position History</Tabs.Tab>
@@ -661,10 +662,10 @@ export default function Futures() {
         centered
         size="sm"
       >
-        <div className="grid gap-4 py-2">
-          <div className="text-sm text-neutral-500">
-            Available to close: <span className="font-semibold text-neutral-800">{partialCloseData?.totalQty}</span>
-          </div>
+        <Flex direction="column" gap="md" py="xs">
+          <Text size="sm" c="dimmed">
+            Available to close: <Text component="span" fw={600} c="var(--mantine-color-text)">{partialCloseData?.totalQty}</Text>
+          </Text>
 
           <TextInput
             label="Quantity to Close"
@@ -689,14 +690,14 @@ export default function Futures() {
           />
 
           <Button
-            color="#ff4761"
+            color="red"
             fullWidth
             onClick={() => closePosition(partialCloseData!.symbol, partialCloseQty)}
             disabled={!partialCloseQty || parseFloat(partialCloseQty) <= 0}
           >
             Confirm Close
           </Button>
-        </div>
+        </Flex>
       </Modal>
 
       <TransferModal
@@ -735,29 +736,31 @@ export default function Futures() {
             />
           </div>
 
-          <div className="grid gap-4 p-3 rounded-md bg-neutral-50/50">
-            <Text size="sm" fw={600} color="#ff4761">Stop Loss (SL)</Text>
-            <TextInput
-              label="Trigger Price"
-              placeholder="0.00"
-              value={tpslPrices.sl}
-              onChange={(e) => setTpslPrices({ ...tpslPrices, sl: e.currentTarget.value })}
-            />
-            <TextInput
-              label="Quantity to Close"
-              placeholder="All"
-              value={tpslPrices.slQty}
-              onChange={(e) => setTpslPrices({ ...tpslPrices, slQty: e.currentTarget.value })}
-            />
-            <TradeSlider
-              value={tpslPercents.sl}
-              onChange={(val) => {
-                setTpslPercents({ ...tpslPercents, sl: val })
-                const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
-                setTpslPrices({ ...tpslPrices, slQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
-              }}
-            />
-          </div>
+          <Box p="md" style={{ background: 'var(--mantine-color-dark-filled)', borderRadius: 'var(--mantine-radius-md)' }}>
+            <Text size="sm" fw={600} color="red">Stop Loss (SL)</Text>
+            <Flex direction="column" gap="sm" mt="sm">
+              <TextInput
+                label="Trigger Price"
+                placeholder="0.00"
+                value={tpslPrices.sl}
+                onChange={(e) => setTpslPrices({ ...tpslPrices, sl: e.currentTarget.value })}
+              />
+              <TextInput
+                label="Quantity to Close"
+                placeholder="All"
+                value={tpslPrices.slQty}
+                onChange={(e) => setTpslPrices({ ...tpslPrices, slQty: e.currentTarget.value })}
+              />
+              <TradeSlider
+                value={tpslPercents.sl}
+                onChange={(val) => {
+                  setTpslPercents({ ...tpslPercents, sl: val })
+                  const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
+                  setTpslPrices({ ...tpslPrices, slQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
+                }}
+              />
+            </Flex>
+          </Box>
 
           <Group grow mt="md">
             <Button variant="light" color="gray" onClick={() => setTpslData(null)}>Cancel</Button>
@@ -765,6 +768,6 @@ export default function Futures() {
           </Group>
         </div>
       </Modal>
-    </div >
+    </Box>
   )
 }

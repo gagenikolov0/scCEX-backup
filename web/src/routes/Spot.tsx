@@ -1,5 +1,5 @@
 
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -147,21 +147,21 @@ export default function Spot() {
   const formatDate = (date: string) => date ? new Date(date).toLocaleString() : '-'
 
   const renderTable = (data: any[], columns: string[], emptyMessage: string, showCancel = false) => (
-    <table className="w-full text-sm">
-      <thead className="text-neutral-500">
-        <tr className="text-left border-b">
-          {columns.map(col => <th key={col} className="py-2 pr-3">{col}</th>)}
-          {showCancel && <th className="py-2 pr-3">Action</th>}
-        </tr>
+    <Box component="table" style={{ width: '100%', fontSize: 'var(--mantine-font-size-sm)' }}>
+      <thead>
+        <Box component="tr" style={{ textAlign: 'left', borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+          {columns.map(col => <Box component="th" key={col} style={{ padding: '8px 12px 8px 0', color: 'var(--mantine-color-dimmed)', fontWeight: 500 }}>{col}</Box>)}
+          {showCancel && <Box component="th" style={{ padding: '8px 12px 8px 0', color: 'var(--mantine-color-dimmed)', fontWeight: 500 }}>Action</Box>}
+        </Box>
       </thead>
       <tbody>
         {data.length === 0 ? (
-          <tr>
-            <td className="py-4 text-center text-neutral-400" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</td>
-          </tr>
+          <Box component="tr">
+            <Box component="td" style={{ padding: '16px 0', textAlign: 'center', color: 'var(--mantine-color-dimmed)' }} colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Box>
+          </Box>
         ) : (
           data.map((item, index) => (
-            <tr key={item.id || item._id || index} className="border-b last:border-0 hover:bg-neutral-50/50">
+            <Box component="tr" key={item.id || item._id || index} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
               {columns.map(col => {
                 let val: any = '-'
                 const c = col.toLowerCase()
@@ -174,18 +174,18 @@ export default function Spot() {
                 if (c === 'symbol') {
                   const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
                   val = (
-                    <div className="flex flex-col leading-tight">
+                    <Flex direction="column" style={{ lineHeight: 1.2 }}>
                       <Text size="xs" fw={700}>{cleanSymbol}</Text>
                       {item.side && (
-                        <Text size="10px" color={item.side === 'buy' ? '#0bba74' : '#ff4761'} fw={700} className="uppercase">
+                        <Text size="xs" color={item.side === 'buy' ? 'green' : 'red'} fw={700} style={{ textTransform: 'uppercase', fontSize: '10px' }}>
                           {item.side}
                         </Text>
                       )}
-                    </div>
+                    </Flex>
                   )
                 }
 
-                else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? '#0bba74' : '#ff4761'} fw={600} className="uppercase">{item.side}</Text>
+                else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'green' : 'red'} fw={600} style={{ textTransform: 'uppercase' }}>{item.side}</Text>
                 else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
                 else if (c === 'price') val = getVal(item.price || item.priceQuote)
                 else if (c === 'total' || c === 'quote amount') {
@@ -210,34 +210,34 @@ export default function Spot() {
                 }
                 else if (c === 'updated') val = formatDate(item.updatedAt)
 
-                return <td key={col} className="py-2 pr-3">{val}</td>
+                return <Box component="td" key={col} style={{ padding: '8px 12px 8px 0' }}>{val}</Box>
               })}
               {showCancel && (
-                <td className="py-2 pr-3">
+                <Box component="td" style={{ padding: '8px 12px 8px 0' }}>
                   <Button size="compact-xs" variant="light" color="red" onClick={() => cancelOrder(item.id)}>
                     Cancel
                   </Button>
-                </td>
+                </Box>
               )}
-            </tr>
+            </Box>
           ))
         )}
       </tbody>
-    </table>
+    </Box>
   )
 
   const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders])
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-center gap-6 py-2">
+    <Box>
+      <Flex align="center" gap="xl" py="sm">
         <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
-            <Button variant="transparent" size="lg" className="h-14 px-2 !bg-transparent hover:!bg-transparent focus:!bg-transparent active:!bg-transparent data-[expanded]:!bg-transparent active:scale-100">
-              <div className="flex flex-col items-start leading-tight">
-                <div className="text-xl font-bold tracking-tight asset-selector-text">{token}{quote}</div>
-                <div className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">Spot</div>
-              </div>
+            <Button variant="transparent" size="lg" h={56} px="xs" style={{ background: 'transparent' }}>
+              <Flex direction="column" align="flex-start" style={{ lineHeight: 1.2 }}>
+                <Text size="xl" fw={700} className="asset-selector-text">{token}{quote}</Text>
+                <Text size="xs" c="dimmed" fw={500} style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10px' }}>Spot</Text>
+              </Flex>
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
@@ -252,43 +252,42 @@ export default function Spot() {
           </Menu.Dropdown>
         </Menu>
 
-        <div className="flex items-center w-fit header-divider">
+        <Flex align="center" className="header-divider" style={{ borderLeft: '1px solid var(--mantine-color-default-border)', paddingLeft: '24px' }}>
           {loadingStats ? <Loader size="xs" /> : (
-            <>
-              <div style={{ marginRight: '24px' }} className="flex flex-col">
-                <Text size="xs" c="dimmed" fw={500}></Text>
+            <Group gap={24}>
+              <Box>
                 <div className="text-lg font-bold">
                   <BigPrice symbol={`${token}${quote}`} market="spot" />
                 </div>
-              </div>
+              </Box>
 
-              <div style={{ marginRight: '24px' }} className="flex flex-col">
+              <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h change</Text>
-                <Text style={{ fontSize: '12px' }} fw={500} c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
+                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'green' : 'red'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
-              </div>
+              </Flex>
 
-              <div style={{ marginRight: '24px' }} className="flex flex-col">
+              <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h high</Text>
-                <Text style={{ fontSize: '12px' }} fw={600}>{stats?.high24h ?? '-'}</Text> {/* Should be white color in dark mode, full FFF color */}
-              </div>
+                <Text size="xs" fw={600}>{stats?.high24h ?? '-'}</Text>
+              </Flex>
 
-              <div style={{ marginRight: '24px' }} className="flex flex-col">
+              <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h low</Text>
-                <Text style={{ fontSize: '12px' }} fw={600}>{stats?.low24h ?? '-'}</Text> {/* Should be white color in dark mode, full FFF color */}
-              </div>
+                <Text size="xs" fw={600}>{stats?.low24h ?? '-'}</Text>
+              </Flex>
 
-              <div className="flex flex-col">
+              <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h volume</Text>
-                <Text style={{ fontSize: '12px' }} fw={600}> {/* Should be white color in dark mode, full FFF color */}
+                <Text size="xs" fw={600}>
                   {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
                 </Text>
-              </div>
-            </>
+              </Flex>
+            </Group>
           )}
-        </div>
-      </div>
+        </Flex>
+      </Flex>
 
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, lg: 7 }}>
@@ -314,40 +313,42 @@ export default function Spot() {
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, lg: 2 }}>
-          <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Spot</div>
-            <div className="p-4 grid gap-3">
-              <div className="flex gap-1 p-1 bg-neutral-100 rounded">
+          <Card padding={0}>
+            <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+              <Text size="sm" fw={500}>Spot</Text>
+            </Box>
+            <Flex direction="column" gap="md" p="md">
+              <Group gap={4} p={4} style={{ background: 'var(--mantine-color-dark-filled)', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button
                   size="xs"
                   variant={tradeSide === 'buy' ? 'filled' : 'subtle'}
-                  color="#0bba74"
+                  color="green"
                   onClick={() => setTradeSide('buy')}
-                  className="flex-1"
+                  flex={1}
                 >
                   Buy
                 </Button>
                 <Button
                   size="xs"
                   variant={tradeSide === 'sell' ? 'filled' : 'subtle'}
-                  color="#ff4761"
+                  color="red"
                   onClick={() => setTradeSide('sell')}
-                  className="flex-1"
+                  flex={1}
                 >
                   Sell
                 </Button>
-              </div>
+              </Group>
 
-              <div className="text-xs text-neutral-500">
+              <Text size="xs" c="dimmed">
                 Available: {tradeSide === 'buy' ? `${Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${quote} ` : `${Number(baseAvail).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token} `}
-              </div>
+              </Text>
 
-              <div className="flex gap-1 p-1 bg-neutral-100 rounded">
+              <Group gap={4} p={4} style={{ background: 'var(--mantine-color-dark-filled)', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button
                   size="xs"
                   variant={orderType === 'market' ? 'filled' : 'subtle'}
                   onClick={() => setOrderType('market')}
-                  className="flex-1"
+                  flex={1}
                 >
                   Market
                 </Button>
@@ -355,11 +356,11 @@ export default function Spot() {
                   size="xs"
                   variant={orderType === 'limit' ? 'filled' : 'subtle'}
                   onClick={() => setOrderType('limit')}
-                  className="flex-1"
+                  flex={1}
                 >
                   Limit
                 </Button>
-              </div>
+              </Group>
 
               {orderType === 'limit' && (
                 <TextInput
@@ -403,12 +404,12 @@ export default function Spot() {
                 }}
               />
 
-              <div className="flex gap-2">
+              <Flex gap="md">
                 {tradeSide === 'buy' ? (
                   <Button
-                    className="flex-1"
+                    flex={1}
                     variant="filled"
-                    color="#0bba74"
+                    color="green"
                     loading={placing === 'buy'}
                     disabled={!isAuthed}
                     onClick={() => placeOrder('buy')}
@@ -417,9 +418,9 @@ export default function Spot() {
                   </Button>
                 ) : (
                   <Button
-                    className="flex-1"
+                    flex={1}
                     variant="filled"
-                    color="#ff4761"
+                    color="red"
                     loading={placing === 'sell'}
                     disabled={!isAuthed}
                     onClick={() => placeOrder('sell')}
@@ -427,19 +428,19 @@ export default function Spot() {
                     Sell {token}
                   </Button>
                 )}
-              </div>
+              </Flex>
               <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
-              {!isAuthed && <div className="text-xs text-neutral-500">Login to trade and see your balances.</div>}
-            </div>
+              {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
+            </Flex>
           </Card>
         </Grid.Col>
       </Grid>
 
       <Grid gutter="md">
         <Grid.Col span={12}>
-          <Card radius="md" withBorder padding={0}>
+          <Card padding={0}>
             <Tabs defaultValue="history" variant="outline">
-              <Tabs.List className="px-3 pt-1">
+              <Tabs.List style={{ padding: '4px 12px 0 12px' }}>
                 <Tabs.Tab value="history">Trade History</Tabs.Tab>
                 <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
                 <Tabs.Tab value="positions">Assets</Tabs.Tab>
@@ -471,6 +472,6 @@ export default function Spot() {
           refreshOrders()
         }}
       />
-    </div>
+    </Box>
   )
 }

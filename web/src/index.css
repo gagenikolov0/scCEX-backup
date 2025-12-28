@@ -1,47 +1,23 @@
-@plugin "tailwindcss-animate";
-
-/* 
-  Tailwind looks for the .dark class on the <html> element. 
-  Mantine looks for [data-mantine-color-scheme="dark"].
-  We sync them here so the whole app reacts to the theme toggle.
-*/
-@custom-variant dark (&:is(.dark *));
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-border: var(--border);
-  --color-primary: var(--primary);
-  --color-secondary: var(--secondary);
-  --color-muted: var(--muted);
-  --color-accent: var(--accent);
-  --color-destructive: var(--destructive);
-  --color-ring: var(--ring);
-}
-
 :root {
   /* Layout */
   --radius: 0.625rem;
 
-  /* Font Scale (Who is using size="sm" etc? These variables are!) */
-  --mantine-font-size-xs: 0.75rem;
-  /* 12px */
-  --mantine-font-size-sm: 0.875rem;
-  /* 14px */
-  --mantine-font-size-md: 1rem;
-  /* 16px */
-  --mantine-font-size-lg: 1.125rem;
-  /* 18px */
-  --mantine-font-size-xl: 1.25rem;
-  /* 20px */
+  /* 
+     MASTER FONT SCALE (ONE SOURCE OF TRUTH)
+     Change these to update EVERYTHING 
+  */
+  --fz-xs: 12px;
+  --fz-sm: 14px;
+  --fz-md: 16px;
+  --fz-lg: 18px;
+  --fz-xl: 20px;
+
+  /* MANTINE MAPPING */
+  --mantine-font-size-xs: var(--fz-xs) !important;
+  --mantine-font-size-sm: var(--fz-sm) !important;
+  --mantine-font-size-md: var(--fz-md) !important;
+  --mantine-font-size-lg: var(--fz-lg) !important;
+  --mantine-font-size-xl: var(--fz-xl) !important;
 
   /* Basic Colors (Light Mode) */
   --background: #ffffff;
@@ -51,8 +27,20 @@
   --secondary: #f8f9fa;
   --muted: #f1f3f5;
   --accent: #f8f9fa;
-  --destructive: #fa5252;
+  --destructive: #b60000;
   --ring: #dee2e6;
+  --liq: #e8590c;
+
+  --pnlgreen: #0BBA74;
+  /* Used ONLY FOR REALIZED AND UNREALIZED PNL!! */
+  --pnlred: #fa5252;
+  /* Used ONLY FOR REALIZED AND UNREALIZED PNL!! */
+
+  --green: #0aa869;
+  /* Used everywhere except unrealized and realized PNL */
+  --red: #fe445c;
+  /* Used everywhere except unrealized and realized PNL */
+
 
   /* Mantine UI Overrides (Light Mode) */
   --mantine-color-body: var(--background) !important;
@@ -70,77 +58,67 @@
   --background: #020202;
   --foreground: #ffffff;
   --border: #ff0195;
-  /* Pink */
   --primary: #00ff73;
-  /* Green */
   --secondary: #7189ff;
-  /* Blue */
-  --muted: #e48518;
-  /* Orange */
+  --muted: #505050;
   --accent: #22c9c9;
-  /* Cyan */
   --ring: #86113e;
-  /* Deep Red */
+  --liq: #e8590c;
 
-  /* Mantine UI Overrides (Exposing the "Secret" variables) */
+  /* Mantine UI Overrides */
   --mantine-color-body: var(--background) !important;
   --mantine-color-text: var(--foreground) !important;
   --mantine-color-dimmed: #adb5bd !important;
 
-  /* Paper & Surfaces (No more secret grays) */
+  /* Paper & Surfaces */
   --mantine-color-dark-6: #0a0a0a !important;
-  /* Panel backgrounds */
   --paper-border-color: var(--border) !important;
   --mantine-color-default-border: var(--border) !important;
 
-  /* The Grayscale scale - forcing it to react to our theme */
+  /* The Grayscale scale */
   --mantine-color-dark-0: #f8f9fa;
   --mantine-color-dark-1: #f1f3f5;
   --mantine-color-dark-2: #e9ecef;
   --mantine-color-dark-3: #dee2e6;
   --mantine-color-dark-4: var(--border) !important;
-  /* Most borders use this */
   --mantine-color-dark-5: #adb5bd;
   --mantine-color-dark-7: #1a1b1e;
   --mantine-color-dark-8: #141517;
   --mantine-color-dark-9: #101113;
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-
-  html,
-  body {
-    @apply bg-background text-foreground;
-    overflow-x: hidden;
-    max-width: 100vw;
-  }
-
-  body {
-    position: relative;
-  }
+* {
+  box-sizing: border-box;
 }
 
-@layer utilities {
-  #tv-attr-logo {
-    display: none !important;
-  }
+html,
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+  max-width: 100vw;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
 }
 
-@layer components {
-  .header-divider {
-    border-left-width: 1px;
-    border-left-style: solid;
-    border-left-color: #d3d3d3;
-    padding-left: 1.5rem;
-  }
+body {
+  position: relative;
+}
 
-  /* Robust theme check for component classes */
-  :where(.dark, [data-mantine-color-scheme="dark"]) .header-divider {
-    border-left-color: var(--border) !important;
-  }
+#tv-attr-logo {
+  display: none !important;
+}
+
+.header-divider {
+  border-left-width: 1px;
+  border-left-style: solid;
+  border-left-color: #d3d3d3;
+  padding-left: 1.5rem;
+}
+
+:where(.dark, [data-mantine-color-scheme="dark"]) .header-divider {
+  border-left-color: var(--border) !important;
 }
 
 /* Specific component overrides */

@@ -1,22 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE } from '../config/api'
+import { Box, Text } from '@mantine/core'
 
 type SideRow = [number, number] // [price, size]
 
-export default function OrderBook({ symbol, market, depth = 50 }: { symbol: string; market: 'spot'|'futures'; depth?: number }) {
+export default function OrderBook({ symbol, market, depth = 50 }: { symbol: string; market: 'spot' | 'futures'; depth?: number }) {
   const [bids, setBids] = useState<SideRow[]>([])
   const [asks, setAsks] = useState<SideRow[]>([])
-  const [status, setStatus] = useState<'connecting'|'open'|'closed'|'error'>('connecting')
+  const [status, setStatus] = useState<'connecting' | 'open' | 'closed' | 'error'>('connecting')
   const [error, setError] = useState<string | null>(null)
   const lastUpdateRef = useRef<number>(0)
 
   useEffect(() => {
     if (!symbol) return
-    
+
     setBids([]); setAsks([]); setError(null); setStatus('connecting')
     const wsBase = API_BASE.replace(/^http/, 'ws')
     const path = market === 'futures' ? '/ws/futures-depth' : '/ws/spot-depth'
-    const sym = market === 'futures' && !symbol.includes('_') ? symbol.replace(/(USDT|USDC)$/,'_$1') : symbol
+    const sym = market === 'futures' && !symbol.includes('_') ? symbol.replace(/(USDT|USDC)$/, '_$1') : symbol
     let stopped = false
     let ws: WebSocket | null = null
     let retries = 0
@@ -25,10 +26,10 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
       try {
         ws = new WebSocket(`${wsBase}${path}`)
         ws.onopen = () => {
-          if (stopped) { try { ws?.close() } catch {} ; return }
+          if (stopped) { try { ws?.close() } catch { }; return }
           setStatus('open')
           retries = 0
-          try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym, depth })) } catch {}
+          try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym, depth })) } catch { }
         }
         ws.onmessage = (ev) => {
           try {
@@ -39,7 +40,7 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
               setBids(msg.bids as SideRow[])
               setAsks(msg.asks as SideRow[])
             }
-          } catch {}
+          } catch { }
         }
         ws.onerror = () => { if (!stopped) { setStatus('error'); setError('Orderbook connection error') } }
         ws.onclose = () => {
@@ -57,8 +58,8 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
     return () => {
       stopped = true
       if (ws && ws.readyState === WebSocket.OPEN) {
-        try { ws.send(JSON.stringify({ type: 'unsub', symbol: sym })) } catch {}
-        try { ws.close() } catch {}
+        try { ws.send(JSON.stringify({ type: 'unsub', symbol: sym })) } catch { }
+        try { ws.close() } catch { }
       }
     }
   }, [symbol, market, depth])
@@ -79,31 +80,33 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
   const askTotalsRev = useMemo(() => totals.askTotals.slice().reverse(), [totals])
 
   return (
-    <div className="p-3 text-sm">
-      {error && <div className="text-red-600 mb-2">{error}</div>}
-      {status === 'connecting' && <div className="text-neutral-500 mb-2">Connecting...</div>}
-      <div className="grid grid-cols-3 gap-y-1 mb-2 sticky top-0 bg-transparent">
-        <div className="text-neutral-500">Price</div>
-        <div className="text-neutral-500">Size</div>
-        <div className="text-neutral-500">Total</div>
-      </div>
-      <div className="grid grid-cols-3 gap-y-1">
+    <Box p="sm">
+      {error && <Text color="red" size="sm" mb="xs">{error}</Text>}
+      {status === 'connecting' && <Text c="dimmed" size="sm" mb="xs">Connecting...</Text>}
+
+      <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '8px', position: 'sticky', top: 0, backgroundColor: 'transparent', zIndex: 1 }}>
+        <Text size="xs" c="dimmed" fw={500}>Price</Text>
+        <Text size="xs" c="dimmed" fw={500}>Size</Text>
+        <Text size="xs" c="dimmed" fw={500}>Total</Text>
+      </Box>
+
+      <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
         {revAsks.map((r, i) => (
-          <div key={`a-${i}`} className="contents">
-            <div className="text-red-600">{fmt(r[0])}</div>
-            <div>{fmt(r[1])}</div>
-            <div>{fmt(askTotalsRev[i])}</div>
-          </div>
+          <Box key={`a-${i}`} style={{ display: 'contents', fontSize: 'var(--mantine-font-size-xs)' }}>
+            <Text size="xs" color="red" fw={500}>{fmt(r[0])}</Text>
+            <Text size="xs">{fmt(r[1])}</Text>
+            <Text size="xs" c="dimmed">{fmt(askTotalsRev[i])}</Text>
+          </Box>
         ))}
         {bids.map((r, i) => (
-          <div key={`b-${i}`} className="contents">
-            <div className="text-green-600">{fmt(r[0])}</div>
-            <div>{fmt(r[1])}</div>
-            <div>{fmt(totals.bidTotals[i])}</div>
-          </div>
+          <Box key={`b-${i}`} style={{ display: 'contents', fontSize: 'var(--mantine-font-size-xs)' }}>
+            <Text size="xs" color="green" fw={500}>{fmt(r[0])}</Text>
+            <Text size="xs">{fmt(r[1])}</Text>
+            <Text size="xs" c="dimmed">{fmt(totals.bidTotals[i])}</Text>
+          </Box>
         ))}
-      </div>
-    </div>
+      </Box>
+    </Box>
   )
 }
 

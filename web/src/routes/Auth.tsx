@@ -35,18 +35,18 @@ export function Login() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div>
             <TextInput {...register('email')} placeholder="Email" />
-            {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+            {errors.email && <p className="text-sm text-red">{errors.email.message}</p>}
           </div>
           <div>
             <TextInput type="password" {...register('password')} placeholder="Password" />
-            {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
+            {errors.password && <p className="text-sm text-red">{errors.password.message}</p>}
           </div>
-          {serverError && <p className="text-sm text-red-600">{serverError}</p>}
+          {serverError && <p className="text-sm text-red">{serverError}</p>}
           <Button type="submit" disabled={isSubmitting} fullWidth size="md" color="dark">
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
-        <p className="text-sm mt-3">No account? <Link to="/register" className="text-blue-600">Register</Link></p>
+        <p className="text-sm mt-3">No account? <Link to="/register" className="text-secondary">Register</Link></p>
       </Paper>
     </div>
   )
@@ -75,18 +75,18 @@ export function Register() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div>
             <TextInput {...register('email')} placeholder="Email" />
-            {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+            {errors.email && <p className="text-sm text-red">{errors.email.message}</p>}
           </div>
           <div>
             <TextInput type="password" {...register('password')} placeholder="Password" />
-            {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
+            {errors.password && <p className="text-sm text-red">{errors.password.message}</p>}
           </div>
-          {serverError && <p className="text-sm text-red-600">{serverError}</p>}
+          {serverError && <p className="text-sm text-red">{serverError}</p>}
           <Button type="submit" disabled={isSubmitting} fullWidth size="md" color="dark">
             {isSubmitting ? 'Creating...' : 'Create account'}
           </Button>
         </form>
-        <p className="text-sm mt-3">Have an account? <Link to="/login" className="text-blue-600">Login</Link></p>
+        <p className="text-sm mt-3">Have an account? <Link to="/login" className="text-secondary">Login</Link></p>
       </Paper>
     </div>
   )

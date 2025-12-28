@@ -21,7 +21,7 @@ export default function Settings() {
             <Text fw={500}>Logout</Text>
             <Text size="sm" c="dimmed">Sign out of your account</Text>
           </div>
-          <Button color="red" onClick={onLogout}>Logout</Button>
+          <Button color="var(--red)" onClick={onLogout}>Logout</Button>
         </Group>
       </Card>
     </div>
