@@ -220,7 +220,7 @@ export default function Spot() {
                   })}
                   {showCancel && (
                     <Table.Td>
-                      <Button size="compact-xs" variant="light" color="#fe445c" onClick={() => cancelOrder(item.id)}>
+                      <Button size="compact-xs" variant="light" color="var(--red)" onClick={() => cancelOrder(item.id)}>
                         Cancel
                       </Button>
                     </Table.Td>
@@ -238,7 +238,7 @@ export default function Spot() {
 
   return (
     <Box>
-      <Flex align="center" gap="lg" py="sm">
+      <Flex align="center" gap="lg" py={4}>
         <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
@@ -298,41 +298,74 @@ export default function Spot() {
       </Flex>
 
       <Grid gutter="md">
-        <Grid.Col span={{ base: 12, lg: 7 }}>
-          <Card padding={0} radius="md" withBorder>
-            <PriceChart
-              onIntervalChange={setInterval}
-              availableIntervals={availableIntervals}
-              key={`${token}${quote}-${interval}-spot`}
-              symbol={`${token}${quote}`}
-              interval={interval}
-              orders={orders.filter((o: any) => o.symbol === `${token}${quote}` && o.status === 'pending')}
-            />
-          </Card>
+        {/* Left Side: Chart, OrderBook, and History Table */}
+        <Grid.Col span={{ base: 12, lg: 10 }}>
+          <Flex direction="column" gap="md">
+            <Grid gutter="md" columns={10}>
+              <Grid.Col span={{ base: 10, lg: 8 }}>
+                <Card padding={0} radius="md" withBorder>
+                  <PriceChart
+                    onIntervalChange={setInterval}
+                    availableIntervals={availableIntervals}
+                    key={`${token}${quote}-${interval}-spot`}
+                    symbol={`${token}${quote}`}
+                    interval={interval}
+                    height={550}
+                    orders={orders.filter((o: any) => o.symbol === `${token}${quote}` && o.status === 'pending')}
+                  />
+                </Card>
+              </Grid.Col>
+
+              {/* OrderBook */}
+              <Grid.Col span={{ base: 10, lg: 2 }}>
+                <Card padding={0} radius="md" withBorder shadow="sm" h={550}>
+                  <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+                    <Text size="sm" fw={600}>Order Book</Text>
+                  </Box>
+                  <Box h={510} style={{ overflowY: 'auto' }}> {/* Adjusted to fit 550px card height minus header */}
+                    <OrderBook symbol={`${token}${quote}`} market="spot" depth={10} />
+                  </Box>
+                </Card>
+              </Grid.Col>
+            </Grid>
+
+            {/* Tables aligned to complete the sidebar pillar height */}
+            <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }}>
+              <Tabs defaultValue="history" variant="outline">
+                <Tabs.List pt={4} px={12}>
+                  <Tabs.Tab value="history">Trade History</Tabs.Tab>
+                  <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
+                  <Tabs.Tab value="positions">Assets</Tabs.Tab>
+                </Tabs.List>
+
+                <Tabs.Panel value="history" p={0}>
+                  {renderTable(history, ['Symbol', 'Quantity', 'Price', 'Quote Amount', 'Time'], 'No trade history')}
+                </Tabs.Panel>
+
+                <Tabs.Panel value="pending" p={0}>
+                  {renderTable(pendingOrders, ['Symbol', 'Quantity', 'Price', 'Status', 'Time'], 'No open orders', true)}
+                </Tabs.Panel>
+
+                <Tabs.Panel value="positions" p={0}>
+                  {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Value', 'Updated'], 'No assets')}
+                </Tabs.Panel>
+              </Tabs>
+            </Card>
+          </Flex>
         </Grid.Col>
 
-        <Grid.Col span={{ base: 12, lg: 3 }}>
-          <Card padding={0} radius="md" withBorder shadow="sm">
-            <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-              <Text size="sm" fw={600}>Order Book</Text>
-            </Box>
-            <Box h={360} style={{ overflowY: 'auto' }}>
-              <OrderBook symbol={`${token}${quote}`} market="spot" depth={10} />
-            </Box>
-          </Card>
-        </Grid.Col>
-
+        {/* Right Side: Sidebar Trade Panel */}
         <Grid.Col span={{ base: 12, lg: 2 }}>
-          <Card padding={0}>
+          <Card padding={0} withBorder radius="md" h={1091} style={{ overflowY: 'auto' }}>
             <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
               <Text size="sm" fw={500}>Spot</Text>
             </Box>
             <Flex direction="column" gap="md" p="md">
-              <Group gap={4} p={4} style={{ background: 'var(--mantine-color-dark-filled)', borderRadius: 'var(--mantine-radius-md)' }}>
+              <Group gap={4} p={4} style={{ background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button
                   size="xs"
                   variant={tradeSide === 'buy' ? 'filled' : 'subtle'}
-                  color="#0BBA74"
+                  color="var(--green)"
                   onClick={() => setTradeSide('buy')}
                   flex={1}
                 >
@@ -341,7 +374,7 @@ export default function Spot() {
                 <Button
                   size="xs"
                   variant={tradeSide === 'sell' ? 'filled' : 'subtle'}
-                  color="#fe445c"
+                  color="var(--red)"
                   onClick={() => setTradeSide('sell')}
                   flex={1}
                 >
@@ -419,7 +452,7 @@ export default function Spot() {
                   <Button
                     flex={1}
                     variant="filled"
-                    color="#0BBA74"
+                    color="var(--green)"
                     loading={placing === 'buy'}
                     disabled={!isAuthed}
                     onClick={() => placeOrder('buy')}
@@ -430,7 +463,7 @@ export default function Spot() {
                   <Button
                     flex={1}
                     variant="filled"
-                    color="#fe445c"
+                    color="var(--red)"
                     loading={placing === 'sell'}
                     disabled={!isAuthed}
                     onClick={() => placeOrder('sell')}
@@ -442,32 +475,6 @@ export default function Spot() {
               <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
               {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
             </Flex>
-          </Card>
-        </Grid.Col>
-      </Grid>
-
-      <Grid gutter="md">
-        <Grid.Col span={12}>
-          <Card padding={0}>
-            <Tabs defaultValue="history" variant="outline">
-              <Tabs.List pt={4} px={12}>
-                <Tabs.Tab value="history">Trade History</Tabs.Tab>
-                <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
-                <Tabs.Tab value="positions">Assets</Tabs.Tab>
-              </Tabs.List>
-
-              <Tabs.Panel value="history" p={0}>
-                {renderTable(history, ['Symbol', 'Quantity', 'Price', 'Quote Amount', 'Time'], 'No trade history')}
-              </Tabs.Panel>
-
-              <Tabs.Panel value="pending" p={0}>
-                {renderTable(pendingOrders, ['Symbol', 'Quantity', 'Price', 'Status', 'Time'], 'No open orders', true)}
-              </Tabs.Panel>
-
-              <Tabs.Panel value="positions" p={0}>
-                {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Value', 'Updated'], 'No assets')}
-              </Tabs.Panel>
-            </Tabs>
           </Card>
         </Grid.Col>
       </Grid>

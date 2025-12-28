@@ -107,11 +107,11 @@ export default function PriceChart(props: Props) {
     })
     const series = chart.addSeries(CandlestickSeries, {
       upColor: '#0BBA74',
-      downColor: '#fe445c',
+      downColor: '#ff4761',
       borderUpColor: '#0BBA74',
-      borderDownColor: '#fe445c',
+      borderDownColor: '#ff4761',
       wickUpColor: '#0BBA74',
-      wickDownColor: '#fe445c',
+      wickDownColor: '#ff4761',
       priceLineStyle: 1, // Dashed
       priceLineWidth: 2,
     })

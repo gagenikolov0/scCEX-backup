@@ -310,7 +310,7 @@ export default function Futures() {
                               {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                             </Text>
                             {item.note === 'Liquidated' && (
-                              <Badge color="#fe445c" size="xs" variant="filled">LIQ</Badge>
+                              <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
                             )}
                           </Group>
                           <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
@@ -324,7 +324,7 @@ export default function Futures() {
                     else if (c === 'tp/sl') {
                       val = (
                         <Flex direction="column" gap={2} lh={1}>
-                          <Text size="xxs" color="#0BBA74" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
+                          <Text size="xxs" color="var(--green)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
                             setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
                             setTpslPrices({
                               tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
@@ -339,7 +339,7 @@ export default function Futures() {
                           }}>
                             TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
                           </Text>
-                          <Text size="xxs" color="#fe445c" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
+                          <Text size="xxs" color="var(--red)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
                             setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
                             setTpslPrices({
                               tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
@@ -388,7 +388,7 @@ export default function Futures() {
 
   return (
     <Box>
-      <Flex align="center" gap="lg" py="sm">
+      <Flex align="center" gap="lg" py={4}>
         <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
@@ -448,35 +448,78 @@ export default function Futures() {
       </Flex>
 
       <Grid gutter="md">
-        <Grid.Col span={{ base: 12, lg: 7 }}>
-          <Card padding={0} radius="md" withBorder>
-            <PriceChart
-              key={`${token}_${quote}-${interval}-futures`}
-              symbol={`${token}_${quote}`}
-              interval={interval}
-              market="futures"
-              orders={recentOrders.filter((o: any) => o.symbol === `${token}_${quote}` && o.status === 'pending')}
-              positions={futuresPositions.filter((p: any) => p.symbol === `${token}_${quote}`)}
-              onClosePosition={(pos) => setPartialCloseData({ symbol: pos.symbol, totalQty: Number(pos.quantity) })}
-              onIntervalChange={setInterval}
-              availableIntervals={availableIntervals}
-            />
-          </Card>
+        {/* Left Side: Chart, OrderBook, and History Table */}
+        <Grid.Col span={{ base: 12, lg: 10 }}>
+          <Flex direction="column" gap="md">
+            <Grid gutter="md" columns={10}>
+              <Grid.Col span={{ base: 10, lg: 8 }}>
+                <Card padding={0} radius="md" withBorder>
+                  <PriceChart
+                    key={`${token}_${quote}-${interval}-futures`}
+                    symbol={`${token}_${quote}`}
+                    interval={interval}
+                    height={550}
+                    market="futures"
+                    orders={recentOrders.filter((o: any) => o.symbol === `${token}_${quote}` && o.status === 'pending')}
+                    positions={futuresPositions.filter((p: any) => p.symbol === `${token}_${quote}`)}
+                    onClosePosition={(pos) => setPartialCloseData({ symbol: pos.symbol, totalQty: Number(pos.quantity) })}
+                    onIntervalChange={setInterval}
+                    availableIntervals={availableIntervals}
+                  />
+                </Card>
+              </Grid.Col>
+
+              {/* OrderBook */}
+              <Grid.Col span={{ base: 10, lg: 2 }}>
+                <Card padding={0} radius="md" withBorder shadow="sm" h={550}>
+                  <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+                    <Text size="sm" fw={600}>Order Book</Text>
+                  </Box>
+                  <Box h={510} style={{ overflowY: 'auto' }}> {/* Adjusted to fit 550px card height minus header */}
+                    <OrderBook symbol={`${token}_${quote}`} market="futures" depth={10} />
+                  </Box>
+                </Card>
+              </Grid.Col>
+            </Grid>
+
+            {/* Tables aligned to complete the sidebar pillar height */}
+            <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }}>
+              <Tabs defaultValue="positions" variant="outline">
+                <Tabs.List pt={4} px={12}>
+                  <Tabs.Tab value="positions">Positions</Tabs.Tab>
+                  <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
+                  <Tabs.Tab value="history" onClick={fetchHistory}>Position History</Tabs.Tab>
+                </Tabs.List>
+
+                <Tabs.Panel value="positions" p={0}>
+                  {renderTable(futuresPositions, [
+                    { label: 'Trading Pair', key: 'Symbol' },
+                    { label: 'Size (Qty)', key: 'Size' },
+                    { label: 'Avg Entry Price', key: 'Entry' },
+                    'Margin',
+                    'Liq. Price',
+                    { label: 'Unrealized PNL', key: 'PnL' },
+                    { label: 'Realized PNL', key: 'Realized PnL' },
+                    'TP/SL',
+                    { label: 'Close', key: 'Action' }
+                  ], 'No active positions')}
+                </Tabs.Panel>
+
+                <Tabs.Panel value="orders" p={0}>
+                  {renderTable(recentOrders.filter(o => o.symbol?.includes('_')), ['Symbol', 'Size', 'Price', 'Status', 'Time', 'Action'], 'No recent orders')}
+                </Tabs.Panel>
+
+                <Tabs.Panel value="history" p={0}>
+                  {renderTable(history, ['Symbol', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time'], 'No trade history')}
+                </Tabs.Panel>
+              </Tabs>
+            </Card>
+          </Flex>
         </Grid.Col>
 
-        <Grid.Col span={{ base: 12, lg: 3 }}>
-          <Card padding={0} radius="md" withBorder shadow="sm">
-            <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-              <Text size="sm" fw={600}>Order Book</Text>
-            </Box>
-            <Box h={360} style={{ overflowY: 'auto' }}>
-              <OrderBook symbol={`${token}_${quote}`} market="futures" depth={10} />
-            </Box>
-          </Card>
-        </Grid.Col>
-
+        {/* Right Side: Sidebar Trade Panel */}
         <Grid.Col span={{ base: 12, lg: 2 }}>
-          <Card padding={0}>
+          <Card padding={0} withBorder radius="md" h={1091} style={{ overflowY: 'auto' }}>
             <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
               <Text size="sm" fw={500}>Trade</Text>
             </Box>
@@ -505,7 +548,7 @@ export default function Futures() {
                 </Text>
               )}
 
-              <Group gap={4} p={4} style={{ background: 'var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-md)' }}>
+              <Group gap={4} p={4} style={{ background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} flex={1}>Market</Button>
                 <Button size="xs" variant={orderType === 'limit' ? 'filled' : 'subtle'} onClick={() => setOrderType('limit')} flex={1}>Limit</Button>
               </Group>
@@ -621,8 +664,8 @@ export default function Futures() {
               <Flex gap="md">
                 {tradeMode === 'open' ? (
                   <>
-                    <Button flex={1} color="#0BBA74" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
-                    <Button flex={1} color="#fe445c" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
+                    <Button flex={1} color="var(--green)" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
+                    <Button flex={1} color="var(--red)" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
                   </>
                 ) : (
                   <Button
@@ -640,42 +683,6 @@ export default function Futures() {
               <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
               {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
             </Flex>
-          </Card>
-        </Grid.Col>
-      </Grid>
-
-      <Grid gutter="md">
-        <Grid.Col span={12}>
-          <Card padding={0}>
-            <Tabs defaultValue="positions" variant="outline">
-              <Tabs.List pt={4} px={12}>
-                <Tabs.Tab value="positions">Positions</Tabs.Tab>
-                <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
-                <Tabs.Tab value="history" onClick={fetchHistory}>Position History</Tabs.Tab>
-              </Tabs.List>
-
-              <Tabs.Panel value="positions" p={0}>
-                {renderTable(futuresPositions, [
-                  { label: 'Trading Pair', key: 'Symbol' },
-                  { label: 'Size (Qty)', key: 'Size' },
-                  { label: 'Avg Entry Price', key: 'Entry' },
-                  'Margin',
-                  'Liq. Price',
-                  { label: 'Unrealized PNL', key: 'PnL' },
-                  { label: 'Realized PNL', key: 'Realized PnL' },
-                  'TP/SL',
-                  { label: 'Close', key: 'Action' }
-                ], 'No active positions')}
-              </Tabs.Panel>
-
-              <Tabs.Panel value="orders" p={0}>
-                {renderTable(recentOrders.filter(o => o.symbol?.includes('_')), ['Symbol', 'Size', 'Price', 'Status', 'Time', 'Action'], 'No recent orders')}
-              </Tabs.Panel>
-
-              <Tabs.Panel value="history" p={0}>
-                {renderTable(history, ['Symbol', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time'], 'No trade history')}
-              </Tabs.Panel>
-            </Tabs>
           </Card>
         </Grid.Col>
       </Grid>
@@ -737,7 +744,7 @@ export default function Futures() {
 
       <Modal opened={!!tpslData} onClose={() => setTpslData(null)} title={`TP/SL Settings - ${tpslData?.symbol}`} centered size="sm">
         <Box p="md" style={{ background: 'var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-md)' }}>
-          <Text size="sm" fw={600} color="#0BBA74">Take Profit (TP)</Text>
+          <Text size="sm" fw={600} color="var(--green)">Take Profit (TP)</Text>
           <Flex direction="column" gap="sm" mt="sm">
             <TextInput
               label="Trigger Price"
@@ -763,7 +770,7 @@ export default function Futures() {
         </Box>
 
         <Box p="md" style={{ background: 'var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-md)' }}>
-          <Text size="sm" fw={600} color="#fe445c">Stop Loss (SL)</Text>
+          <Text size="sm" fw={600} color="var(--red)">Stop Loss (SL)</Text>
           <Flex direction="column" gap="sm" mt="sm">
             <TextInput
               label="Trigger Price"

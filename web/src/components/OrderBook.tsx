@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE } from '../config/api'
 import { Box, Text, SimpleGrid } from '@mantine/core'
+import BigPrice from './BigPrice'
 
 type SideRow = [number, number] // [price, size]
 
@@ -80,7 +81,7 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
   const askTotalsRev = useMemo(() => totals.askTotals.slice().reverse(), [totals])
 
   return (
-    <Box p="sm">
+    <Box p="sm" style={{ overflowX: 'hidden' }}>
       {error && <Text color="red" size="sm" mb="xs">{error}</Text>}
       {status === 'connecting' && <Text c="dimmed" size="sm" mb="xs">Connecting...</Text>}
 
@@ -98,6 +99,13 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
             <Text size="xs" c="dimmed">{fmt(askTotalsRev[i])}</Text>
           </Box>
         ))}
+      </SimpleGrid>
+
+      <Box py={3} my={4} style={{ borderTop: '1px solid var(--mantine-color-default-border)', borderBottom: '1px solid var(--mantine-color-default-border)', textAlign: 'center' }}>
+        <BigPrice symbol={symbol} market={market} />
+      </Box>
+
+      <SimpleGrid cols={3} spacing={4}>
         {bids.map((r, i) => (
           <Box key={`b-${i}`} style={{ display: 'contents' }}>
             <Text size="xs" color="var(--green)" fw={500}>{fmt(r[0])}</Text>

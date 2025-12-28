@@ -5,7 +5,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <Box>
       <Header />
-      <Container size="xl" py="lg">
+      <Container fluid px="md" pt={0} pb="lg">
         {children}
       </Container>
     </Box>

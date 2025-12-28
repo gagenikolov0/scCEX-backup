@@ -59,3 +59,6 @@ i there are way many _ in the codebase that what i've seen in the UI
 
 
 ❓i want futures trading panel and spot tradng panel to have fixed height and so if there are more positions than the height of the panel allows, i want to see a vertical scrollbar
+
+
+❓There's a small UI problem with Asset selector, after i hover over it and then mouse leaves the dropdown, and accidentally within that second hover on the Disappeared dropdown, it opens again.
