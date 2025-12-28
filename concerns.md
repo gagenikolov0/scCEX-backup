@@ -6,8 +6,8 @@
 
 
 
-❓ Cant see full chart history - limited to 200 candles, but 200 candles applied to all intervals/charts?
-Also when chart loads it only shows the last candle before i have to zoom out to see the rest 200 candles or pull to the right
+❓ Cant see full chart history - limited to 200 candles, but 200 candles applied to all intervals/charts? i want 1000 candles for all intervals
+Also when SOME chart loads it only shows the last candle before i have to zoom out to see the rest available candles or pull to the right which i hate lot more, while on some intervals the chart loads nicely, visible many candles not just one.
 
 
 ❓ Which css file is for wallet.tsx?
@@ -43,3 +43,4 @@ When opening market position on a pair that we already have position it works we
 
 ❓in position table after we set TP/SL what does TP/SL show right next to our price? its some percentage
 but i dont get what percentage of what 
+

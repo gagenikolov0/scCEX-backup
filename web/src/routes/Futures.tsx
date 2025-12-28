@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAccount } from '../contexts/AccountContext'
 import TransferModal from '../components/TransferModal'
 import TradeSlider from '../components/TradeSlider'
+import { PanelBottom } from 'lucide-react'
 
 export default function Futures() {
   const [search] = useSearchParams()
@@ -302,7 +303,7 @@ export default function Futures() {
                           {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                         </Text>
                         {item.note === 'Liquidated' && (
-                          <Badge color="red" size="xs" variant="filled" style={{ marginLeft: '3px' }}>LIQ</Badge>
+                          <Badge color="red" size="xs" variant="filled" style={{ marginLeft: '4px', paddingBottom: '2px' }}>LIQ</Badge>
                         )}
                       </div>
                       <Text size="10px" color={realizedPnl >= 0 ? '#0bba74' : '#FF4761'}>
@@ -377,10 +378,10 @@ export default function Futures() {
       <div className="flex items-center gap-6 py-2">
         <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
-            <Button variant="transparent" size="lg" className="h-14 px-2 !bg-transparent hover:!bg-transparent focus:!bg-transparent active:!bg-transparent data-[expanded]:!bg-transparent">
+            <Button variant="transparent" size="lg" className="h-14 px-2 !bg-transparent hover:!bg-transparent focus:!bg-transparent active:!bg-transparent data-[expanded]:!bg-transparent active:scale-100">
               <div className="flex flex-col items-start leading-tight">
-                <div className="text-xl font-bold tracking-tight">{token}{quote}</div>
-                <div className="text-[10px] text-neutral-500 font-medium uppercase tracking-wider">Perpetual</div>
+                <div className="text-xl font-bold tracking-tight asset-selector-text">{token}{quote}</div>
+                <div className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">Perpetual</div>
               </div>
             </Button>
           </Menu.Target>
@@ -402,30 +403,30 @@ export default function Futures() {
               <div style={{ marginRight: '24px' }} className="flex flex-col">
                 <Text size="xs" c="dimmed" fw={500}></Text>
                 <div className="text-lg font-bold">
-                  <BigPrice symbol={`${token}_${quote}`} market="futures" />
+                  <BigPrice symbol={`${token}${quote}`} market="futures" />
                 </div>
               </div>
 
               <div style={{ marginRight: '24px' }} className="flex flex-col">
                 <Text size="xs" c="dimmed" fw={600}>24h Change</Text>
-                <Text style={{ fontSize: '13px' }} fw={500} c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
+                <Text style={{ fontSize: '12px' }} fw={500} c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
               </div>
 
               <div style={{ marginRight: '24px' }} className="flex flex-col">
                 <Text size="xs" c="dimmed" fw={500}>24h High</Text>
-                <Text style={{ fontSize: '13px' }} fw={600}>{stats?.high24h ?? '-'}</Text>
+                <Text style={{ fontSize: '12px' }} fw={600}>{stats?.high24h ?? '-'}</Text>
               </div>
 
               <div style={{ marginRight: '24px' }} className="flex flex-col">
                 <Text size="xs" c="dimmed" fw={500}>24h Low</Text>
-                <Text style={{ fontSize: '13px' }} fw={600}>{stats?.low24h ?? '-'}</Text>
+                <Text style={{ fontSize: '12px' }} fw={600}>{stats?.low24h ?? '-'}</Text>
               </div>
 
               <div className="flex flex-col">
                 <Text size="xs" c="dimmed" fw={500}>24h Volume</Text>
-                <Text style={{ fontSize: '13px' }} fw={600}>
+                <Text style={{ fontSize: '12px' }} fw={600}>
                   {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
                 </Text>
               </div>

@@ -69,15 +69,14 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
         }
     }, [price, openPrice, colorScheme])
 
-    if (!price) return <span className="text-gray-400 text-sm">Loading...</span>
+    if (!price) return <span className="text-gray-400 text-sm"></span>
 
     return (
         <Text
             component="span"
-            size="xl"
-            fw={900}
+            fw={750}
             c={color}
-            style={{ fontSize: '2rem', lineHeight: 1 }}
+            style={{ fontSize: '1.6rem', lineHeight: 1 }}
             className={`${className} transition-colors duration-200`}
         >
             {price.toFixed(market === 'futures' ? 1 : 2)}

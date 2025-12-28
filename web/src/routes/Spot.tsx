@@ -230,13 +230,13 @@ export default function Spot() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-center gap-6 py-2 border-b">
-        <Menu shadow="md" width={260} position="bottom-start" withinPortal>
+      <div className="flex items-center gap-6 py-2">
+        <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
-            <Button variant="subtle" size="lg" className="h-14 px-2 hover:bg-neutral-100 transition-colors">
+            <Button variant="transparent" size="lg" className="h-14 px-2 !bg-transparent hover:!bg-transparent focus:!bg-transparent active:!bg-transparent data-[expanded]:!bg-transparent active:scale-100">
               <div className="flex flex-col items-start leading-tight">
-                <div className="text-xl font-bold tracking-tight">{token}{quote}</div>
-                <div className="text-[10px] text-neutral-500 font-medium uppercase tracking-wider">Spot</div>
+                <div className="text-xl font-bold tracking-tight asset-selector-text">{token}{quote}</div>
+                <div className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">Spot</div>
               </div>
             </Button>
           </Menu.Target>
@@ -252,36 +252,36 @@ export default function Spot() {
           </Menu.Dropdown>
         </Menu>
 
-        <div className="flex items-center gap-8">
+        <div className="flex items-center w-fit header-divider">
           {loadingStats ? <Loader size="xs" /> : (
             <>
-              <div className="flex flex-col">
-                <Text size="xs" c="dimmed" fw={500}>Price</Text>
+              <div style={{ marginRight: '24px' }} className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}></Text>
                 <div className="text-lg font-bold">
                   <BigPrice symbol={`${token}${quote}`} market="spot" />
                 </div>
               </div>
 
-              <div className="flex flex-col">
-                <Text size="xs" c="dimmed" fw={500}>24h Change</Text>
-                <Text size="sm" fw={700} c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
+              <div style={{ marginRight: '24px' }} className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h change</Text>
+                <Text style={{ fontSize: '12px' }} fw={500} c={(Number(stats?.change24h) || 0) >= 0 ? '#0bba74' : '#FF4761'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
               </div>
 
-              <div className="flex flex-col">
-                <Text size="xs" c="dimmed" fw={500}>24h High</Text>
-                <Text size="sm" fw={600}>{stats?.high24h ?? '-'}</Text>
+              <div style={{ marginRight: '24px' }} className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h high</Text>
+                <Text style={{ fontSize: '12px' }} fw={600}>{stats?.high24h ?? '-'}</Text> {/* Should be white color in dark mode, full FFF color */}
+              </div>
+
+              <div style={{ marginRight: '24px' }} className="flex flex-col">
+                <Text size="xs" c="dimmed" fw={500}>24h low</Text>
+                <Text style={{ fontSize: '12px' }} fw={600}>{stats?.low24h ?? '-'}</Text> {/* Should be white color in dark mode, full FFF color */}
               </div>
 
               <div className="flex flex-col">
-                <Text size="xs" c="dimmed" fw={500}>24h Low</Text>
-                <Text size="sm" fw={600}>{stats?.low24h ?? '-'}</Text>
-              </div>
-
-              <div className="flex flex-col">
-                <Text size="xs" c="dimmed" fw={500}>24h Volume</Text>
-                <Text size="sm" fw={600}>
+                <Text size="xs" c="dimmed" fw={500}>24h volume</Text>
+                <Text style={{ fontSize: '12px' }} fw={600}> {/* Should be white color in dark mode, full FFF color */}
                   {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
                 </Text>
               </div>

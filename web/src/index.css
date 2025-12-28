@@ -139,14 +139,30 @@
   .header-divider {
     border-left-width: 1px;
     border-left-style: solid;
-    border-left-color: #4b5563;
-    /* gray-600 */
+    border-left-color: #d3d3d3;
     padding-left: 1.5rem;
-    /* pl-6 */
   }
 
-  .dark .header-divider {
-    border-left-color: #262626;
-    /* neutral-800 */
+  :where(.dark, [data-mantine-color-scheme="dark"]) .header-divider {
+    border-left-color: #666666;
   }
+}
+
+/* Force theme-aware color for asset selector text */
+.asset-selector-text {
+  color: #000000 !important;
+}
+
+:where(.dark, [data-mantine-color-scheme="dark"]) .asset-selector-text {
+  color: #ffffff !important;
+}
+
+/* Disable all click animations (scaling) globally */
+button:active,
+a:active,
+[role="button"]:active,
+.mantine-Button-root:active,
+.mantine-ActionIcon-root:active {
+  transform: none !important;
+  transition: none !important;
 }
