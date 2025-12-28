@@ -1,4 +1,4 @@
-import { Slider } from '@mantine/core'
+import { Slider, Box } from '@mantine/core'
 
 interface TradeSliderProps {
     value: number
@@ -7,7 +7,7 @@ interface TradeSliderProps {
 
 export default function TradeSlider({ value, onChange }: TradeSliderProps) {
     return (
-        <div className="py-1">
+        <Box py="xs" mb="lg">
             <Slider
                 value={value}
                 onChange={onChange}
@@ -23,11 +23,10 @@ export default function TradeSlider({ value, onChange }: TradeSliderProps) {
                     { value: 100, label: '100%' },
                 ]}
                 styles={{
-                    markLabel: { fontSize: '10px', marginTop: '4px' },
-                    thumb: { borderWidth: 2, padding: 3 },
-                    root: { marginBottom: '16px' }
+                    markLabel: { fontSize: 'var(--mantine-font-size-xxs)', marginTop: 'var(--mantine-spacing-xs)' },
+                    thumb: { borderWidth: 2, padding: 3 }
                 }}
             />
-        </div>
+        </Box>
     )
 }

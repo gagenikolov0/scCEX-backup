@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Modal, Button, TextInput, SegmentedControl, Group } from '@mantine/core'
+import { Modal, Button, TextInput, SegmentedControl, Group, Text } from '@mantine/core'
 import { API_BASE } from '../config/api'
 import { useAccount } from '../contexts/AccountContext'
 import TradeSlider from './TradeSlider'
@@ -94,9 +94,9 @@ export default function TransferModal({ opened, onClose, currentSide, asset, onT
         />
       </Group>
 
-      <div className="mb-2 text-xs text-neutral-500 text-right">
-        Available: <span className="font-semibold text-neutral-800 dark:text-neutral-200">{Number(maxAmount).toLocaleString(undefined, { maximumFractionDigits: 4 })} {asset}</span>
-      </div>
+      <Text size="xs" c="dimmed" ta="right" mb={4}>
+        Available: <Text component="span" fw={600} style={{ color: 'var(--foreground)' }}>{Number(maxAmount).toLocaleString(undefined, { maximumFractionDigits: 4 })} {asset}</Text>
+      </Text>
 
       <TextInput
         label="Amount"

@@ -76,16 +76,26 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
           connected = true
           ws?.send(JSON.stringify({ type: 'sub_all' }))
         }
+
+        let pendingData: SpotStats[] | null = null
+        const throttleInterval = setInterval(() => {
+          if (pendingData) {
+            setSpotStats(pendingData)
+            pendingData = null
+          }
+        }, 1000)
+
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(String(ev.data))
             if (msg?.type === 'stats_all' && Array.isArray(msg?.data)) {
-              setSpotStats(msg.data)
+              pendingData = msg.data
             }
           } catch { }
         }
         ws.onclose = () => {
           connected = false
+          clearInterval(throttleInterval)
           if (!stopped) {
             setTimeout(connect, 2000)
           }
@@ -120,16 +130,26 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
           connected = true
           ws?.send(JSON.stringify({ type: 'sub_all' }))
         }
+
+        let pendingData: FuturesStats[] | null = null
+        const throttleInterval = setInterval(() => {
+          if (pendingData) {
+            setFuturesStats(pendingData)
+            pendingData = null
+          }
+        }, 1000)
+
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(String(ev.data))
             if (msg?.type === 'stats_all' && Array.isArray(msg?.data)) {
-              setFuturesStats(msg.data)
+              pendingData = msg.data
             }
           } catch { }
         }
         ws.onclose = () => {
           connected = false
+          clearInterval(throttleInterval)
           if (!stopped) {
             setTimeout(connect, 2000)
           }

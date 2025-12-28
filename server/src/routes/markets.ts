@@ -57,7 +57,7 @@ router.get('/spot/24h', async (req: Request, res: Response) => {
 // Proxy: Spot klines
 router.get('/spot/klines', async (req: Request, res: Response) => {
   try {
-    const { symbol, interval = '1m', limit = '200' } = req.query as Record<string, string>
+    const { symbol, interval = '1m', limit = '2000' } = req.query as Record<string, string>
     if (!symbol) return res.status(400).json({ error: 'symbol is required' })
     const key = `spot:klines:${symbol}:${interval}:${limit}`
     const ttl = interval === '1m' ? 2000 : interval === '5m' ? 10_000 : interval === '1h' ? 60_000 : 300_000
@@ -134,7 +134,7 @@ router.get('/futures/klines', async (req: Request, res: Response) => {
   try {
     const symbol = String(req.query.symbol || '')
     const interval = String(req.query.interval || '1m')
-    const limit = String(req.query.limit || '200')
+    const limit = String(req.query.limit || '2000')
     if (!symbol) return res.status(400).json({ error: 'symbol is required' })
     // Map spot-style intervals to futures API intervals
     const map: Record<string, string> = {

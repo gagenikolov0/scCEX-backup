@@ -1,5 +1,5 @@
 
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group, Table } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -147,82 +147,88 @@ export default function Spot() {
   const formatDate = (date: string) => date ? new Date(date).toLocaleString() : '-'
 
   const renderTable = (data: any[], columns: string[], emptyMessage: string, showCancel = false) => (
-    <Box component="table" style={{ width: '100%', fontSize: 'var(--mantine-font-size-sm)' }}>
-      <thead>
-        <Box component="tr" style={{ textAlign: 'left', borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-          {columns.map(col => <Box component="th" key={col} style={{ padding: '8px 12px 8px 0', color: 'var(--mantine-color-dimmed)', fontWeight: 500 }}>{col}</Box>)}
-          {showCancel && <Box component="th" style={{ padding: '8px 12px 8px 0', color: 'var(--mantine-color-dimmed)', fontWeight: 500 }}>Action</Box>}
-        </Box>
-      </thead>
-      <tbody>
-        {data.length === 0 ? (
-          <Box component="tr">
-            <Box component="td" style={{ padding: '16px 0', textAlign: 'center', color: 'var(--mantine-color-dimmed)' }} colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Box>
-          </Box>
-        ) : (
-          data.map((item, index) => (
-            <Box component="tr" key={item.id || item._id || index} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-              {columns.map(col => {
-                let val: any = '-'
-                const c = col.toLowerCase()
+    <Box style={{ overflowX: 'auto', flex: 1 }} px="md">
+      <Table verticalSpacing="xs" highlightOnHover fs="sm" withRowBorders>
+        <Table.Thead bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
+          <Table.Tr>
+            {columns.map(col => <Table.Th key={col} c="dimmed" fw={600} py={10}>{col}</Table.Th>)}
+            {showCancel && <Table.Th c="dimmed" fw={600} py={10}>Action</Table.Th>}
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody style={{ verticalAlign: 'top' }}>
+          {data.length === 0 ? (
+            <Table.Tr>
+              <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Table.Td>
+            </Table.Tr>
+          ) : (
+            data.map((item, index) => (
+              <Table.Tr key={item.id || item._id || index}>
+                {columns.map(col => {
+                  let val: any = '-'
+                  const c = col.toLowerCase()
 
-                const getVal = (v: any) => {
-                  if (v && typeof v === 'object' && v.$numberDecimal) return v.$numberDecimal
-                  return v
-                }
-
-                if (c === 'symbol') {
-                  const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
-                  val = (
-                    <Flex direction="column" style={{ lineHeight: 1.2 }}>
-                      <Text size="xs" fw={700}>{cleanSymbol}</Text>
-                      {item.side && (
-                        <Text size="xs" color={item.side === 'buy' ? 'green' : 'red'} fw={700} style={{ textTransform: 'uppercase', fontSize: '10px' }}>
-                          {item.side}
-                        </Text>
-                      )}
-                    </Flex>
-                  )
-                }
-
-                else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'green' : 'red'} fw={600} style={{ textTransform: 'uppercase' }}>{item.side}</Text>
-                else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
-                else if (c === 'price') val = getVal(item.price || item.priceQuote)
-                else if (c === 'total' || c === 'quote amount') {
-                  const t = getVal(item.total || item.quoteAmount)
-                  val = t ? `${Number(t).toFixed(2)} ${quote} ` : '-'
-                }
-                else if (c === 'status') val = item.status
-                else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
-                else if (c === 'asset') val = item.asset
-                else if (c === 'available') val = getVal(item.available)
-                else if (c === 'reserved') val = getVal(item.reserved)
-                else if (c === 'value') {
-                  const asset = item.asset
-                  const available = parseFloat(getVal(item.available) || '0')
-                  if (asset === 'USDT' || asset === 'USDC') {
-                    val = `${available.toFixed(2)} ${quote}`
-                  } else {
-                    const pairStats = spotStats.find(s => s.symbol === `${asset}${quote}`)
-                    const price = parseFloat(pairStats?.lastPrice || '0')
-                    val = price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
+                  const getVal = (v: any) => {
+                    if (v && typeof v === 'object' && v.$numberDecimal) return v.$numberDecimal
+                    return v
                   }
-                }
-                else if (c === 'updated') val = formatDate(item.updatedAt)
 
-                return <Box component="td" key={col} style={{ padding: '8px 12px 8px 0' }}>{val}</Box>
-              })}
-              {showCancel && (
-                <Box component="td" style={{ padding: '8px 12px 8px 0' }}>
-                  <Button size="compact-xs" variant="light" color="red" onClick={() => cancelOrder(item.id)}>
-                    Cancel
-                  </Button>
-                </Box>
-              )}
-            </Box>
-          ))
-        )}
-      </tbody>
+                  if (c === 'symbol') {
+                    const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
+                    val = (
+                      <Flex direction="column" lh={1.2}>
+                        <Text size="xs" fw={700}>{cleanSymbol}</Text>
+                        {item.side && (
+                          <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                            {item.side}
+                          </Text>
+                        )}
+                      </Flex>
+                    )
+                  }
+
+                  else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
+                  else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
+                  else if (c === 'price') val = getVal(item.price || item.priceQuote)
+                  else if (c === 'total' || c === 'quote amount') {
+                    const t = getVal(item.total || item.quoteAmount)
+                    val = t ? `${Number(t).toFixed(2)} ${quote} ` : '-'
+                  }
+                  else if (c === 'status') val = item.status
+                  else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
+                  else if (c === 'asset') val = item.asset
+                  else if (c === 'available') val = getVal(item.available)
+                  else if (c === 'reserved') val = getVal(item.reserved)
+                  else if (c === 'value') {
+                    const asset = item.asset
+                    const available = parseFloat(getVal(item.available) || '0')
+                    if (asset === 'USDT' || asset === 'USDC') {
+                      val = `${available.toFixed(2)} ${quote}`
+                    } else {
+                      const pairStats = spotStats.find(s => s.symbol === `${asset}${quote}`)
+                      const price = parseFloat(pairStats?.lastPrice || '0')
+                      val = price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
+                    }
+                  }
+                  else if (c === 'updated') val = formatDate(item.updatedAt)
+
+                  return (
+                    <Table.Td key={col}>
+                      {val}
+                    </Table.Td>
+                  )
+                })}
+                {showCancel && (
+                  <Table.Td>
+                    <Button size="compact-xs" variant="light" color="#fe445c" onClick={() => cancelOrder(item.id)}>
+                      Cancel
+                    </Button>
+                  </Table.Td>
+                )}
+              </Table.Tr>
+            ))
+          )}
+        </Table.Tbody>
+      </Table>
     </Box>
   )
 
@@ -230,20 +236,20 @@ export default function Spot() {
 
   return (
     <Box>
-      <Flex align="center" gap="xl" py="sm">
+      <Flex align="center" gap="lg" py="sm">
         <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
-            <Button variant="transparent" size="lg" h={56} px="xs" style={{ background: 'transparent' }}>
-              <Flex direction="column" align="flex-start" style={{ lineHeight: 1.2 }}>
-                <Text size="xl" fw={700} className="asset-selector-text">{token}{quote}</Text>
-                <Text size="xs" c="dimmed" fw={500} style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10px' }}>Spot</Text>
+            <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
+              <Flex direction="column" align="flex-start" lh={1.2}>
+                <Text size="xl" fw={700}>{token}{quote}</Text>
+                <Text size="xxs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: '0.05em' }}>Spot</Text>
               </Flex>
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <div className="p-2">
+            <Box p="xs">
               <TextInput placeholder="Search pair" value={pairQuery} onChange={(e) => setPairQuery(e.currentTarget.value)} size="xs" />
-            </div>
+            </Box>
             <ScrollArea.Autosize mah={320} mx={0} type="auto">
               {filteredOptions.map((t) => (
                 <Menu.Item key={t} onClick={() => setToken(t)}>{t}/{quote}</Menu.Item>
@@ -252,18 +258,18 @@ export default function Spot() {
           </Menu.Dropdown>
         </Menu>
 
-        <Flex align="center" className="header-divider" style={{ borderLeft: '1px solid var(--mantine-color-default-border)', paddingLeft: '24px' }}>
+        <Flex align="center" pl={24} style={{ borderLeft: '1px solid var(--mantine-color-default-border)' }}>
           {loadingStats ? <Loader size="xs" /> : (
             <Group gap={24}>
               <Box>
-                <div className="text-lg font-bold">
+                <Box fs="1.25rem" fw={700}>
                   <BigPrice symbol={`${token}${quote}`} market="spot" />
-                </div>
+                </Box>
               </Box>
 
               <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h change</Text>
-                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'green' : 'red'}>
+                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? '#0BBA74' : '#fe445c'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
               </Flex>
@@ -304,11 +310,13 @@ export default function Spot() {
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, lg: 3 }}>
-          <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Order Book</div>
-            <div className="p-0 h-[360px] overflow-y-auto text-sm">
+          <Card padding={0} radius="md" withBorder shadow="sm">
+            <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+              <Text size="sm" fw={600}>Order Book</Text>
+            </Box>
+            <Box h={360} style={{ overflowY: 'auto' }}>
               <OrderBook symbol={`${token}${quote}`} market="spot" depth={50} />
-            </div>
+            </Box>
           </Card>
         </Grid.Col>
 
@@ -322,7 +330,7 @@ export default function Spot() {
                 <Button
                   size="xs"
                   variant={tradeSide === 'buy' ? 'filled' : 'subtle'}
-                  color="green"
+                  color="#0BBA74"
                   onClick={() => setTradeSide('buy')}
                   flex={1}
                 >
@@ -331,7 +339,7 @@ export default function Spot() {
                 <Button
                   size="xs"
                   variant={tradeSide === 'sell' ? 'filled' : 'subtle'}
-                  color="red"
+                  color="#fe445c"
                   onClick={() => setTradeSide('sell')}
                   flex={1}
                 >
@@ -409,7 +417,7 @@ export default function Spot() {
                   <Button
                     flex={1}
                     variant="filled"
-                    color="green"
+                    color="#0BBA74"
                     loading={placing === 'buy'}
                     disabled={!isAuthed}
                     onClick={() => placeOrder('buy')}
@@ -420,7 +428,7 @@ export default function Spot() {
                   <Button
                     flex={1}
                     variant="filled"
-                    color="red"
+                    color="#fe445c"
                     loading={placing === 'sell'}
                     disabled={!isAuthed}
                     onClick={() => placeOrder('sell')}
@@ -440,21 +448,21 @@ export default function Spot() {
         <Grid.Col span={12}>
           <Card padding={0}>
             <Tabs defaultValue="history" variant="outline">
-              <Tabs.List style={{ padding: '4px 12px 0 12px' }}>
+              <Tabs.List pt={4} px={12}>
                 <Tabs.Tab value="history">Trade History</Tabs.Tab>
                 <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
                 <Tabs.Tab value="positions">Assets</Tabs.Tab>
               </Tabs.List>
 
-              <Tabs.Panel value="history" p="md">
+              <Tabs.Panel value="history" p={0}>
                 {renderTable(history, ['Symbol', 'Quantity', 'Price', 'Quote Amount', 'Time'], 'No trade history')}
               </Tabs.Panel>
 
-              <Tabs.Panel value="pending" p="md">
+              <Tabs.Panel value="pending" p={0}>
                 {renderTable(pendingOrders, ['Symbol', 'Quantity', 'Price', 'Status', 'Time'], 'No open orders', true)}
               </Tabs.Panel>
 
-              <Tabs.Panel value="positions" p="md">
+              <Tabs.Panel value="positions" p={0}>
                 {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Value', 'Updated'], 'No assets')}
               </Tabs.Panel>
             </Tabs>

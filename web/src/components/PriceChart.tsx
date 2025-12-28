@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts'
 import { Pencil, PencilOff } from 'lucide-react'
+import { Box, Flex, Button, ActionIcon, Tooltip, useMantineColorScheme } from '@mantine/core'
 import { API_BASE } from '../config/api'
 import { usePrice } from '../contexts/PriceContext'
 import type { IChartApi, Time } from 'lightweight-charts'
@@ -19,6 +20,7 @@ type Props = {
 
 export default function PriceChart(props: Props) {
   const { symbol, height = 420, interval = '1m', market = 'spot', orders = [], positions = [] } = props
+  const { colorScheme } = useMantineColorScheme()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<any>(null)
@@ -65,26 +67,35 @@ export default function PriceChart(props: Props) {
       try { chartRef.current.remove() } catch { }
     }
     let disposed = false
+
     const chart = createChart(containerRef.current, {
       height,
-      layout: { background: { color: 'transparent' }, textColor: '#888' },
-      grid: { horzLines: { color: 'rgba(0,0,0,0.1)' }, vertLines: { color: 'rgba(0,0,0,0.1)' } },
-      timeScale: { rightOffset: 6, barSpacing: 8, fixLeftEdge: true },
-      rightPriceScale: { borderVisible: false },
+      layout: { background: { color: 'transparent' }, textColor: '#808080' },
+      grid: {
+        horzLines: { visible: false },
+        vertLines: { visible: false }
+      },
+      timeScale: {
+        rightOffset: 6,
+        barSpacing: 8,
+      },
+      rightPriceScale: {
+        borderVisible: false,
+      },
       crosshair: {
         mode: 0,
-        vertLine: { width: 1, color: '#4b5563', style: 2, labelVisible: true },
-        horzLine: { width: 1, color: '#4b5563', style: 2, labelVisible: true },
+        vertLine: { width: 1, color: '#808080', style: 2, labelVisible: true },
+        horzLine: { width: 1, color: '#808080', style: 2, labelVisible: true },
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
       handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
     })
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: '#0aa869',
+      upColor: '#0BBA74',
       downColor: '#fe445c',
-      borderUpColor: '#0aa869',
+      borderUpColor: '#0BBA74',
       borderDownColor: '#fe445c',
-      wickUpColor: '#0aa869',
+      wickUpColor: '#0BBA74',
       wickDownColor: '#fe445c',
       priceLineStyle: 1, // Dashed
       priceLineWidth: 2,
@@ -135,7 +146,7 @@ export default function PriceChart(props: Props) {
       drawStartRef.current = null
       lineSeriesRef.current = []
     }
-  }, [height, symbol])
+  }, [height, symbol, colorScheme])
 
   // drawing: handle click-to-place two points + preview
   useEffect(() => {
@@ -238,7 +249,7 @@ export default function PriceChart(props: Props) {
       try {
         const path = 'spot/klines'
         const sym = market === 'futures' ? deUnderscore(normalizeFuturesSymbol(symbol)) : symbol
-        const url = `${API_BASE}/api/markets/${path}?symbol=${sym}&interval=${interval}&limit=200`
+        const url = `${API_BASE}/api/markets/${path}?symbol=${sym}&interval=${interval}&limit=2000`
         const res = await fetch(url)
         if (!res.ok) return
         const data = await res.json()
@@ -248,6 +259,9 @@ export default function PriceChart(props: Props) {
         if (!cancelled && seriesRef.current) {
           seriesRef.current.setData(candles)
           lastBarRef.current = candles[candles.length - 1] ?? null
+          if (candles.length > 0 && chartRef.current) {
+            chartRef.current.timeScale().fitContent()
+          }
         }
       } catch { }
     })()
@@ -303,7 +317,7 @@ export default function PriceChart(props: Props) {
       if (isNaN(price)) return
       const line = seriesRef.current.createPriceLine({
         price,
-        color: o.side === 'buy' ? '#16a34a' : '#e03131',
+        color: o.side === 'buy' ? 'var(--green)' : 'var(--red)',
         lineWidth: 1,
         lineStyle: 2, // Dotted
         axisLabelVisible: true,
@@ -312,14 +326,14 @@ export default function PriceChart(props: Props) {
       orderLinesRef.current.push(line)
     })
 
-    // Draw Futures Positions
+    // Draw Positions
     positions.forEach(p => {
       // Entry Line
       const entryPrice = parseFloat(p.entryPrice)
       if (!isNaN(entryPrice)) {
         const line = seriesRef.current.createPriceLine({
           price: entryPrice,
-          color: p.side === 'long' ? '#0aa769' : '#fe445c',
+          color: p.side === 'long' ? '#0BBA74' : '#fe445c',
           lineWidth: 1,
           lineStyle: 2, // Dotted/Dashed
           axisLabelVisible: true,
@@ -333,7 +347,7 @@ export default function PriceChart(props: Props) {
       if (!isNaN(liqPrice) && liqPrice > 0) {
         const line = seriesRef.current.createPriceLine({
           price: liqPrice,
-          color: 'var(--liq)',
+          color: '#fe445c',
           lineWidth: 1,
           lineStyle: 0, // Solid
           axisLabelVisible: true,
@@ -376,75 +390,109 @@ export default function PriceChart(props: Props) {
   const activePosition = positions.find(p => p.symbol === symbol || p.symbol === deUnderscore(normalizeFuturesSymbol(symbol)))
 
   return (
-    <div className="relative w-full" style={{ height: `${height}px`, minHeight: `${height}px` }}>
-      <div ref={containerRef} className="w-full h-full" style={{ cursor: 'crosshair' }} />
+    <Box style={{ position: 'relative', width: '100%', height: `${height}px`, minHeight: `${height}px` }}>
+      <Box
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          cursor: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><line x1="8" y1="0" x2="8" y2="16" stroke="%23808080" stroke-width="1"/><line x1="0" y1="8" x2="16" y2="8" stroke="%23808080" stroke-width="1"/></svg>') 8 8, crosshair`
+        }}
+      />
 
       {/* Top Left: Intervals */}
-      <div
-        className="absolute z-[10] flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-full shadow-2xl border border-gray-200"
+      <Flex
+        gap={4}
+        p={4}
         style={{
+          position: 'absolute',
           top: 8,
           left: 8,
+          zIndex: 10,
+          background: 'var(--mantine-color-body)',
+          borderRadius: 'var(--mantine-radius-xl)',
+          border: '1px solid var(--mantine-color-default-border)',
+          boxShadow: 'var(--mantine-shadow-md)',
           pointerEvents: 'auto'
         }}
       >
         {(props.availableIntervals || ['1m', '5m', '15m', '1h', '4h', '1d']).map((iv) => (
-          <button
+          <Button
             key={iv}
+            size="compact-xs"
+            variant={interval === iv ? 'filled' : 'subtle'}
+            color={interval === iv ? 'dark' : 'gray'}
             onClick={() => props.onIntervalChange && props.onIntervalChange(iv)}
-            className={`px-2 py-1 text-[10px] font-bold rounded-full transition-all ${interval === iv
-              ? 'bg-gray-900 text-white'
-              : 'text-gray-600 hover:bg-gray-100'
-              }`}
+            style={{
+              fontSize: 'var(--mantine-font-size-xxs)',
+              fontWeight: 700,
+              borderRadius: 'var(--mantine-radius-xl)',
+              minWidth: '32px',
+              padding: '0 4px'
+            }}
           >
             {iv}
-          </button>
+          </Button>
         ))}
-      </div>
+      </Flex>
 
       {/* Left Sidebar: Drawing Tools */}
-      <div
-        className="absolute z-[10] flex flex-col gap-2"
+      <Box
         style={{
+          position: 'absolute',
           top: 60,
           left: 8,
+          zIndex: 10,
           pointerEvents: 'auto'
         }}
       >
-        <button
-          onClick={() => setDrawMode(!drawMode)}
-          className={`p-2 rounded-full transition-all shadow-2xl border-2 flex items-center justify-center ${drawMode
-            ? 'bg-blue-600 text-white border-blue-400 scale-110'
-            : 'bg-white text-gray-900 border-gray-400 hover:bg-gray-50'
-            }`}
-          title={drawMode ? 'Cancel Draw' : 'Draw Trendline'}
-        >
-          {drawMode ? <PencilOff size={18} /> : <Pencil size={18} />}
-        </button>
-      </div>
+        <Tooltip label={drawMode ? 'Cancel Draw' : 'Draw Trendline'} position="right">
+          <ActionIcon
+            onClick={() => setDrawMode(!drawMode)}
+            size="lg"
+            radius="xl"
+            variant={drawMode ? 'filled' : 'outline'}
+            color={drawMode ? 'blue' : 'gray'}
+            style={{
+              boxShadow: 'var(--mantine-shadow-md)',
+              borderWidth: '2px',
+              transform: drawMode ? 'scale(1.1)' : 'none',
+              transition: 'transform 0.1s ease'
+            }}
+          >
+            {drawMode ? <PencilOff size={18} /> : <Pencil size={18} />}
+          </ActionIcon>
+        </Tooltip>
+      </Box>
 
-      {/* Dynamic: Close Position Button (on the entry line) */}
+
       {activePosition && props.onClosePosition && closeBtnTop !== null && closeBtnTop >= 0 && closeBtnTop <= height && (
-        <div
-          className="absolute z-[10] flex items-center gap-2"
+        <Flex
+          gap={8}
+          align="center"
           style={{
+            position: 'absolute',
             top: closeBtnTop,
             left: 8,
+            zIndex: 10,
             transform: 'translateY(-50%)',
-            pointerEvents: 'auto',
-            display: 'flex'
+            pointerEvents: 'auto'
           }}
         >
           {/* Unrealized PNL */}
           {tick && (
-            <div
-              className="px-2 py-0.5 text-[11px]"
+            <Box
+              px={6}
+              py={2}
               style={{
-                padding: '1px 4px 2px 4px',
-                backgroundColor: (activePosition.side === 'long' ? tick.price >= activePosition.entryPrice : tick.price <= activePosition.entryPrice) ? '#0bba74' : '#ff4761',
-                color: '#ffffff'
+                fontSize: 'var(--fz-xxs)',
+                fontWeight: 700,
+                backgroundColor: (activePosition.side === 'long' ? tick.price >= activePosition.entryPrice : tick.price <= activePosition.entryPrice) ? 'var(--green)' : 'var(--red)',
+                color: 'var(--mantine-color-white)',
+                borderRadius: 'var(--mantine-radius-xs)'
               }}
-            >PNL&nbsp;
+            >
+              PNL&nbsp;
               {(() => {
                 const lastPrice = tick.price
                 const entryPrice = parseFloat(activePosition.entryPrice)
@@ -452,18 +500,26 @@ export default function PriceChart(props: Props) {
                 const pnl = activePosition.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
                 return `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}`
               })()}
-            </div>
+            </Box>
           )}
 
-          <button
+          {/* Dynamic: Close Position Button (on the entry line) */}
+          <Button
+            size="compact-xs"
+            color="red"
+            variant="filled"
             onClick={() => props.onClosePosition && props.onClosePosition(activePosition)}
-            className="px-2 py-0.5 text-[11px] font-bold rounded bg-red-600 text-white hover:bg-red-700 transition-colors shadow-2xl border border-red-700 uppercase"
-            title="Close Position"
+            style={{
+              fontSize: 'var(--fz-xxs)',
+              fontWeight: 700,
+              boxShadow: 'var(--mantine-shadow-md)',
+              textTransform: 'uppercase'
+            }}
           >
             Close
-          </button>
-        </div>
+          </Button>
+        </Flex>
       )}
-    </div >
+    </Box>
   )
 }

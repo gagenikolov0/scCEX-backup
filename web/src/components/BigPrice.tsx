@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Text, useMantineColorScheme } from '@mantine/core'
+import { Text } from '@mantine/core'
 import { API_BASE } from '../config/api'
 import { usePrice } from '../contexts/PriceContext'
 
 interface BigPriceProps {
     symbol: string
-    className?: string
     market?: 'spot' | 'futures'
 }
 
-export default function BigPrice({ symbol, className, market = 'futures' }: BigPriceProps) {
+export default function BigPrice({ symbol, market = 'futures' }: BigPriceProps) {
     const [price, setPrice] = useState<number | null>(null)
     const [openPrice, setOpenPrice] = useState<number | null>(null)
     const [color, setColor] = useState('gray')
-    const { colorScheme } = useMantineColorScheme()
 
     // Centralized WS update
     const tick = usePrice(market, symbol)
@@ -60,15 +58,15 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
     useEffect(() => {
         if (price === null || openPrice === null) return
         if (price > openPrice) {
-            setColor('var(--beautygreen)')
+            setColor('var(--green)')
         } else if (price < openPrice) {
-            setColor('var(--beautyred)')
+            setColor('var(--red)')
         } else {
-            setColor('var(--foreground)')
+            setColor('dimmed')
         }
-    }, [price, openPrice, colorScheme])
+    }, [price, openPrice])
 
-    if (!price) return <span className="text-gray-400 text-sm"></span>
+    if (!price) return null
 
     return (
         <Text
@@ -76,7 +74,6 @@ export default function BigPrice({ symbol, className, market = 'futures' }: BigP
             fw={750}
             c={color}
             style={{ fontSize: '1.6rem', lineHeight: 1 }}
-            className={`${className} transition-colors duration-200`}
         >
             {price.toFixed(market === 'futures' ? 1 : 2)}
         </Text>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE } from '../config/api'
-import { Box, Text } from '@mantine/core'
+import { Box, Text, SimpleGrid } from '@mantine/core'
 
 type SideRow = [number, number] // [price, size]
 
@@ -84,29 +84,29 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
       {error && <Text color="red" size="sm" mb="xs">{error}</Text>}
       {status === 'connecting' && <Text c="dimmed" size="sm" mb="xs">Connecting...</Text>}
 
-      <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '8px', position: 'sticky', top: 0, backgroundColor: 'transparent', zIndex: 1 }}>
+      <SimpleGrid cols={3} spacing={4} mb={8} style={{ position: 'sticky', top: 0, backgroundColor: 'transparent', zIndex: 1 }}>
         <Text size="xs" c="dimmed" fw={500}>Price</Text>
         <Text size="xs" c="dimmed" fw={500}>Size</Text>
         <Text size="xs" c="dimmed" fw={500}>Total</Text>
-      </Box>
+      </SimpleGrid>
 
-      <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+      <SimpleGrid cols={3} spacing={4}>
         {revAsks.map((r, i) => (
-          <Box key={`a-${i}`} style={{ display: 'contents', fontSize: 'var(--mantine-font-size-xs)' }}>
-            <Text size="xs" color="red" fw={500}>{fmt(r[0])}</Text>
+          <Box key={`a-${i}`} style={{ display: 'contents' }}>
+            <Text size="xs" color="var(--red)" fw={500}>{fmt(r[0])}</Text>
             <Text size="xs">{fmt(r[1])}</Text>
             <Text size="xs" c="dimmed">{fmt(askTotalsRev[i])}</Text>
           </Box>
         ))}
         {bids.map((r, i) => (
-          <Box key={`b-${i}`} style={{ display: 'contents', fontSize: 'var(--mantine-font-size-xs)' }}>
-            <Text size="xs" color="green" fw={500}>{fmt(r[0])}</Text>
+          <Box key={`b-${i}`} style={{ display: 'contents' }}>
+            <Text size="xs" color="var(--green)" fw={500}>{fmt(r[0])}</Text>
             <Text size="xs">{fmt(r[1])}</Text>
             <Text size="xs" c="dimmed">{fmt(totals.bidTotals[i])}</Text>
           </Box>
         ))}
-      </Box>
-    </Box>
+      </SimpleGrid>
+    </Box >
   )
 }
 

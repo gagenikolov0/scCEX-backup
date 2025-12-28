@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button } from '@mantine/core'
+import { Button, Box, Title, Select, Text, Stack, Paper } from '@mantine/core'
 import QRCode from 'react-qr-code'
 import { API_BASE } from '../config/api'
 
@@ -14,7 +14,7 @@ export default function Deposit() {
     solAddress?: string | null
     xrpAddress?: string | null
   }
-  
+
   const [group, setGroup] = useState<AddressGroup | null>(null)
   const [chain, setChain] = useState<Chain>('ETH')
   const [loading, setLoading] = useState(false)
@@ -50,38 +50,43 @@ export default function Deposit() {
   }, [group, chain])
 
   return (
-    <div className="min-h-screen p-6">
-      <h1 className="text-2xl font-semibold mb-4">Deposit</h1>
-      
-      <div className="mb-3 flex gap-2 items-center">
-        <label className="text-sm">Chain</label>
-        <select value={chain} onChange={e => setChain(e.target.value as Chain)} className="border rounded px-2 py-1">
-          {CHAINS.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
-      
-      <Button onClick={fetchAddress} disabled={loading} variant="filled" color="dark">
-        {loading ? 'Loading...' : 'Show Deposit Address'}
-      </Button>
-      
-      {error && <p className="text-red-600 mt-3 text-sm">{error}</p>}
-      
-      {group && (
-        <div className="mt-4 p-4 border rounded">
-          {currentAddress ? (
-            <>
-              <p className="font-mono break-all">{currentAddress}</p>
-              <p className="text-sm text-gray-500">{chain}</p>
-              <div className="mt-4 bg-white p-3 inline-block">
-                <QRCode value={currentAddress} size={160} />
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-red-600">No address set for {chain}</p>
-          )}
-        </div>
-      )}
-    </div>
+    <Box p="xl" mih="calc(100vh - 100px)">
+      <Title order={1} size="h2" mb="lg">Deposit</Title>
+
+      <Stack gap="md" maw={400}>
+        <Select
+          label="Chain"
+          value={chain}
+          onChange={(val) => setChain(val as Chain)}
+          data={CHAINS as unknown as string[]}
+          size="sm"
+        />
+
+        <Button onClick={fetchAddress} loading={loading} variant="filled" color="dark">
+          Show Deposit Address
+        </Button>
+
+        {error && <Text color="red" size="sm">{error}</Text>}
+
+        {group && (
+          <Paper withBorder p="md" radius="md">
+            {currentAddress ? (
+              <Stack gap="xs" align="center">
+                <Text fw={500} ff="monospace" ta="center" style={{ wordBreak: 'break-all' }}>
+                  {currentAddress}
+                </Text>
+                <Text size="xs" c="dimmed">{chain}</Text>
+                <Box p="md" mt="sm" style={{ background: 'white', borderRadius: 'var(--mantine-radius-md)' }}>
+                  <QRCode value={currentAddress} size={160} />
+                </Box>
+              </Stack>
+            ) : (
+              <Text color="red" size="sm">No address set for {chain}</Text>
+            )}
+          </Paper>
+        )}
+      </Stack>
+    </Box>
   )
 }
 

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Button, TextInput, Paper } from '@mantine/core'
+import { Button, TextInput, Paper, Box, Stack, Title, Text, Center, Anchor } from '@mantine/core'
 
 const schema = z.object({
   email: z.string().email(),
@@ -29,26 +29,28 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Paper shadow="sm" radius="md" withBorder className="w-full max-w-sm p-6">
-        <h1 className="text-xl font-semibold mb-4">Login</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <div>
-            <TextInput {...register('email')} placeholder="Email" />
-            {errors.email && <p className="text-sm text-red">{errors.email.message}</p>}
-          </div>
-          <div>
-            <TextInput type="password" {...register('password')} placeholder="Password" />
-            {errors.password && <p className="text-sm text-red">{errors.password.message}</p>}
-          </div>
-          {serverError && <p className="text-sm text-red">{serverError}</p>}
-          <Button type="submit" disabled={isSubmitting} fullWidth size="md" color="dark">
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
-          </Button>
+    <Center mih="100vh" p="md">
+      <Paper shadow="sm" radius="md" withBorder p="xl" w="100%" maw={400}>
+        <Title order={1} size="h3" mb="lg">Login</Title>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Stack gap="md">
+            <Box>
+              <TextInput {...register('email')} placeholder="Email" label="Email" error={errors.email?.message} />
+            </Box>
+            <Box>
+              <TextInput type="password" {...register('password')} placeholder="Password" label="Password" error={errors.password?.message} />
+            </Box>
+            {serverError && <Text size="sm" color="red">{serverError}</Text>}
+            <Button type="submit" loading={isSubmitting} fullWidth size="md" color="dark">
+              Sign in
+            </Button>
+          </Stack>
         </form>
-        <p className="text-sm mt-3">No account? <Link to="/register" className="text-secondary">Register</Link></p>
+        <Text size="sm" mt="md" ta="center">
+          No account? <Anchor component={Link} to="/register" color="blue">Register</Anchor>
+        </Text>
       </Paper>
-    </div>
+    </Center>
   )
 }
 
@@ -69,26 +71,28 @@ export function Register() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Paper shadow="sm" radius="md" withBorder className="w-full max-w-sm p-6">
-        <h1 className="text-xl font-semibold mb-4">Create account</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <div>
-            <TextInput {...register('email')} placeholder="Email" />
-            {errors.email && <p className="text-sm text-red">{errors.email.message}</p>}
-          </div>
-          <div>
-            <TextInput type="password" {...register('password')} placeholder="Password" />
-            {errors.password && <p className="text-sm text-red">{errors.password.message}</p>}
-          </div>
-          {serverError && <p className="text-sm text-red">{serverError}</p>}
-          <Button type="submit" disabled={isSubmitting} fullWidth size="md" color="dark">
-            {isSubmitting ? 'Creating...' : 'Create account'}
-          </Button>
+    <Center mih="100vh" p="md">
+      <Paper shadow="sm" radius="md" withBorder p="xl" w="100%" maw={400}>
+        <Title order={1} size="h3" mb="lg">Create account</Title>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Stack gap="md">
+            <Box>
+              <TextInput {...register('email')} placeholder="Email" label="Email" error={errors.email?.message} />
+            </Box>
+            <Box>
+              <TextInput type="password" {...register('password')} placeholder="Password" label="Password" error={errors.password?.message} />
+            </Box>
+            {serverError && <Text size="sm" color="red">{serverError}</Text>}
+            <Button type="submit" loading={isSubmitting} fullWidth size="md" color="dark">
+              Create account
+            </Button>
+          </Stack>
         </form>
-        <p className="text-sm mt-3">Have an account? <Link to="/login" className="text-secondary">Login</Link></p>
+        <Text size="sm" mt="md" ta="center">
+          Have an account? <Anchor component={Link} to="/login" color="blue">Login</Anchor>
+        </Text>
       </Paper>
-    </div>
+    </Center>
   )
 }
 

@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { IconHome2, IconUser, IconSun, IconMoon } from '@tabler/icons-react'
+import { IconUser, IconSun, IconMoon } from '@tabler/icons-react'
 import {
   Anchor,
   Box,
@@ -16,9 +16,23 @@ import {
   Stack,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { useEffect, useState } from 'react'
+
 import classes from './HeaderMegaMenu.module.css'
 import { useAuth } from '../contexts/AuthContext'
+
+// Home icon: prefer custom /icon.png from public
+function HomeIcon() {
+  return (
+    <Center w={24} h={24}>
+      <img
+        src="/icon.png"
+        alt="Home"
+        style={{ width: 24, height: 24, objectFit: 'contain' }}
+        className={classes.homeIcon}
+      />
+    </Center>
+  )
+}
 
 export default function Header() {
   const { colorScheme, setColorScheme } = useMantineColorScheme()
@@ -28,22 +42,8 @@ export default function Header() {
   const [futuresOpen, { toggle: toggleFutures }] = useDisclosure(false)
   const [spotOpen, { toggle: toggleSpot }] = useDisclosure(false)
 
-  // Home icon: prefer custom /icon.png from public, fallback to Tabler icon
-  function HomeIcon() {
-    const [loaded, setLoaded] = useState(false)
-    useEffect(() => {
-      const img = new Image()
-      img.onload = () => setLoaded(true)
-      img.onerror = () => setLoaded(false)
-      img.src = '/icon.png'
-    }, [])
-    return loaded
-      ? <img src="/icon.png" alt="Home" className={classes.homeIcon} />
-      : <IconHome2 className={classes.homeIcon} size={24} />
-  }
-
   return (
-    <header className={classes.header}>
+    <Box component="header" className={classes.header}>
       <Group justify="space-between" h="100%">
         {/* Left: Home icon and menus (desktop only) */}
         <Group h="100%" gap={0} visibleFrom="sm">
@@ -60,11 +60,11 @@ export default function Header() {
             {/* Futures hover menu */}
             <HoverCard width={260} position="bottom" radius="md" shadow="md" withinPortal openDelay={50} closeDelay={50} transitionProps={{ duration: 220 }}>
               <HoverCard.Target>
-                <span className={classes.trigger}>
+                <Box component="span" className={classes.trigger}>
                   <Center inline>
                     <Box component="span" mr={5}>Futures</Box>
                   </Center>
-                </span>
+                </Box>
               </HoverCard.Target>
               <HoverCard.Dropdown>
                 <Stack gap="xs">
@@ -77,11 +77,11 @@ export default function Header() {
             {/* Spot hover menu */}
             <HoverCard width={220} position="bottom" radius="md" shadow="md" withinPortal openDelay={50} closeDelay={50} transitionProps={{ duration: 220 }}>
               <HoverCard.Target>
-                <span className={classes.trigger}>
+                <Box component="span" className={classes.trigger}>
                   <Center inline>
                     <Box component="span" mr={5}>Spot</Box>
                   </Center>
-                </span>
+                </Box>
               </HoverCard.Target>
               <HoverCard.Dropdown>
                 <Stack gap="xs">
@@ -155,6 +155,6 @@ export default function Header() {
           </Group>
         </ScrollArea>
       </Drawer>
-    </header>
+    </Box>
   )
 }

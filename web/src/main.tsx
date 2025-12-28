@@ -1,60 +1,56 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
+import './index.css'
+import App from './App.tsx'
 import { MantineProvider, createTheme } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 
 const theme = createTheme({
   primaryColor: 'gray',
+  black: '#020202',
+  white: '#ffffff',
   fontSizes: {
-    xs: '12px',
-    sm: '14px',
-    md: '16px',
-    lg: '18px',
-    xl: '20px',
+    xxs: 'var(--fz-xxs)',
+    xs: 'var(--fz-xs)',
+    sm: 'var(--fz-sm)',
+    md: 'var(--fz-md)',
+    lg: 'var(--fz-lg)',
+    xl: 'var(--fz-xl)',
   },
+  spacing: {
+    xs: '8px',
+    sm: '12px',
+    md: '13px',
+    lg: '24px',
+    xl: '48px',
+  },
+
   colors: {
     // Custom colors to match the exchange UI
-    brand: [
-      '#f8f9fa', '#f1f3f5', '#e9ecef', '#dee2e6', '#adb5bd',
-      '#868e96', '#495057', '#343a40', '#212529', '#1a1b1e'
-    ],
-    green: [
-      '#e6fcf5', '#c3fae8', '#96f2d7', '#63e6be', '#38d9a9',
-      '#20c997', '#12b886', '#0ca678', '#099268', '#087f5b'
-    ],
-    red: [
-      '#fff5f5', '#ffe3e3', '#ffc9c9', '#ffa8a8', '#ff8787',
-      '#ff6b6b', '#fa5252', '#f03e3e', '#e03131', '#c92a2a'
+
+    dark: [
+      '#C1C2C5', '#A6A7AB', '#909296', '#5C5F66', '#373A40',
+      '#2C2E33', '#25262B', '#020202', '#141517', '#101113',
     ],
   },
   components: {
+    Table: {
+      styles: {
+        tr: {
+          '--table-hover-color': 'light-dark(var(--mantine-color-gray-1), rgba(255, 255, 255, 0.04))',
+        }
+      }
+    },
     Button: {
       defaultProps: {
         loaderProps: { type: 'dots' },
         radius: 'md',
       },
-      styles: {
-        root: {
-          '&:active': {
-            transform: 'none !important',
-          },
-        },
-      },
     },
     ActionIcon: {
       defaultProps: {
         radius: 'md',
-      },
-      styles: {
-        root: {
-          '&:active': {
-            transform: 'none !important',
-          },
-        },
       },
     },
     Card: {
@@ -74,10 +70,8 @@ const theme = createTheme({
 });
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="light">
-      <Notifications position="top-right" />
-      <App />
-    </MantineProvider>
-  </StrictMode>,
+  <MantineProvider theme={theme}>
+    <Notifications position="top-right" />
+    <App />
+  </MantineProvider>,
 )

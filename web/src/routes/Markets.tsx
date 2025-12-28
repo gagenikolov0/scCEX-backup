@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect } from 'react'
-import { Card, TextInput, Anchor } from '@mantine/core'
+import { useMemo, useState, useEffect, memo } from 'react'
+import { Card, TextInput, Anchor, Box, Flex, Group, Text, Stack, Grid } from '@mantine/core'
 import { Link } from 'react-router-dom'
 import { useMarket } from '../contexts/MarketContext'
 
@@ -8,6 +8,60 @@ function splitSymbol(sym: string): { base: string; quote: string } {
   if (sym.endsWith('USDC')) return { base: sym.slice(0, -4), quote: 'USDC' }
   return { base: sym, quote: '' }
 }
+
+const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' | 'futures', base: string, quote: string }) => {
+  const price = item.lastPrice ?? ''
+  const change = item.change24h ?? 0
+  const high = item.high24h ?? ''
+  const low = item.low24h ?? ''
+  const vol = item.volume24h ? parseFloat(item.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : ''
+
+  const changeNum = parseFloat(String(change)) || 0
+  const changeColor = changeNum > 0 ? 'green' : changeNum < 0 ? 'red' : 'dimmed'
+
+  return (
+    <Anchor key={`${type}-${quote.toLowerCase()}-${item.symbol}`} component={Link} to={`/${type}?base=${base.replace('/', '_')}&quote=${quote}`} underline="never" c="inherit">
+      <Flex direction="column" px="md" py="sm" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', transition: 'background-color 0.1s ease' }} className="market-row-hover">
+        <Flex justify="space-between" align="center" mb={4}>
+          <Group gap={8}>
+            <Text size="sm" fw={700}>{base}</Text>
+            <Text size="xs" fw={500} c="dimmed" px={4} bg="var(--mantine-color-default-border)" style={{ borderRadius: 'var(--mantine-radius-xs)' }}>{quote}</Text>
+          </Group>
+          <Text size="sm" fw={700} c={changeColor} style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {changeNum > 0 ? '+' : ''}{changeNum.toFixed(2)}%
+          </Text>
+        </Flex>
+        <Flex justify="space-between" align="flex-end">
+          <Text size="lg" fw={600} ff="monospace" style={{ fontVariantNumeric: 'tabular-nums' }}>{price}</Text>
+          <Flex direction="column" align="flex-end" gap={2}>
+            <Flex gap={4} ff="monospace" tt="uppercase" style={{ letterSpacing: '-0.02em' }}>
+              <Text size="xxs" component="span" c="green" opacity={0.7}>H </Text><Text size="xxs" component="span">{high}</Text>
+              <Text size="xxs" component="span" c="red" opacity={0.7} ml={4}>L </Text><Text size="xxs" component="span">{low}</Text>
+            </Flex>
+            <Flex gap={4} align="center" style={{ fontFamily: 'monospace' }} c="dimmed">
+              <Text size="xxs" component="span" opacity={0.7}>VOL</Text> <Text size="xxs" component="span">{vol}</Text>
+            </Flex>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Anchor>
+  )
+})
+
+const RenderMarketCard = memo(({ title, data, type }: { title: string, data: any[], type: 'spot' | 'futures' }) => (
+  <Card padding={0} radius="md" withBorder shadow="xs">
+    <Flex p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }} bg="var(--mantine-color-default-border)" justify="space-between" align="center">
+      <Text size="sm" fw={600}>{title}</Text>
+      <Text size="xs" c="dimmed">24h Change</Text>
+    </Flex>
+    <Box style={{ maxHeight: '440px', overflow: 'auto' }}>
+      {data.map(item => {
+        const baseInfo = type === 'spot' ? splitSymbol(item.symbol) : { base: item.symbol.replace('_USDT', '').replace('_USDC', '').replace('_', '/'), quote: item.symbol.includes('_USDT') ? 'USDT' : 'USDC' }
+        return <MarketRow key={`${type}-${item.symbol}`} item={item} type={type} base={baseInfo.base} quote={baseInfo.quote} />
+      })}
+    </Box>
+  </Card>
+))
 
 export default function Markets() {
   const { spotStats, futuresStats, listen, unlisten } = useMarket()
@@ -22,74 +76,33 @@ export default function Markets() {
 
   const spotUSDT = useMemo(() => spotStats.filter(t => t.symbol.endsWith('USDT')).filter(filterFn), [spotStats, q])
   const spotUSDC = useMemo(() => spotStats.filter(t => t.symbol.endsWith('USDC')).filter(filterFn), [spotStats, q])
-
-  const renderMarketCard = (title: string, data: any[], type: 'spot' | 'futures') => (
-    <Card padding={0} radius="md" withBorder shadow="xs">
-      <div className="p-3 border-b text-sm font-semibold bg-neutral-50 dark:bg-neutral-900/50 flex justify-between">
-        <span>{title}</span>
-        <span className="text-neutral-500 font-normal">24h Change</span>
-      </div>
-      <div className="divide-y max-h-[440px] overflow-auto">
-        {data.map(item => {
-          let base: string = '', quote: string = '', price: string = '', change: string | number = 0, high: string = '', low: string = '', vol: string = ''
-
-          const baseInfo = type === 'spot' ? splitSymbol(item.symbol) : { base: item.symbol.replace('_USDT', '').replace('_USDC', '').replace('_', '/'), quote: item.symbol.includes('_USDT') ? 'USDT' : 'USDC' }
-          base = baseInfo.base
-          quote = baseInfo.quote
-          price = item.lastPrice ?? ''
-          change = item.change24h ?? 0
-          high = item.high24h ?? ''
-          low = item.low24h ?? ''
-          vol = item.volume24h ? parseFloat(item.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : ''
-
-          const changeNum = parseFloat(String(change)) || 0
-          const changeColor = changeNum > 0 ? 'text-green-500' : changeNum < 0 ? 'text-[#FF4761]' : 'text-neutral-500'
-
-          return (
-            <Anchor key={`${type}-${quote.toLowerCase()}-${item.symbol}`} component={Link} to={`/${type}?base=${base.replace('/', '_')}&quote=${quote}`} underline="never" c="inherit" className="flex flex-col px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">
-              <div className="flex justify-between items-center mb-1">
-                <div className="text-sm font-bold flex items-center gap-2">
-                  <span>{base}</span>
-                  <span className="text-xs font-normal text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-1 rounded">{quote}</span>
-                </div>
-                <div className={`text-sm font-bold tabular-nums ${changeColor}`}>
-                  {changeNum > 0 ? '+' : ''}{changeNum.toFixed(2)}%
-                </div>
-              </div>
-              <div className="flex justify-between items-end">
-                <div className="text-lg font-mono tabular-nums leading-none">{price}</div>
-                <div className="flex flex-col items-end gap-0.5">
-                  <div className="text-[10px] text-neutral-400 font-mono uppercase tracking-tighter">
-                    <span className="text-green-500/70">H </span>{high} <span className="ml-1 text-red-500/70">L </span>{low}
-                  </div>
-                  <div className="text-[10px] text-neutral-400 font-mono flex gap-1 items-center">
-                    <span className="opacity-70">VOL</span> {vol}
-                  </div>
-                </div>
-              </div>
-            </Anchor>
-          )
-        })}
-      </div>
-    </Card>
-  )
+  const futuresUSDT = useMemo(() => futuresStats.filter((f: any) => typeof f.symbol === 'string' && f.symbol.endsWith('_USDT')).filter(filterFn), [futuresStats, q])
+  const futuresUSDC = useMemo(() => futuresStats.filter((f: any) => typeof f.symbol === 'string' && f.symbol.endsWith('_USDC')).filter(filterFn), [futuresStats, q])
 
   return (
-    <div className="grid gap-4">
-      <div className="flex items-center gap-3">
-        <TextInput placeholder="Search (e.g. BTC, SOL)" value={q} onChange={e => setQ(e.currentTarget.value)} className="max-w-xs" />
-      </div>
+    <Stack gap="md">
+      <Flex align="center" gap="md">
+        <TextInput placeholder="Search (e.g. BTC, SOL)" value={q} onChange={e => setQ(e.currentTarget.value)} maw={320} w="100%" />
+      </Flex>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {renderMarketCard('Spot · USDT', spotUSDT, 'spot')}
-        {renderMarketCard('Spot · USDC', spotUSDC, 'spot')}
-      </div>
+      <Grid gutter="md">
+        <Grid.Col span={{ base: 12, lg: 6 }}>
+          <RenderMarketCard title="Spot · USDT" data={spotUSDT} type="spot" />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, lg: 6 }}>
+          <RenderMarketCard title="Spot · USDC" data={spotUSDC} type="spot" />
+        </Grid.Col>
+      </Grid>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {renderMarketCard('Futures · USDT Perpetuals', futuresStats.filter((f: any) => typeof f.symbol === 'string' && f.symbol.endsWith('_USDT')), 'futures')}
-        {renderMarketCard('Futures · USDC Perpetuals', futuresStats.filter((f: any) => typeof f.symbol === 'string' && f.symbol.endsWith('_USDC')), 'futures')}
-      </div>
-    </div>
+      <Grid gutter="md">
+        <Grid.Col span={{ base: 12, lg: 6 }}>
+          <RenderMarketCard title="Futures · USDT Perpetuals" data={futuresUSDT} type="futures" />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, lg: 6 }}>
+          <RenderMarketCard title="Futures · USDC Perpetuals" data={futuresUSDC} type="futures" />
+        </Grid.Col>
+      </Grid>
+    </Stack>
   )
 }
 

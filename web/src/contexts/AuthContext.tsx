@@ -15,12 +15,20 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem('accessToken'))
-  const [isReady, setIsReady] = useState(false)
+  const [isReady, setIsReady] = useState(() => {
+    const token = localStorage.getItem('accessToken');
+    // If we have a token, we optimistically assume we are ready to render
+    return !!token;
+  })
 
   const persist = useCallback((token: string | null) => {
     if (token) localStorage.setItem('accessToken', token)
     else localStorage.removeItem('accessToken')
-    setAccessToken(token)
+
+    setAccessToken(current => {
+      if (current === token) return current;
+      return token;
+    })
   }, [])
 
   const refresh = useCallback(async () => {
@@ -90,15 +98,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })()
   }, [persist, refresh, verify])
 
-  // Background silent refresh cadence (every 10 minutes) and on tab focus
+  // Background silent refresh cadence (every 10 minutes)
   useEffect(() => {
     if (!accessToken) return
     const id = setInterval(() => { refresh().then(verify) }, 10 * 60 * 1000)
-    const onFocus = () => { refresh().then(verify) }
-    window.addEventListener('focus', onFocus)
+
     return () => {
       clearInterval(id)
-      window.removeEventListener('focus', onFocus)
     }
   }, [accessToken, refresh, verify])
 

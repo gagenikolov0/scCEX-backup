@@ -110,7 +110,7 @@ router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
 
 // GET /api/spot/orders
 router.get("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
-  const limit = Math.min(parseInt(String((req.query as any)?.limit ?? "50"), 10) || 50, 200);
+  const limit = Math.min(parseInt(String((req.query as any)?.limit ?? "500"), 10) || 500, 2000);
   const rows = await SpotOrder.find({ userId: req.user!.id }).sort({ createdAt: -1 }).limit(limit).lean();
   return res.json(
     rows.map((r) => ({

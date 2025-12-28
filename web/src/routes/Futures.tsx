@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, SegmentedControl, Modal, NumberInput, Slider, Badge, Flex, Box } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, SegmentedControl, Modal, NumberInput, Slider, Badge, Flex, Box, Stack, Table } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -11,7 +11,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAccount } from '../contexts/AccountContext'
 import TransferModal from '../components/TransferModal'
 import TradeSlider from '../components/TradeSlider'
-import { PanelBottom } from 'lucide-react'
 
 export default function Futures() {
   const [search] = useSearchParams()
@@ -221,174 +220,186 @@ export default function Futures() {
   }
 
   const renderTable = (data: any[], columns: (string | { label: string, key: string })[], emptyMessage: string) => (
-    <Box component="table" style={{ width: '100%', fontSize: 'var(--mantine-font-size-sm)' }}>
-      <thead>
-        <Box component="tr" style={{ textAlign: 'left', borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-          {columns.map(col => {
-            const label = typeof col === 'string' ? col : col.label
-            return <Box component="th" key={label} style={{ padding: '8px 12px 8px 0', color: 'var(--mantine-color-dimmed)', fontWeight: 500 }}>{label}</Box>
-          })}
-        </Box>
-      </thead>
-      <tbody>
-        {data.length === 0 ? (
-          <Box component="tr">
-            <Box component="td" style={{ padding: '16px 0', textAlign: 'center', color: 'var(--mantine-color-dimmed)' }} colSpan={columns.length}>{emptyMessage}</Box>
-          </Box>
-        ) : (
-          data.map((item, idx) => (
-            <Box component="tr" key={item._id || idx} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-              {columns.map(column => {
-                let val: any = '-'
-                const key = typeof column === 'string' ? column : column.key
-                const c = key.toLowerCase()
+    <Box style={{ overflowX: 'auto', flex: 1 }} px="md">
+      <Table verticalSpacing="xs" highlightOnHover fs="sm" withRowBorders>
+        <Table.Thead bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
+          <Table.Tr>
+            {columns.map(col => {
+              const label = typeof col === 'string' ? col : col.label
+              return (
+                <Table.Th key={label} c="dimmed" fw={600} style={{ whiteSpace: 'nowrap' }} py={10}>
+                  {label}
+                </Table.Th>
+              )
+            })}
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody style={{ verticalAlign: 'top' }}>
+          {data.length === 0 ? (
+            <Table.Tr>
+              <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length}>
+                {emptyMessage}
+              </Table.Td>
+            </Table.Tr>
+          ) : (
+            data.map((item, idx) => (
+              <Table.Tr key={item._id || idx}>
+                {columns.map(column => {
+                  let val: any = '-'
+                  const key = typeof column === 'string' ? column : column.key
+                  const c = key.toLowerCase()
 
-                if (c === 'symbol') {
-                  const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
-                  val = (
-                    <Flex direction="column" style={{ lineHeight: 1.2 }}>
-                      <Text fw={700} size="sm">{cleanSymbol}</Text>
-                      {(item.leverage || item.side) && (
+                  if (c === 'symbol') {
+                    const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
+                    val = (
+                      <Flex direction="column" lh={1.2}>
+                        <Text fw={700} size="sm">{cleanSymbol}</Text>
+                        {(item.leverage || item.side) && (
+                          <Group gap={4}>
+                            {item.leverage && <Text size="xs" c="dimmed" fw={500}>{item.leverage}x</Text>}
+                            {item.side && (
+                              <Text size="xs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                {item.side}
+                              </Text>
+                            )}
+                          </Group>
+                        )}
+                      </Flex>
+                    )
+                  }
+                  else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
+                  else if (c === 'size') val = Number(item.quantity).toFixed(4)
+                  else if (c === 'entry') val = item.entryPrice
+                  else if (c === 'exit') val = item.exitPrice
+                  else if (c === 'price') val = item.price
+                  else if (c === 'liq. price') val = <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
+                  else if (c === 'pnl') {
+                    const itemStats = futuresStats.find(s => s.symbol === item.symbol)
+                    const lastPrice = Number(itemStats?.lastPrice || 0)
+                    const entryPrice = Number(item.entryPrice || 0)
+                    const qty = Number(item.quantity || 0)
+                    const margin = Number(item.margin || 0)
+
+                    let pnlValue = 0
+                    if (lastPrice > 0) {
+                      pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
+                    }
+
+                    const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
+                    val = (
+                      <Flex direction="column" lh={1.2}>
+                        <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}> {/* what the fuck is this? */}
+                          {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
+                        </Text>
+                        <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}> {/* what the fuck is this? */}
+                          ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                        </Text>
+                      </Flex>
+                    )
+                  }
+                  else if (c === 'realized pnl') {
+                    const realizedPnl = Number(item.realizedPnL || 0)
+                    const margin = Number(item.margin || item.marginToRelease || 0)
+                    const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
+
+                    val = (
+                      <Flex direction="column" lh={1.2}>
                         <Group gap={4}>
-                          {item.leverage && <Text size="xs" c="dimmed" fw={500}>{item.leverage}x</Text>}
-                          {item.side && (
-                            <Text size="xs" color={item.side === 'long' ? 'green' : 'red'} fw={700} style={{ textTransform: 'uppercase' }}>
-                              {item.side}
-                            </Text>
+                          <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                            {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
+                          </Text>
+                          {item.note === 'Liquidated' && (
+                            <Badge color="#fe445c" size="xs" variant="filled">LIQ</Badge>
                           )}
                         </Group>
-                      )}
-                    </Flex>
-                  )
-                }
-                else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? 'green' : 'red'} fw={600} style={{ textTransform: 'uppercase' }}>{item.side}</Text>
-                else if (c === 'size') val = Number(item.quantity).toFixed(4)
-                else if (c === 'entry') val = item.entryPrice
-                else if (c === 'exit') val = item.exitPrice
-                else if (c === 'price') val = item.price
-                else if (c === 'liq. price') val = <Text size="sm" color="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
-                else if (c === 'pnl') {
-                  const itemStats = futuresStats.find(s => s.symbol === item.symbol)
-                  const lastPrice = Number(itemStats?.lastPrice || 0)
-                  const entryPrice = Number(item.entryPrice || 0)
-                  const qty = Number(item.quantity || 0)
-                  const margin = Number(item.margin || 0)
-
-                  let pnlValue = 0
-                  if (lastPrice > 0) {
-                    pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
-                  }
-
-                  const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
-                  val = (
-                    <Flex direction="column" style={{ lineHeight: 1.2 }}>
-                      <Text size="xs" color={pnlValue >= 0 ? 'green' : 'red'} fw={600}>
-                        {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
-                      </Text>
-                      <Text size="xs" color={pnlValue >= 0 ? 'green' : 'red'} style={{ fontSize: '10px' }}>
-                        ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                      </Text>
-                    </Flex>
-                  )
-                }
-                else if (c === 'realized pnl') {
-                  const realizedPnl = Number(item.realizedPnL || 0)
-                  const margin = Number(item.margin || item.marginToRelease || 0)
-                  const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
-
-                  val = (
-                    <Flex direction="column" style={{ lineHeight: 1.2 }}>
-                      <Group gap={4}>
-                        <Text size="xs" color={realizedPnl >= 0 ? 'green' : 'red'} fw={600}>
-                          {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
+                        <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
+                          ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                         </Text>
-                        {item.note === 'Liquidated' && (
-                          <Badge color="red" size="xs" variant="filled">LIQ</Badge>
-                        )}
-                      </Group>
-                      <Text size="xs" color={realizedPnl >= 0 ? 'green' : 'red'} style={{ fontSize: '10px' }}>
-                        ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                      </Text>
-                    </Flex>
-                  )
-                }
-                else if (c === 'leverage') val = `${item.leverage}x`
-                else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
-                else if (c === 'tp/sl') {
-                  val = (
-                    <Flex direction="column" gap={2} style={{ minWidth: '80px', lineHeight: 1 }}>
-                      <Text size="xs" color="teal" style={{ fontSize: '10px', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
-                        setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
-                        setTpslPrices({
-                          tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
-                          sl: item.slPrice > 0 ? String(item.slPrice) : '',
-                          tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
-                          slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
-                        })
-                        setTpslPercents({
-                          tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
-                          sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
-                        })
-                      }}>
-                        TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
-                      </Text>
-                      <Text size="xs" color="red" style={{ fontSize: '10px', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
-                        setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
-                        setTpslPrices({
-                          tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
-                          sl: item.slPrice > 0 ? String(item.slPrice) : '',
-                          tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
-                          slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
-                        })
-                        setTpslPercents({
-                          tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
-                          sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
-                        })
-                      }}>
-                        SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
-                      </Text>
-                    </Flex>
-                  )
-                }
-                else if (c === 'status') val = item.status
-                else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
-                else if (c === 'action') {
-                  const isPosTable = columns.some(col => {
-                    const l = typeof col === 'string' ? col : col.label
-                    return l === 'PnL'
-                  })
-                  if (isPosTable) {
-                    val = <Button size="compact-xs" color="red" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
-                  } else {
-                    val = item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
+                      </Flex>
+                    )
                   }
-                }
+                  else if (c === 'leverage') val = `${item.leverage}x`
+                  else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
+                  else if (c === 'tp/sl') {
+                    val = (
+                      <Flex direction="column" gap={2} lh={1}>
+                        <Text size="xxs" color="#0BBA74" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
+                          setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
+                          setTpslPrices({
+                            tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
+                            sl: item.slPrice > 0 ? String(item.slPrice) : '',
+                            tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
+                            slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
+                          })
+                          setTpslPercents({
+                            tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
+                            sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
+                          })
+                        }}>
+                          TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
+                        </Text>
+                        <Text size="xxs" color="#fe445c" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
+                          setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
+                          setTpslPrices({
+                            tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
+                            sl: item.slPrice > 0 ? String(item.slPrice) : '',
+                            tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
+                            slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
+                          })
+                          setTpslPercents({
+                            tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
+                            sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
+                          })
+                        }}>
+                          SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
+                        </Text>
+                      </Flex>
+                    )
+                  }
+                  else if (c === 'status') val = item.status
+                  else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
+                  else if (c === 'action') {
+                    const isPosTable = columns.some(col => {
+                      const k = typeof col === 'string' ? col : col.key
+                      return k.toLowerCase() === 'pnl'
+                    })
+                    if (isPosTable) {
+                      val = <Button size="compact-xs" color="#fe445c" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
+                    } else {
+                      val = item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
+                    }
+                  }
 
-                return <Box component="td" key={typeof column === 'string' ? column : column.label} style={{ padding: '8px 12px 8px 0' }}>{val}</Box>
-              })}
-            </Box>
-          ))
-        )}
-      </tbody>
+                  return (
+                    <Table.Td key={typeof column === 'string' ? column : column.label}>
+                      {val}
+                    </Table.Td>
+                  )
+                })}
+              </Table.Tr>
+            ))
+          )}
+        </Table.Tbody>
+      </Table>
     </Box>
   )
 
   return (
     <Box>
-      <Flex align="center" gap="xl" py="sm">
+      <Flex align="center" gap="lg" py="sm">
         <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
           <Menu.Target>
-            <Button variant="transparent" size="lg" h={56} px="xs" style={{ background: 'transparent' }}>
-              <Flex direction="column" align="flex-start" style={{ lineHeight: 1.2 }}>
-                <Text size="xl" fw={700} className="asset-selector-text">{token}{quote}</Text>
-                <Text size="xs" c="dimmed" fw={500} style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10px' }}>Perpetual</Text>
+            <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
+              <Flex direction="column" align="flex-start" lh={1.2}>
+                <Text size="xl" fw={700}>{token}{quote}</Text>
+                <Text size="xxs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: '0.05em' }}>Perpetual</Text>
               </Flex>
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <div className="p-2">
+            <Box p="xs">
               <TextInput placeholder="Search pair" value={pairQuery} onChange={(e) => setPairQuery(e.currentTarget.value)} size="xs" />
-            </div>
+            </Box>
             <ScrollArea.Autosize mah={320} mx={0} type="auto">
               {filteredOptions.map((t) => (
                 <Menu.Item key={t} onClick={() => setToken(t)}>{t}/{quote}</Menu.Item>
@@ -397,18 +408,18 @@ export default function Futures() {
           </Menu.Dropdown>
         </Menu>
 
-        <Flex align="center" className="header-divider" style={{ borderLeft: '1px solid var(--mantine-color-default-border)', paddingLeft: '24px' }}>
+        <Flex align="center" style={{ borderLeft: '1px solid var(--mantine-color-default-border)', paddingLeft: '24px' }}>
           {loadingStats ? <Loader size="xs" /> : (
             <Group gap={24}>
               <Box>
-                <div className="text-lg font-bold">
+                <Box fs="1.25rem" fw={700}>
                   <BigPrice symbol={`${token}${quote}`} market="futures" />
-                </div>
+                </Box>
               </Box>
 
               <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={600}>24h Change</Text>
-                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'green' : 'red'}>
+                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? '#0BBA74' : '#fe445c'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
               </Flex>
@@ -452,11 +463,13 @@ export default function Futures() {
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, lg: 3 }}>
-          <Card padding={0} radius="md" withBorder>
-            <div className="p-3 border-b text-sm font-medium">Order Book</div>
-            <div className="p-0 h-[360px] overflow-y-auto text-sm">
+          <Card padding={0} radius="md" withBorder shadow="sm">
+            <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+              <Text size="sm" fw={600}>Order Book</Text>
+            </Box>
+            <Box h={360} style={{ overflowY: 'auto' }}>
               <OrderBook symbol={`${token}_${quote}`} market="futures" depth={50} />
-            </div>
+            </Box>
           </Card>
         </Grid.Col>
 
@@ -490,7 +503,7 @@ export default function Futures() {
                 </Text>
               )}
 
-              <Group gap={4} p={4} style={{ background: 'var(--mantine-color-dark-filled)', borderRadius: 'var(--mantine-radius-md)' }}>
+              <Group gap={4} p={4} style={{ background: 'var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} flex={1}>Market</Button>
                 <Button size="xs" variant={orderType === 'limit' ? 'filled' : 'subtle'} onClick={() => setOrderType('limit')} flex={1}>Limit</Button>
               </Group>
@@ -547,7 +560,7 @@ export default function Futures() {
                     centered
                     size="xs"
                   >
-                    <div className="flex flex-col gap-6">
+                    <Stack gap="xl">
                       <NumberInput
                         label="Leverage"
                         value={Number(tempLeverage)}
@@ -598,7 +611,7 @@ export default function Futures() {
                           Confirm
                         </Button>
                       </Group>
-                    </div>
+                    </Stack>
                   </Modal>
                 </>
               )}
@@ -606,13 +619,13 @@ export default function Futures() {
               <Flex gap="md">
                 {tradeMode === 'open' ? (
                   <>
-                    <Button flex={1} color="green" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
-                    <Button flex={1} color="red" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
+                    <Button flex={1} color="#0BBA74" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
+                    <Button flex={1} color="#fe445c" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
                   </>
                 ) : (
                   <Button
                     flex={1}
-                    color="red"
+                    color="#fe445c"
                     variant="filled"
                     onClick={() => closePosition(`${token}_${quote}`, qty)}
                     disabled={!isAuthed || !qty}
@@ -633,21 +646,31 @@ export default function Futures() {
         <Grid.Col span={12}>
           <Card padding={0}>
             <Tabs defaultValue="positions" variant="outline">
-              <Tabs.List style={{ padding: '4px 12px 0 12px' }}>
+              <Tabs.List pt={4} px={12}>
                 <Tabs.Tab value="positions">Positions</Tabs.Tab>
                 <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
                 <Tabs.Tab value="history" onClick={fetchHistory}>Position History</Tabs.Tab>
               </Tabs.List>
 
-              <Tabs.Panel value="positions" p="md">
-                {renderTable(futuresPositions, ['Symbol', 'Size', 'Entry', 'Margin', 'Liq. Price', 'PnL', 'Realized PnL', 'TP/SL', 'Action'], 'No active positions')}
+              <Tabs.Panel value="positions" p={0}>
+                {renderTable(futuresPositions, [
+                  { label: 'Trading Pair', key: 'Symbol' },
+                  { label: 'Size (Qty)', key: 'Size' },
+                  { label: 'Avg Entry Price', key: 'Entry' },
+                  'Margin',
+                  'Liq. Price',
+                  { label: 'Unrealized PNL', key: 'PnL' },
+                  { label: 'Realized PNL', key: 'Realized PnL' },
+                  'TP/SL',
+                  { label: 'Close', key: 'Action' }
+                ], 'No active positions')}
               </Tabs.Panel>
 
-              <Tabs.Panel value="orders" p="md">
+              <Tabs.Panel value="orders" p={0}>
                 {renderTable(recentOrders.filter(o => o.symbol?.includes('_')), ['Symbol', 'Size', 'Price', 'Status', 'Time', 'Action'], 'No recent orders')}
               </Tabs.Panel>
 
-              <Tabs.Panel value="history" p="md">
+              <Tabs.Panel value="history" p={0}>
                 {renderTable(history, ['Symbol', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time'], 'No trade history')}
               </Tabs.Panel>
             </Tabs>
@@ -690,7 +713,7 @@ export default function Futures() {
           />
 
           <Button
-            color="red"
+            color="#fe445c"
             fullWidth
             onClick={() => closePosition(partialCloseData!.symbol, partialCloseQty)}
             disabled={!partialCloseQty || parseFloat(partialCloseQty) <= 0}
@@ -711,9 +734,9 @@ export default function Futures() {
       />
 
       <Modal opened={!!tpslData} onClose={() => setTpslData(null)} title={`TP/SL Settings - ${tpslData?.symbol}`} centered size="sm">
-        <div className="flex flex-col gap-6">
-          <div className="grid gap-4 p-3 rounded-md bg-neutral-50/50">
-            <Text size="sm" fw={600} color="teal">Take Profit (TP)</Text>
+        <Box p="md" style={{ background: 'var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-md)' }}>
+          <Text size="sm" fw={600} color="#0BBA74">Take Profit (TP)</Text>
+          <Flex direction="column" gap="sm" mt="sm">
             <TextInput
               label="Trigger Price"
               placeholder="0.00"
@@ -734,39 +757,38 @@ export default function Futures() {
                 setTpslPrices({ ...tpslPrices, tpQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
               }}
             />
-          </div>
+          </Flex>
+        </Box>
 
-          <Box p="md" style={{ background: 'var(--mantine-color-dark-filled)', borderRadius: 'var(--mantine-radius-md)' }}>
-            <Text size="sm" fw={600} color="red">Stop Loss (SL)</Text>
-            <Flex direction="column" gap="sm" mt="sm">
-              <TextInput
-                label="Trigger Price"
-                placeholder="0.00"
-                value={tpslPrices.sl}
-                onChange={(e) => setTpslPrices({ ...tpslPrices, sl: e.currentTarget.value })}
-              />
-              <TextInput
-                label="Quantity to Close"
-                placeholder="All"
-                value={tpslPrices.slQty}
-                onChange={(e) => setTpslPrices({ ...tpslPrices, slQty: e.currentTarget.value })}
-              />
-              <TradeSlider
-                value={tpslPercents.sl}
-                onChange={(val) => {
-                  setTpslPercents({ ...tpslPercents, sl: val })
-                  const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
-                  setTpslPrices({ ...tpslPrices, slQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
-                }}
-              />
-            </Flex>
-          </Box>
-
-          <Group grow mt="md">
-            <Button variant="light" color="gray" onClick={() => setTpslData(null)}>Cancel</Button>
-            <Button color="blue" onClick={() => updateTPSL(tpslData!.symbol, tpslPrices.tp, tpslPrices.sl, tpslPrices.tpQty, tpslPrices.slQty)}>Save TP/SL</Button>
-          </Group>
-        </div>
+        <Box p="md" style={{ background: 'var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-md)' }}>
+          <Text size="sm" fw={600} color="#fe445c">Stop Loss (SL)</Text>
+          <Flex direction="column" gap="sm" mt="sm">
+            <TextInput
+              label="Trigger Price"
+              placeholder="0.00"
+              value={tpslPrices.sl}
+              onChange={(e) => setTpslPrices({ ...tpslPrices, sl: e.currentTarget.value })}
+            />
+            <TextInput
+              label="Quantity to Close"
+              placeholder="All"
+              value={tpslPrices.slQty}
+              onChange={(e) => setTpslPrices({ ...tpslPrices, slQty: e.currentTarget.value })}
+            />
+            <TradeSlider
+              value={tpslPercents.sl}
+              onChange={(val) => {
+                setTpslPercents({ ...tpslPercents, sl: val })
+                const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
+                setTpslPrices({ ...tpslPrices, slQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
+              }}
+            />
+          </Flex>
+        </Box>
+        <Group grow mt="md">
+          <Button variant="light" color="gray" onClick={() => setTpslData(null)}>Cancel</Button>
+          <Button color="blue" onClick={() => updateTPSL(tpslData!.symbol, tpslPrices.tp, tpslPrices.sl, tpslPrices.tpQty, tpslPrices.slQty)}>Save TP/SL</Button>
+        </Group>
       </Modal>
     </Box>
   )

@@ -1,4 +1,4 @@
-import { Group, Text, Stack, Badge, Grid, Paper, NavLink } from '@mantine/core'
+import { Group, Text, Stack, Badge, Grid, Paper, NavLink, Box, Flex } from '@mantine/core'
 import { useAccount } from '../contexts/AccountContext'
 import { useState } from 'react'
 
@@ -52,9 +52,9 @@ export default function Wallet() {
       case 'futures':
         return (
           <>
-            <Paper withBorder p="lg" radius="md" mb="md" bg="var(--background)">
+            <Paper withBorder p="lg" radius="md" mb="md">
               <Text size="sm" c="dimmed">Total Futures Value</Text>
-              <Text size="2xl" fw={700} c="var(--secondary)">{formatUSD(totalFuturesValue)}</Text>
+              <Text size="2xl" fw={700} c="blue">{formatUSD(totalFuturesValue)}</Text>
             </Paper>
             <Grid gutter="md">
               {['USDT', 'USDC'].map(asset => {
@@ -65,7 +65,7 @@ export default function Wallet() {
                       <Stack gap="xs">
                         <Group justify="space-between">
                           <Text size="sm" c="dimmed">{asset} Futures</Text>
-                          <Badge color="var(--secondary)" variant="light">Isolated</Badge>
+                          <Badge color="blue" variant="light">Isolated</Badge>
                         </Group>
                         <Text size="xl" fw={600}>{formatBalance(available)}</Text>
                       </Stack>
@@ -80,9 +80,9 @@ export default function Wallet() {
       case 'spot':
         return (
           <>
-            <Paper withBorder p="lg" radius="md" mb="md" bg="var(--background)">
+            <Paper withBorder p="lg" radius="md" mb="md">
               <Text size="sm" c="dimmed">Total Spot Value</Text>
-              <Text size="2xl" fw={700} c="var(--green)">{formatUSD(totalPortfolioUSD - totalFuturesValue)}</Text>
+              <Text size="2xl" fw={700} c="green">{formatUSD(totalPortfolioUSD - totalFuturesValue)}</Text>
             </Paper>
             <Grid gutter="md">
               {['USDT', 'USDC'].map(asset => {
@@ -94,7 +94,7 @@ export default function Wallet() {
                       <Stack gap="xs">
                         <Group justify="space-between">
                           <Text size="sm" c="dimmed">{asset} Balance</Text>
-                          <Badge color={asset === 'USDT' ? 'var(--green)' : 'var(--secondary)'} variant="light">Stable</Badge>
+                          <Badge color={asset === 'USDT' ? 'green' : 'blue'} variant="light">Stable</Badge>
                         </Group>
                         <Text size="xl" fw={600}>{formatBalance(spotAvailable[asset as keyof typeof spotAvailable])}</Text>
                         {parseFloat(reserved) > 0 && (
@@ -125,23 +125,24 @@ export default function Wallet() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      <div className="w-48 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
-        <div className="p-4">
-          <Stack gap="xs">
-            {tabs.map(tab => (
-              <NavLink
-                key={tab.id}
-                label={tab.label}
-                active={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                variant="filled"
-              />
-            ))}
-          </Stack>
-        </div>
-      </div>
-      <div className="flex-1 p-6">{renderContent()}</div>
-    </div>
+    <Flex mih="calc(100vh - 100px)">
+      <Box w={200} style={{ borderRight: '1px solid var(--mantine-color-default-border)', background: 'var(--mantine-color-default-border)' }}>
+        <Stack gap={4} p="md">
+          {tabs.map(tab => (
+            <NavLink
+              key={tab.id}
+              label={tab.label}
+              active={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              variant="filled"
+              style={{ borderRadius: 'var(--mantine-radius-md)' }}
+            />
+          ))}
+        </Stack>
+      </Box>
+      <Box p="xl" flex={1}>
+        {renderContent()}
+      </Box>
+    </Flex>
   )
 }

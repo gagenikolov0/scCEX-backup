@@ -1,9 +1,13 @@
+import { Box, Title, Text, Stack } from '@mantine/core'
+
 export default function Home() {
   return (
-    <div className="min-h-screen p-6 bg-neutral-50 dark:bg-neutral-950">
-      <h1 className="text-2xl font-semibold mb-4">Home</h1>
-      <div className="mt-2 text-sm text-neutral-500">Go to the Deposit page to view your deposit addresses and QR.</div>
-    </div>
+    <Box p="xl" mih="calc(100vh - 100px)">
+      <Stack gap="md">
+        <Title order={1} size="h2" fw={600}>Home</Title>
+        <Text size="sm" c="dimmed">Go to the Deposit page to view your deposit addresses and QR.</Text>
+      </Stack>
+    </Box>
   )
 }
 
