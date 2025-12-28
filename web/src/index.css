@@ -15,6 +15,9 @@
   /* Global Source of Truth for Colors */
   --green: #0BBA74;
   --red: #fe445c;
+  --chart-text: #808080;
+  --chart-line: #808080;
+  --qr-bg: #ffffff;
 }
 
 
@@ -24,6 +27,9 @@
   --foreground: #ffffff;
   --border: #373a40;
   --liq: #e8590c;
+  --chart-text: #a0a0a0;
+  --chart-line: #373a40;
+  --qr-bg: #ffffff;
 }
 
 * {

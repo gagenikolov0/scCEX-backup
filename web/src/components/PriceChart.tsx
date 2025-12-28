@@ -62,6 +62,21 @@ export default function PriceChart(props: Props) {
   }
 
   useEffect(() => {
+    if (chartRef.current) {
+      const styles = getComputedStyle(document.documentElement)
+      const textColor = styles.getPropertyValue('--chart-text').trim() || '#808080'
+      const lineColor = styles.getPropertyValue('--chart-line').trim() || '#808080'
+      chartRef.current.applyOptions({
+        layout: { textColor },
+        crosshair: {
+          vertLine: { color: lineColor },
+          horzLine: { color: lineColor },
+        }
+      })
+    }
+  }, [colorScheme])
+
+  useEffect(() => {
     if (!containerRef.current) return
     if (chartRef.current) {
       try { chartRef.current.remove() } catch { }
@@ -100,6 +115,21 @@ export default function PriceChart(props: Props) {
       priceLineStyle: 1, // Dashed
       priceLineWidth: 2,
     })
+
+    // Theme symmetry handler
+    const updateTheme = () => {
+      const styles = getComputedStyle(document.documentElement)
+      const textColor = styles.getPropertyValue('--chart-text').trim() || '#808080'
+      const lineColor = styles.getPropertyValue('--chart-line').trim() || '#808080'
+      chart.applyOptions({
+        layout: { textColor },
+        crosshair: {
+          vertLine: { color: lineColor },
+          horzLine: { color: lineColor },
+        }
+      })
+    }
+    updateTheme()
     chartRef.current = chart
     seriesRef.current = series
     lineSeriesRef.current = []

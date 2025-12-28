@@ -49,9 +49,7 @@ Also sometimes when chart loads it only shows the last single candle before i ha
 i there are way many _ in the codebase that what i've seen in the UI
 
 
-❓ position height in futures is too long
-aslo we need left and right padding of the div that contains both positions and the Trading Pair	Size (Qty)	Avg Entry Price.....
-also where in code do we set the weight and height of chart, orderbook, trade panel in futures and spot?
+❓ where in code do we set the weight and height of chart, orderbook, trade panel in futures and spot?
 
 
 ❓Mantine not symmetrical between dark and light mode

@@ -147,88 +147,90 @@ export default function Spot() {
   const formatDate = (date: string) => date ? new Date(date).toLocaleString() : '-'
 
   const renderTable = (data: any[], columns: string[], emptyMessage: string, showCancel = false) => (
-    <Box style={{ overflowX: 'auto', flex: 1 }} px="md">
-      <Table verticalSpacing="xs" highlightOnHover fs="sm" withRowBorders>
-        <Table.Thead bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-          <Table.Tr>
-            {columns.map(col => <Table.Th key={col} c="dimmed" fw={600} py={10}>{col}</Table.Th>)}
-            {showCancel && <Table.Th c="dimmed" fw={600} py={10}>Action</Table.Th>}
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody style={{ verticalAlign: 'top' }}>
-          {data.length === 0 ? (
+    <Box style={{ height: '430px', overflowY: 'auto' }}>
+      <Box style={{ overflowX: 'auto', flex: 1 }} px="md">
+        <Table verticalSpacing="xs" highlightOnHover fs="sm" withRowBorders>
+          <Table.Thead bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <Table.Tr>
-              <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Table.Td>
+              {columns.map(col => <Table.Th key={col} c="dimmed" fw={600} py={10}>{col}</Table.Th>)}
+              {showCancel && <Table.Th c="dimmed" fw={600} py={10}>Action</Table.Th>}
             </Table.Tr>
-          ) : (
-            data.map((item, index) => (
-              <Table.Tr key={item.id || item._id || index}>
-                {columns.map(col => {
-                  let val: any = '-'
-                  const c = col.toLowerCase()
-
-                  const getVal = (v: any) => {
-                    if (v && typeof v === 'object' && v.$numberDecimal) return v.$numberDecimal
-                    return v
-                  }
-
-                  if (c === 'symbol') {
-                    const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
-                    val = (
-                      <Flex direction="column" lh={1.2}>
-                        <Text size="xs" fw={700}>{cleanSymbol}</Text>
-                        {item.side && (
-                          <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                            {item.side}
-                          </Text>
-                        )}
-                      </Flex>
-                    )
-                  }
-
-                  else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
-                  else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
-                  else if (c === 'price') val = getVal(item.price || item.priceQuote)
-                  else if (c === 'total' || c === 'quote amount') {
-                    const t = getVal(item.total || item.quoteAmount)
-                    val = t ? `${Number(t).toFixed(2)} ${quote} ` : '-'
-                  }
-                  else if (c === 'status') val = item.status
-                  else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
-                  else if (c === 'asset') val = item.asset
-                  else if (c === 'available') val = getVal(item.available)
-                  else if (c === 'reserved') val = getVal(item.reserved)
-                  else if (c === 'value') {
-                    const asset = item.asset
-                    const available = parseFloat(getVal(item.available) || '0')
-                    if (asset === 'USDT' || asset === 'USDC') {
-                      val = `${available.toFixed(2)} ${quote}`
-                    } else {
-                      const pairStats = spotStats.find(s => s.symbol === `${asset}${quote}`)
-                      const price = parseFloat(pairStats?.lastPrice || '0')
-                      val = price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
-                    }
-                  }
-                  else if (c === 'updated') val = formatDate(item.updatedAt)
-
-                  return (
-                    <Table.Td key={col}>
-                      {val}
-                    </Table.Td>
-                  )
-                })}
-                {showCancel && (
-                  <Table.Td>
-                    <Button size="compact-xs" variant="light" color="#fe445c" onClick={() => cancelOrder(item.id)}>
-                      Cancel
-                    </Button>
-                  </Table.Td>
-                )}
+          </Table.Thead>
+          <Table.Tbody style={{ verticalAlign: 'top' }}>
+            {data.length === 0 ? (
+              <Table.Tr>
+                <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Table.Td>
               </Table.Tr>
-            ))
-          )}
-        </Table.Tbody>
-      </Table>
+            ) : (
+              data.map((item, index) => (
+                <Table.Tr key={item.id || item._id || index}>
+                  {columns.map(col => {
+                    let val: any = '-'
+                    const c = col.toLowerCase()
+
+                    const getVal = (v: any) => {
+                      if (v && typeof v === 'object' && v.$numberDecimal) return v.$numberDecimal
+                      return v
+                    }
+
+                    if (c === 'symbol') {
+                      const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
+                      val = (
+                        <Flex direction="column" lh={1.2}>
+                          <Text size="xs" fw={700}>{cleanSymbol}</Text>
+                          {item.side && (
+                            <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                              {item.side}
+                            </Text>
+                          )}
+                        </Flex>
+                      )
+                    }
+
+                    else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
+                    else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
+                    else if (c === 'price') val = getVal(item.price || item.priceQuote)
+                    else if (c === 'total' || c === 'quote amount') {
+                      const t = getVal(item.total || item.quoteAmount)
+                      val = t ? `${Number(t).toFixed(2)} ${quote} ` : '-'
+                    }
+                    else if (c === 'status') val = item.status
+                    else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
+                    else if (c === 'asset') val = item.asset
+                    else if (c === 'available') val = getVal(item.available)
+                    else if (c === 'reserved') val = getVal(item.reserved)
+                    else if (c === 'value') {
+                      const asset = item.asset
+                      const available = parseFloat(getVal(item.available) || '0')
+                      if (asset === 'USDT' || asset === 'USDC') {
+                        val = `${available.toFixed(2)} ${quote}`
+                      } else {
+                        const pairStats = spotStats.find(s => s.symbol === `${asset}${quote}`)
+                        const price = parseFloat(pairStats?.lastPrice || '0')
+                        val = price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
+                      }
+                    }
+                    else if (c === 'updated') val = formatDate(item.updatedAt)
+
+                    return (
+                      <Table.Td key={col}>
+                        {val}
+                      </Table.Td>
+                    )
+                  })}
+                  {showCancel && (
+                    <Table.Td>
+                      <Button size="compact-xs" variant="light" color="#fe445c" onClick={() => cancelOrder(item.id)}>
+                        Cancel
+                      </Button>
+                    </Table.Td>
+                  )}
+                </Table.Tr>
+              ))
+            )}
+          </Table.Tbody>
+        </Table>
+      </Box>
     </Box>
   )
 
@@ -269,7 +271,7 @@ export default function Spot() {
 
               <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={500}>24h change</Text>
-                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? '#0BBA74' : '#fe445c'}>
+                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'var(--green)' : 'var(--red)'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
               </Flex>
@@ -315,7 +317,7 @@ export default function Spot() {
               <Text size="sm" fw={600}>Order Book</Text>
             </Box>
             <Box h={360} style={{ overflowY: 'auto' }}>
-              <OrderBook symbol={`${token}${quote}`} market="spot" depth={50} />
+              <OrderBook symbol={`${token}${quote}`} market="spot" depth={10} />
             </Box>
           </Card>
         </Grid.Col>

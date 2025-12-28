@@ -220,167 +220,169 @@ export default function Futures() {
   }
 
   const renderTable = (data: any[], columns: (string | { label: string, key: string })[], emptyMessage: string) => (
-    <Box style={{ overflowX: 'auto', flex: 1 }} px="md">
-      <Table verticalSpacing="xs" highlightOnHover fs="sm" withRowBorders>
-        <Table.Thead bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-          <Table.Tr>
-            {columns.map(col => {
-              const label = typeof col === 'string' ? col : col.label
-              return (
-                <Table.Th key={label} c="dimmed" fw={600} style={{ whiteSpace: 'nowrap' }} py={10}>
-                  {label}
-                </Table.Th>
-              )
-            })}
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody style={{ verticalAlign: 'top' }}>
-          {data.length === 0 ? (
+    <Box style={{ height: '430px', overflowY: 'auto' }}>
+      <Box style={{ overflowX: 'auto', flex: 1 }} px="md">
+        <Table verticalSpacing="xs" highlightOnHover fs="sm" withRowBorders>
+          <Table.Thead bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <Table.Tr>
-              <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length}>
-                {emptyMessage}
-              </Table.Td>
+              {columns.map(col => {
+                const label = typeof col === 'string' ? col : col.label
+                return (
+                  <Table.Th key={label} c="dimmed" fw={600} style={{ whiteSpace: 'nowrap' }} py={10}>
+                    {label}
+                  </Table.Th>
+                )
+              })}
             </Table.Tr>
-          ) : (
-            data.map((item, idx) => (
-              <Table.Tr key={item._id || idx}>
-                {columns.map(column => {
-                  let val: any = '-'
-                  const key = typeof column === 'string' ? column : column.key
-                  const c = key.toLowerCase()
+          </Table.Thead>
+          <Table.Tbody style={{ verticalAlign: 'top' }}>
+            {data.length === 0 ? (
+              <Table.Tr>
+                <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length}>
+                  {emptyMessage}
+                </Table.Td>
+              </Table.Tr>
+            ) : (
+              data.map((item, idx) => (
+                <Table.Tr key={item._id || idx}>
+                  {columns.map(column => {
+                    let val: any = '-'
+                    const key = typeof column === 'string' ? column : column.key
+                    const c = key.toLowerCase()
 
-                  if (c === 'symbol') {
-                    const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
-                    val = (
-                      <Flex direction="column" lh={1.2}>
-                        <Text fw={700} size="sm">{cleanSymbol}</Text>
-                        {(item.leverage || item.side) && (
+                    if (c === 'symbol') {
+                      const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
+                      val = (
+                        <Flex direction="column" lh={1.2}>
+                          <Text fw={700} size="sm">{cleanSymbol}</Text>
+                          {(item.leverage || item.side) && (
+                            <Group gap={4}>
+                              {item.leverage && <Text size="xs" c="dimmed" fw={500}>{item.leverage}x</Text>}
+                              {item.side && (
+                                <Text size="xs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                  {item.side}
+                                </Text>
+                              )}
+                            </Group>
+                          )}
+                        </Flex>
+                      )
+                    }
+                    else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
+                    else if (c === 'size') val = Number(item.quantity).toFixed(4)
+                    else if (c === 'entry') val = item.entryPrice
+                    else if (c === 'exit') val = item.exitPrice
+                    else if (c === 'price') val = item.price
+                    else if (c === 'liq. price') val = <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
+                    else if (c === 'pnl') {
+                      const itemStats = futuresStats.find(s => s.symbol === item.symbol)
+                      const lastPrice = Number(itemStats?.lastPrice || 0)
+                      const entryPrice = Number(item.entryPrice || 0)
+                      const qty = Number(item.quantity || 0)
+                      const margin = Number(item.margin || 0)
+
+                      let pnlValue = 0
+                      if (lastPrice > 0) {
+                        pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
+                      }
+
+                      const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
+                      val = (
+                        <Flex direction="column" lh={1.2}>
+                          <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}> {/* what the fuck is this? */}
+                            {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
+                          </Text>
+                          <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}> {/* what the fuck is this? */}
+                            ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                          </Text>
+                        </Flex>
+                      )
+                    }
+                    else if (c === 'realized pnl') {
+                      const realizedPnl = Number(item.realizedPnL || 0)
+                      const margin = Number(item.margin || item.marginToRelease || 0)
+                      const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
+
+                      val = (
+                        <Flex direction="column" lh={1.2}>
                           <Group gap={4}>
-                            {item.leverage && <Text size="xs" c="dimmed" fw={500}>{item.leverage}x</Text>}
-                            {item.side && (
-                              <Text size="xs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                                {item.side}
-                              </Text>
+                            <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                              {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
+                            </Text>
+                            {item.note === 'Liquidated' && (
+                              <Badge color="#fe445c" size="xs" variant="filled">LIQ</Badge>
                             )}
                           </Group>
-                        )}
-                      </Flex>
-                    )
-                  }
-                  else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
-                  else if (c === 'size') val = Number(item.quantity).toFixed(4)
-                  else if (c === 'entry') val = item.entryPrice
-                  else if (c === 'exit') val = item.exitPrice
-                  else if (c === 'price') val = item.price
-                  else if (c === 'liq. price') val = <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
-                  else if (c === 'pnl') {
-                    const itemStats = futuresStats.find(s => s.symbol === item.symbol)
-                    const lastPrice = Number(itemStats?.lastPrice || 0)
-                    const entryPrice = Number(item.entryPrice || 0)
-                    const qty = Number(item.quantity || 0)
-                    const margin = Number(item.margin || 0)
-
-                    let pnlValue = 0
-                    if (lastPrice > 0) {
-                      pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
-                    }
-
-                    const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
-                    val = (
-                      <Flex direction="column" lh={1.2}>
-                        <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}> {/* what the fuck is this? */}
-                          {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
-                        </Text>
-                        <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}> {/* what the fuck is this? */}
-                          ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                        </Text>
-                      </Flex>
-                    )
-                  }
-                  else if (c === 'realized pnl') {
-                    const realizedPnl = Number(item.realizedPnL || 0)
-                    const margin = Number(item.margin || item.marginToRelease || 0)
-                    const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
-
-                    val = (
-                      <Flex direction="column" lh={1.2}>
-                        <Group gap={4}>
-                          <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
-                            {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
+                          <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
+                            ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                           </Text>
-                          {item.note === 'Liquidated' && (
-                            <Badge color="#fe445c" size="xs" variant="filled">LIQ</Badge>
-                          )}
-                        </Group>
-                        <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
-                          ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                        </Text>
-                      </Flex>
-                    )
-                  }
-                  else if (c === 'leverage') val = `${item.leverage}x`
-                  else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
-                  else if (c === 'tp/sl') {
-                    val = (
-                      <Flex direction="column" gap={2} lh={1}>
-                        <Text size="xxs" color="#0BBA74" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
-                          setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
-                          setTpslPrices({
-                            tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
-                            sl: item.slPrice > 0 ? String(item.slPrice) : '',
-                            tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
-                            slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
-                          })
-                          setTpslPercents({
-                            tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
-                            sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
-                          })
-                        }}>
-                          TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
-                        </Text>
-                        <Text size="xxs" color="#fe445c" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
-                          setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
-                          setTpslPrices({
-                            tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
-                            sl: item.slPrice > 0 ? String(item.slPrice) : '',
-                            tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
-                            slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
-                          })
-                          setTpslPercents({
-                            tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
-                            sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
-                          })
-                        }}>
-                          SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
-                        </Text>
-                      </Flex>
-                    )
-                  }
-                  else if (c === 'status') val = item.status
-                  else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
-                  else if (c === 'action') {
-                    const isPosTable = columns.some(col => {
-                      const k = typeof col === 'string' ? col : col.key
-                      return k.toLowerCase() === 'pnl'
-                    })
-                    if (isPosTable) {
-                      val = <Button size="compact-xs" color="#fe445c" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
-                    } else {
-                      val = item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
+                        </Flex>
+                      )
                     }
-                  }
+                    else if (c === 'leverage') val = `${item.leverage}x`
+                    else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
+                    else if (c === 'tp/sl') {
+                      val = (
+                        <Flex direction="column" gap={2} lh={1}>
+                          <Text size="xxs" color="#0BBA74" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
+                            setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
+                            setTpslPrices({
+                              tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
+                              sl: item.slPrice > 0 ? String(item.slPrice) : '',
+                              tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
+                              slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
+                            })
+                            setTpslPercents({
+                              tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
+                              sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
+                            })
+                          }}>
+                            TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
+                          </Text>
+                          <Text size="xxs" color="#fe445c" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
+                            setTpslData({ symbol: item.symbol, totalQty: Number(item.quantity), tp: item.tpPrice, tpQty: item.tpQuantity, sl: item.slPrice, slQty: item.slQuantity })
+                            setTpslPrices({
+                              tp: item.tpPrice > 0 ? String(item.tpPrice) : '',
+                              sl: item.slPrice > 0 ? String(item.slPrice) : '',
+                              tpQty: item.tpQuantity > 0 ? String(item.tpQuantity) : '',
+                              slQty: item.slQuantity > 0 ? String(item.slQuantity) : ''
+                            })
+                            setTpslPercents({
+                              tp: item.tpQuantity > 0 ? Math.round((item.tpQuantity / item.quantity) * 100) : 0,
+                              sl: item.slQuantity > 0 ? Math.round((item.slQuantity / item.quantity) * 100) : 0
+                            })
+                          }}>
+                            SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
+                          </Text>
+                        </Flex>
+                      )
+                    }
+                    else if (c === 'status') val = item.status
+                    else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
+                    else if (c === 'action') {
+                      const isPosTable = columns.some(col => {
+                        const k = typeof col === 'string' ? col : col.key
+                        return k.toLowerCase() === 'pnl'
+                      })
+                      if (isPosTable) {
+                        val = <Button size="compact-xs" color="#fe445c" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
+                      } else {
+                        val = item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
+                      }
+                    }
 
-                  return (
-                    <Table.Td key={typeof column === 'string' ? column : column.label}>
-                      {val}
-                    </Table.Td>
-                  )
-                })}
-              </Table.Tr>
-            ))
-          )}
-        </Table.Tbody>
-      </Table>
+                    return (
+                      <Table.Td key={typeof column === 'string' ? column : column.label}>
+                        {val}
+                      </Table.Td>
+                    )
+                  })}
+                </Table.Tr>
+              ))
+            )}
+          </Table.Tbody>
+        </Table>
+      </Box>
     </Box>
   )
 
@@ -419,7 +421,7 @@ export default function Futures() {
 
               <Flex direction="column">
                 <Text size="xs" c="dimmed" fw={600}>24h Change</Text>
-                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? '#0BBA74' : '#fe445c'}>
+                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'var(--green)' : 'var(--red)'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
               </Flex>
@@ -468,7 +470,7 @@ export default function Futures() {
               <Text size="sm" fw={600}>Order Book</Text>
             </Box>
             <Box h={360} style={{ overflowY: 'auto' }}>
-              <OrderBook symbol={`${token}_${quote}`} market="futures" depth={50} />
+              <OrderBook symbol={`${token}_${quote}`} market="futures" depth={10} />
             </Box>
           </Card>
         </Grid.Col>

@@ -76,7 +76,7 @@ export default function Deposit() {
                   {currentAddress}
                 </Text>
                 <Text size="xs" c="dimmed">{chain}</Text>
-                <Box p="md" mt="sm" style={{ background: 'white', borderRadius: 'var(--mantine-radius-md)' }}>
+                <Box p="md" mt="sm" style={{ background: 'var(--qr-bg)', borderRadius: 'var(--mantine-radius-md)' }}>
                   <QRCode value={currentAddress} size={160} />
                 </Box>
               </Stack>
