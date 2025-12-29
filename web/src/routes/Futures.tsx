@@ -29,6 +29,7 @@ export default function Futures() {
     listen()
     return () => unlisten()
   }, [])
+
   const [qty, setQty] = useState('')
   const [leverage, setLeverage] = useState('10')
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
@@ -38,22 +39,18 @@ export default function Futures() {
   const [tradeMode, setTradeMode] = useState<'open' | 'close'>('open')
   const [percent, setPercent] = useState(0)
   const [openedLeverage, setOpenedLeverage] = useState(false)
-  const [tempLeverage, setTempLeverage] = useState(leverage)
-
-  const [tpslData, setTpslData] = useState<{ symbol: string; totalQty: number; tp?: number; tpQty?: number; sl?: number; slQty?: number } | null>(null)
-  const [tpslPrices, setTpslPrices] = useState({ tp: '', sl: '', tpQty: '', slQty: '' })
-  const [tpslPercents, setTpslPercents] = useState({ tp: 0, sl: 0 })
-
-  const [partialCloseData, setPartialCloseData] = useState<{ symbol: string; totalQty: number } | null>(null)
+  const [tempLeverage, setTempLeverage] = useState('10')
+  const [partialCloseData, setPartialCloseData] = useState<any | null>(null)
   const [partialCloseQty, setPartialCloseQty] = useState('')
   const [partialClosePercent, setPartialClosePercent] = useState(0)
-
-  useEffect(() => setToken(initialBase), [initialBase])
+  const [tpslData, setTpslData] = useState<any | null>(null)
+  const [tpslPrices, setTpslPrices] = useState({ tp: '', sl: '', tpQty: '', slQty: '' })
+  const [tpslPercents, setTpslPercents] = useState({ tp: 0, sl: 0 })
 
   const tokenOptions = useMemo(() => {
     const list = futuresStats
       .filter(r => typeof r.symbol === 'string' && r.symbol.endsWith(quote))
-      .map(r => r.symbol.replace(`_${quote}`, ''))
+      .map(r => r.symbol.replace('_', '').replace(quote, ''))
     return Array.from(new Set(list))
   }, [futuresStats, quote])
 
@@ -384,7 +381,7 @@ export default function Futures() {
   return (
     <Box>
       <Flex align="center" gap="lg" py={4}>
-        <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
+        <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={0} closeDelay={50} transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}>
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
               <Flex direction="column" align="flex-start" lh={1.2}>

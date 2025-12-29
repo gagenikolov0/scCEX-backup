@@ -290,7 +290,9 @@ export default function PriceChart(props: Props) {
           seriesRef.current.setData(candles)
           lastBarRef.current = candles[candles.length - 1] ?? null
           if (candles.length > 0 && chartRef.current) {
-            chartRef.current.timeScale().fitContent()
+            requestAnimationFrame(() => {
+              if (chartRef.current) chartRef.current.timeScale().fitContent()
+            })
           }
         }
       } catch { }

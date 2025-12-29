@@ -1,4 +1,3 @@
-
 import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group, Table } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
@@ -32,7 +31,7 @@ export default function Spot() {
   const [percent, setPercent] = useState(0)
 
   const { spotStats, listen, unlisten } = useMarket()
-  const { positions, orders, spotAvailable, refreshOrders, refreshBalances } = useAccount()
+  const { orders, spotAvailable, refreshOrders, refreshBalances, positions } = useAccount()
 
   useEffect(() => {
     listen()
@@ -42,7 +41,7 @@ export default function Spot() {
   useEffect(() => setToken(initialBase), [initialBase])
 
   const tokenOptions = useMemo(() => {
-    const list = spotStats.filter(t => t.symbol.endsWith(quote)).map(t => t.symbol.replace(quote, ''))
+    const list = spotStats.filter(t => t.symbol.endsWith(quote)).map(t => t.symbol.replace('_', '').replace(quote, ''))
     return Array.from(new Set(list))
   }, [spotStats, quote])
 
@@ -55,9 +54,6 @@ export default function Spot() {
     symbol: `${token}${quote}`,
     market: 'spot'
   })
-
-  const available = (spotAvailable as any)?.[quote] ?? '0'
-  const baseAvail = positions.find((r: any) => (r?.asset || '').toUpperCase() === token.toUpperCase())?.available ?? '0'
 
   // For Spot Header (selected pair)
   useEffect(() => {
@@ -80,7 +76,6 @@ export default function Spot() {
     return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
   }, [token, quote])
 
-  // Necessary HTTP Post server 
   const fetchHistory = async () => {
     if (!isAuthed) return
     try {
@@ -91,11 +86,9 @@ export default function Spot() {
     } catch { }
   }
 
-
   useEffect(() => {
     if (isAuthed) fetchHistory()
   }, [isAuthed])
-
 
   const placeOrder = async (side: 'buy' | 'sell') => {
     if (!qty || Number(qty) <= 0 || !localStorage.getItem('accessToken')) return
@@ -235,11 +228,13 @@ export default function Spot() {
   )
 
   const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders])
+  const available = (spotAvailable as any)?.[quote] ?? '0'
+  const baseAvail = positions.find((r: any) => (r?.asset || '').toUpperCase() === token.toUpperCase())?.available ?? '0'
 
   return (
     <Box>
       <Flex align="center" gap="lg" py={4}>
-        <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={100} closeDelay={200} transitionProps={{ transition: 'pop-top-left', duration: 200, timingFunction: 'ease' }}>
+        <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={0} closeDelay={50} transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}>
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
               <Flex direction="column" align="flex-start" lh={1.2}>
