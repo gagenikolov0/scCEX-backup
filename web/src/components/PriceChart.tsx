@@ -451,7 +451,7 @@ export default function PriceChart(props: Props) {
             key={iv}
             size="compact-xs"
             variant={interval === iv ? 'filled' : 'subtle'}
-            color={interval === iv ? 'dark' : 'gray'}
+            color={interval === iv ? 'dark.6' : 'gray'}
             onClick={() => props.onIntervalChange && props.onIntervalChange(iv)}
             style={{
               fontSize: 'var(--mantine-font-size-xxs)',

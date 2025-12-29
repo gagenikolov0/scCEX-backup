@@ -8,8 +8,6 @@ import { Notifications } from '@mantine/notifications'
 
 const theme = createTheme({
   primaryColor: 'gray',
-  black: '#020202',
-  white: '#ffffff',
   fontSizes: {
     xxs: 'var(--fz-xxs)',
     xs: 'var(--fz-xs)',
@@ -24,35 +22,6 @@ const theme = createTheme({
     md: '13px',
     lg: '24px',
     xl: '48px',
-  },
-
-  colors: {
-    // Custom colors to match the exchange UI
-
-    dark: [
-      '#ffffff', // --fg-1
-      '#a6a7ab',
-      '#5c5f66',
-      '#373a40', // --border-1
-      '#25262b',
-      '#1a1b1e', // --bg-4
-      '#141517',
-      '#0a0a0a', // --bg-2
-      '#050505',
-      '#000000',
-    ],
-    light: [
-      '#020202',
-      '#a6a7ab',
-      '#5c5f66',
-      '#373a40', // --border-1
-      '#25262b',
-      '#1a1b1e', // --bg-4
-      '#141517',
-      '#0a0a0a', // --bg-2
-      '#050505',
-      '#000000',
-    ]
   },
   components: {
     Table: {

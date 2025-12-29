@@ -5,32 +5,59 @@
   --fz-md: 16px;
   --fz-lg: 18px;
   --fz-xl: 20px;
-  --green: #12b886;
+  --green: #0BBA74;
   --red: #ff4761;
   --liq: #e8590c;
+  --qr-bg: #ffffff;
+
+  /* Mantine Global Colors */
+  --mantine-color-black: #020202;
+  --mantine-color-white: #ffffff;
 
   /* Alias Mapping */
   --background: var(--bg-1);
   --foreground: var(--fg-1);
   --border: var(--border-1);
-  --chart-text: var(--fg-2);
+  --chart-text: var(--mantine-color-dark-1);
   --chart-line: var(--border-1);
-
-
-  --bg-2: #f8f9fa;
-  --bg-4: #e9ecef;
-  --border-1: #e9ecef;
-  --qr-bg: #f8f9fa;
 }
 
 .dark,
 [data-mantine-color-scheme="dark"] {
+  --mantine-color-dark-0: #ffffff;
+  /* --fg-1 */
 
-  --fg-1: #ffffff;
-  --bg-2: #0a0a0a;
-  --border-1: #373a40;
-  --bg-4: #1a1b1e;
-  --qr-bg: #ffffff;
+  --mantine-color-dark-1: #a6a7ab;
+  /* --chart-text */
+
+  --mantine-color-dark-2: #5c5f66;
+  /* c="dimmed" */
+
+  --mantine-color-dark-3: #373a40;
+  /* --border-1 */
+
+  --mantine-color-dark-4: #25262b;
+  /* --bg-5 */
+
+  --mantine-color-dark-5: #1a1b1e;
+  /* --bg-4 */
+
+  --mantine-color-dark-6: #141517;
+  /* --bg-2 */
+
+  --mantine-color-dark-7: #0a0a0a;
+  /* body background */
+
+  --mantine-color-dark-9: #000000;
+  /* --bg-1 */
+
+  /* classes used by elements */
+  --fg-1: var(--mantine-color-dark-0);
+  --border-1: var(--mantine-color-dark-3);
+  --bg-5: var(--mantine-color-dark-4);
+  --bg-4: var(--mantine-color-dark-5);
+  --bg-2: var(--mantine-color-dark-6);
+  --bg-1: var(--mantine-color-dark-9);
 }
 
 * {

@@ -40,25 +40,13 @@ When opening market position on a pair that we already have position it works we
 USER INTERFACE
 ═════════════════════════════
 
-❓ Cant see full chart history - limited to 200 candles
-i want 2000 candles for all intervals
 Also sometimes when chart loads it only shows the last single candle before i have to zoom out, or pull to the right to see the rest available candles, while sometimes the chart loads nicely, visible many candles not just a single candle.
+❓That is fixed but now the chart kinda flickers it shows me one single candle except this time it doesn't allow me to zoom out to see other candles becase there are not other candles, after i refresh the chart is normal
 
 
 ❓ why so many "_" ???? i dont understand. I've seen some BTC_USDT on UI which should obviously be BTCUSDT but 
 i there are way many _ in the codebase that what i've seen in the UI
 
 
-❓ where in code do we set the weight and height of chart, orderbook, trade panel in futures and spot?
-
-
-❓Mantine not symmetrical between dark and light mode
-
-
-❓In orderbook please just show 10 best bids and 10 asks max, the point is to save a lot of energy by doing this, not to remove visibility of other bids and asks 
-
-
-❓i want futures trading panel and spot tradng panel to have fixed height and so if there are more positions than the height of the panel allows, i want to see a vertical scrollbar
-
-
-❓There's a small UI problem with Asset selector, after i hover over it and then mouse leaves the dropdown, and accidentally within that second hover on the Disappeared dropdown, it opens again.
+❓There's a small UI problem with Asset selector. After i hover over it and the drop down opens and my mouse leaves the dropdown, within that second if i hover back on the Disappeared dropdown, it opens again.
+If i hover back on the asset selector then yeah it should open again but not when i hover on the space where the dropdown used to be one second before it closes
