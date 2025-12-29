@@ -86,11 +86,12 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
       {status === 'connecting' && <Text c="dimmed" size="sm" mb="xs">Connecting...</Text>}
 
       <SimpleGrid cols={3} spacing={4} mb={8} style={{ position: 'sticky', top: 0, backgroundColor: 'transparent', zIndex: 1 }}>
-        <Text size="xs" c="dimmed" fw={500}>Price</Text>
-        <Text size="xs" c="dimmed" fw={500}>Size</Text>
-        <Text size="xs" c="dimmed" fw={500}>Total</Text>
+        <Text size="sm" c="dimmed" fw={500}>Price</Text>
+        <Text size="sm" c="dimmed" fw={500}>Size</Text>
+        <Text size="sm" c="dimmed" fw={500}>Total</Text>
       </SimpleGrid>
 
+      {/* asks */}
       <SimpleGrid cols={3} spacing={4}>
         {revAsks.map((r, i) => (
           <Box key={`a-${i}`} style={{ display: 'contents' }}>
@@ -101,10 +102,11 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
         ))}
       </SimpleGrid>
 
-      <Box py={3} my={4} style={{ borderTop: '1px solid var(--mantine-color-default-border)', borderBottom: '1px solid var(--mantine-color-default-border)', textAlign: 'center' }}>
+      <Box py={3} my={4}>
         <BigPrice symbol={symbol} market={market} />
       </Box>
 
+      {/* bids */}
       <SimpleGrid cols={3} spacing={4}>
         {bids.map((r, i) => (
           <Box key={`b-${i}`} style={{ display: 'contents' }}>

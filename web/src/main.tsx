@@ -40,7 +40,7 @@ const theme = createTheme({
       '#0a0a0a', // 7: bg-2
       '#050505', // 8: near black
       '#000000', // 9: darkest (bg-1)
-    ],
+    ]
   },
   components: {
     Table: {

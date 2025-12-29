@@ -7,34 +7,34 @@
   --fz-xl: 20px;
 
   /* Global Colors (Source of Truth) */
-  --green: #0BBA74;
+  --green: #12b886;
   --red: #ff4761;
   --liq: #e8590c;
 
-  /* Perfect Theme Symmetry (Light Mode) */
-  /* Level 1 (Extreme) <---> Level 5 (Soft) */
-  --bg-1: #ffffff;
-  /* lightest  | #ffffff -> #000000 */
-  --bg-2: #f8f9fa;
-  /* lighter   | #f8f9fa -> #0a0a0a */
-  --bg-3: #f1f3f5;
-  /* light     | #f1f3f5 -> #141517 */
-  --bg-4: #e9ecef;
-  /* less light| #e9ecef -> #1a1b1e */
-  --bg-5: #dee2e6;
-  /* least light| #dee2e6 -> #25262b */
 
   --fg-1: #1a1b1e;
-  /* darkest   | #1a1b1e -> #ffffff */
+  /* #1a1b1e -> #ffffff */
   --fg-2: #5c5f66;
-  /* darker    | #5c5f66 -> #a6a7ab */
+  /* #5c5f66 -> #a6a7ab */
   --fg-3: #adb5bd;
-  /* dark      | #adb5bd -> #5c5f66 */
+  /* #adb5bd -> #5c5f66 */
+  --bg-5: #dee2e6;
+  /* #dee2e6 -> #25262b */
+  --bg-4: #e9ecef;
+  /* #e9ecef -> #1a1b1e */
+  --bg-3: #f1f3f5;
+  /* #f1f3f5 -> #141517 */
+  --bg-2: #f8f9fa;
+  /* #f8f9fa -> #0a0a0a */
+  --bg-1: #ffffff;
+  /* #ffffff -> #000000 */
+
 
   --border-1: #e9ecef;
   /* #e9ecef -> #373a40 */
   --border-2: #dee2e6;
   /* #dee2e6 -> #2c2e33 */
+
 
   /* Alias Mapping */
   --background: var(--bg-1);
@@ -47,24 +47,24 @@
 
 .dark,
 [data-mantine-color-scheme="dark"] {
-  /* Perfect Theme Symmetry (Dark Mode) */
-  --bg-1: #000000;
-  /* darkest    | #000000 -> #ffffff */
-  --bg-2: #0a0a0a;
-  /* darker     | #0a0a0a -> #f8f9fa */
-  --bg-3: #141517;
-  /* dark       | #141517 -> #f1f3f5 */
-  --bg-4: #1a1b1e;
-  /* less dark  | #1a1b1e -> #e9ecef */
-  --bg-5: #25262b;
-  /* least dark | #25262b -> #dee2e6 */
-
   --fg-1: #ffffff;
-  /* lightest   | #ffffff -> #1a1b1e */
+  /* #ffffff -> #1a1b1e */
   --fg-2: #a6a7ab;
-  /* lighter    | #a6a7ab -> #5c5f66 */
+  /* #a6a7ab -> #5c5f66 */
   --fg-3: #5c5f66;
-  /* light      | #5c5f66 -> #adb5bd */
+  /* #5c5f66 -> #adb5bd */
+  --bg-5: #25262b;
+  /* #25262b -> #dee2e6 */
+  --bg-4: #1a1b1e;
+  /* #1a1b1e -> #e9ecef */
+  --bg-3: #141517;
+  /* #141517 -> #f1f3f5 */
+  --bg-2: #0a0a0a;
+  /* #0a0a0a -> #f8f9fa */
+  --bg-1: #000000;
+  /* #000000 -> #ffffff */
+
+
 
   --border-1: #373a40;
   --border-2: #2c2e33;
@@ -105,4 +105,29 @@ a:active,
 .mantine-ActionIcon-root:active {
   transform: none !important;
   transition: none !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-4);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-5);
+}
+
+/* Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-4) transparent;
 }

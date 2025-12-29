@@ -97,6 +97,7 @@ export default function Header() {
         <Group visibleFrom="sm">
           {isAuthed ? (
             <>
+              <Button component={Link} to="/deposit" color="blue" radius="xl" size="xs" px="md">Deposit</Button>
               <NavLink to="/wallet" className={({ isActive }) => `${classes.trigger} ${classes.pill} ${isActive ? classes.pillActive : ''}`}>Wallet</NavLink>
               <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
                 <IconUser size={18} />

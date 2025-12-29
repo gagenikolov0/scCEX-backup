@@ -88,11 +88,7 @@ export default function Futures() {
     return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
   }, [token, quote])
 
-
-
   const available = (futuresAvailable as any)?.[quote] ?? '0'
-
-
 
   const [history, setHistory] = useState<any[]>([])
 
@@ -108,7 +104,6 @@ export default function Futures() {
   }
 
   useEffect(() => {
-
     fetchHistory()
   }, [isAuthed])
 
@@ -221,9 +216,9 @@ export default function Futures() {
 
   const renderTable = (data: any[], columns: (string | { label: string, key: string })[], emptyMessage: string) => (
     <Box style={{ height: '430px', overflowY: 'auto' }}>
-      <Box style={{ overflowX: 'auto', flex: 1 }} px="md">
-        <Table verticalSpacing="xs" highlightOnHover fs="sm" withRowBorders>
-          <Table.Thead bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+      <Box style={{ overflowX: 'auto', flex: 1 }} px="xs">
+        <Table verticalSpacing="xs" horizontalSpacing={4} highlightOnHover fs="sm" withRowBorders={false}>
+          <Table.Thead bg="var(--bg-2)" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <Table.Tr>
               {columns.map(col => {
                 const label = typeof col === 'string' ? col : col.label
@@ -235,7 +230,7 @@ export default function Futures() {
               })}
             </Table.Tr>
           </Table.Thead>
-          <Table.Tbody style={{ verticalAlign: 'top' }}>
+          <Table.Tbody style={{ verticalAlign: 'middle' }}>
             {data.length === 0 ? (
               <Table.Tr>
                 <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length}>
@@ -253,13 +248,13 @@ export default function Futures() {
                     if (c === 'symbol') {
                       const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
                       val = (
-                        <Flex direction="column" lh={1.2}>
-                          <Text fw={700} size="sm">{cleanSymbol}</Text>
+                        <Flex direction="column" lh={1.2} gap={0}>
+                          <Text size="sm" fw={700}>{cleanSymbol}</Text>
                           {(item.leverage || item.side) && (
-                            <Group gap={4}>
-                              {item.leverage && <Text size="xs" c="dimmed" fw={500}>{item.leverage}x</Text>}
+                            <Group gap={2}>
+                              {item.leverage && <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>}
                               {item.side && (
-                                <Text size="xs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
                                   {item.side}
                                 </Text>
                               )}
@@ -289,10 +284,10 @@ export default function Futures() {
                       const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
                       val = (
                         <Flex direction="column" lh={1.2}>
-                          <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}> {/* what the fuck is this? */}
+                          <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
                             {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
                           </Text>
-                          <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}> {/* what the fuck is this? */}
+                          <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}>
                             ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                           </Text>
                         </Flex>
@@ -453,12 +448,12 @@ export default function Futures() {
           <Flex direction="column" gap="md">
             <Grid gutter="md" columns={10}>
               <Grid.Col span={{ base: 10, lg: 8 }}>
-                <Card padding={0} radius="md" withBorder>
+                <Card padding={0} radius="md" withBorder shadow="xs">
                   <PriceChart
                     key={`${token}_${quote}-${interval}-futures`}
                     symbol={`${token}_${quote}`}
                     interval={interval}
-                    height={550}
+                    height={630}
                     market="futures"
                     orders={recentOrders.filter((o: any) => o.symbol === `${token}_${quote}` && o.status === 'pending')}
                     positions={futuresPositions.filter((p: any) => p.symbol === `${token}_${quote}`)}
@@ -471,19 +466,19 @@ export default function Futures() {
 
               {/* OrderBook */}
               <Grid.Col span={{ base: 10, lg: 2 }}>
-                <Card padding={0} radius="md" withBorder shadow="sm" h={550}>
-                  <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-                    <Text size="sm" fw={600}>Order Book</Text>
+                <Card padding={0} radius="md" withBorder shadow="xs" h={630}>
+                  <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
+                    <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Order Book</Text>
                   </Box>
-                  <Box h={510} style={{ overflowY: 'auto' }}> {/* Adjusted to fit 550px card height minus header */}
-                    <OrderBook symbol={`${token}_${quote}`} market="futures" depth={10} />
+                  <Box h={600} style={{ overflowY: 'auto' }}>
+                    <OrderBook symbol={`${token}_${quote}`} market="futures" depth={12} />
                   </Box>
                 </Card>
               </Grid.Col>
             </Grid>
 
             {/* Tables aligned to complete the sidebar pillar height */}
-            <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }}>
+            <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }} shadow="xs">
               <Tabs defaultValue="positions" variant="outline">
                 <Tabs.List pt={4} px={12}>
                   <Tabs.Tab value="positions">Positions</Tabs.Tab>
@@ -519,9 +514,9 @@ export default function Futures() {
 
         {/* Right Side: Sidebar Trade Panel */}
         <Grid.Col span={{ base: 12, lg: 2 }}>
-          <Card padding={0} withBorder radius="md" h={1091} style={{ overflowY: 'auto' }}>
-            <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-              <Text size="sm" fw={500}>Trade</Text>
+          <Card padding={0} withBorder radius="md" h={1171} style={{ overflowY: 'auto' }} shadow="xs">
+            <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
+              <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Futures Trade</Text>
             </Box>
             <Flex direction="column" gap="md" p="md">
               <SegmentedControl
@@ -533,53 +528,7 @@ export default function Futures() {
                 ]}
                 size="xs"
                 color="blue"
-              />
-
-              {tradeMode === 'open' ? (
-                <Text size="xs" c="dimmed">Available: {Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} {quote}</Text>
-              ) : (
-                <Text size="xs" c="dimmed">
-                  Position Available: {
-                    (() => {
-                      const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
-                      return pos ? `${Number(pos.quantity).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token}` : `0 ${token}`
-                    })()
-                  }
-                </Text>
-              )}
-
-              <Group gap={4} p={4} style={{ background: 'var(--bg-3)', borderRadius: 'var(--mantine-radius-md)' }}>
-                <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} flex={1}>Market</Button>
-                <Button size="xs" variant={orderType === 'limit' ? 'filled' : 'subtle'} onClick={() => setOrderType('limit')} flex={1}>Limit</Button>
-              </Group>
-
-              {orderType === 'limit' && (
-                <TextInput label="Limit Price" placeholder="0.00" value={limitPrice} onChange={(e) => setLimitPrice(e.currentTarget.value)} size="xs" />
-              )}
-
-              <TextInput
-                label={tradeMode === 'open' ? "Quantity (USDT)" : `Quantity (${token})`}
-                placeholder="0.00"
-                value={qty}
-                onChange={(e) => setQty(e.currentTarget.value)}
-                size="xs"
-              />
-
-              <TradeSlider
-                value={percent}
-                onChange={(val) => {
-                  setPercent(val)
-                  if (tradeMode === 'close') {
-                    const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
-                    if (pos) {
-                      if (val === 100) {
-                        setQty(pos.quantity.toString())
-                      } else {
-                        setQty(((pos.quantity * val) / 100).toFixed(8).replace(/\.?0+$/, ''))
-                      }
-                    }
-                  }
-                }}
+                bg="var(--bg-2)"
               />
 
               {tradeMode === 'open' && (
@@ -616,7 +565,7 @@ export default function Futures() {
                         suffix="x"
                       />
 
-                      <Group gap={4} grow>
+                      <Group gap="xs">
                         {['10', '20', '50', '100', '500'].map(lv => (
                           <Button
                             key={lv}
@@ -661,6 +610,53 @@ export default function Futures() {
                 </>
               )}
 
+              <Group gap={4} p={4} style={{ background: 'var(--bg-2)', borderRadius: 'var(--mantine-radius-md)' }}>
+                <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} flex={1}>Market</Button>
+                <Button size="xs" variant={orderType === 'limit' ? 'filled' : 'subtle'} onClick={() => setOrderType('limit')} flex={1}>Limit</Button>
+              </Group>
+
+              {orderType === 'limit' && (
+                <TextInput label="Limit Price" placeholder="0.00" value={limitPrice} onChange={(e) => setLimitPrice(e.currentTarget.value)} size="xs" />
+              )}
+
+              {tradeMode === 'open' ? (
+                <Text size="xs" c="dimmed">Available: {Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} {quote}</Text>
+              ) : (
+                <Text size="xs" c="dimmed">
+                  Position Available: {
+                    (() => {
+                      const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
+                      return pos ? `${Number(pos.quantity).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token}` : `0 ${token}`
+                    })()
+                  }
+                </Text>
+              )}
+
+              <TextInput
+                label={tradeMode === 'open' ? "Quantity (USDT)" : `Quantity (${token})`}
+                placeholder="0.00"
+                value={qty}
+                onChange={(e) => setQty(e.currentTarget.value)}
+                size="xs"
+              />
+
+              <TradeSlider
+                value={percent}
+                onChange={(val) => {
+                  setPercent(val)
+                  if (tradeMode === 'close') {
+                    const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
+                    if (pos) {
+                      if (val === 100) {
+                        setQty(pos.quantity.toString())
+                      } else {
+                        setQty(((pos.quantity * val) / 100).toFixed(8).replace(/\.?0+$/, ''))
+                      }
+                    }
+                  }
+                }}
+              />
+
               <Flex gap="md">
                 {tradeMode === 'open' ? (
                   <>
@@ -681,6 +677,14 @@ export default function Futures() {
               </Flex>
 
               <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
+              <Button
+                variant="filled"
+                color="blue"
+                radius="md"
+                onClick={() => window.location.href = '/deposit'}
+              >
+                Deposit
+              </Button>
               {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
             </Flex>
           </Card>

@@ -148,15 +148,15 @@ export default function Spot() {
 
   const renderTable = (data: any[], columns: string[], emptyMessage: string, showCancel = false) => (
     <Box style={{ height: '430px', overflowY: 'auto' }}>
-      <Box style={{ overflowX: 'auto', flex: 1 }} px="md">
-        <Table verticalSpacing="xs" highlightOnHover fs="sm" withRowBorders>
-          <Table.Thead bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+      <Box style={{ overflowX: 'auto', flex: 1 }} px="xs">
+        <Table verticalSpacing="xs" horizontalSpacing={4} highlightOnHover fs="sm" withRowBorders={false}>
+          <Table.Thead bg="var(--bg-2)" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <Table.Tr>
               {columns.map(col => <Table.Th key={col} c="dimmed" fw={600} py={10}>{col}</Table.Th>)}
               {showCancel && <Table.Th c="dimmed" fw={600} py={10}>Action</Table.Th>}
             </Table.Tr>
           </Table.Thead>
-          <Table.Tbody style={{ verticalAlign: 'top' }}>
+          <Table.Tbody style={{ verticalAlign: 'middle' }}>
             {data.length === 0 ? (
               <Table.Tr>
                 <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Table.Td>
@@ -176,8 +176,8 @@ export default function Spot() {
                     if (c === 'symbol') {
                       const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
                       val = (
-                        <Flex direction="column" lh={1.2}>
-                          <Text size="xs" fw={700}>{cleanSymbol}</Text>
+                        <Flex direction="column" lh={1.2} gap={0}>
+                          <Text size="sm" fw={700}>{cleanSymbol}</Text>
                           {item.side && (
                             <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
                               {item.side}
@@ -270,24 +270,24 @@ export default function Spot() {
               </Box>
 
               <Flex direction="column">
-                <Text size="xs" c="dimmed" fw={500}>24h change</Text>
+                <Text size="xs" c="dimmed" fw={600}>24h Change</Text>
                 <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'var(--green)' : 'var(--red)'}>
                   {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
                 </Text>
               </Flex>
 
               <Flex direction="column">
-                <Text size="xs" c="dimmed" fw={500}>24h high</Text>
+                <Text size="xs" c="dimmed" fw={500}>24h High</Text>
                 <Text size="xs" fw={600}>{stats?.high24h ?? '-'}</Text>
               </Flex>
 
               <Flex direction="column">
-                <Text size="xs" c="dimmed" fw={500}>24h low</Text>
+                <Text size="xs" c="dimmed" fw={500}>24h Low</Text>
                 <Text size="xs" fw={600}>{stats?.low24h ?? '-'}</Text>
               </Flex>
 
               <Flex direction="column">
-                <Text size="xs" c="dimmed" fw={500}>24h volume</Text>
+                <Text size="xs" c="dimmed" fw={500}>24h Volume</Text>
                 <Text size="xs" fw={600}>
                   {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
                 </Text>
@@ -303,14 +303,14 @@ export default function Spot() {
           <Flex direction="column" gap="md">
             <Grid gutter="md" columns={10}>
               <Grid.Col span={{ base: 10, lg: 8 }}>
-                <Card padding={0} radius="md" withBorder>
+                <Card padding={0} radius="md" withBorder shadow="xs">
                   <PriceChart
                     onIntervalChange={setInterval}
                     availableIntervals={availableIntervals}
                     key={`${token}${quote}-${interval}-spot`}
                     symbol={`${token}${quote}`}
                     interval={interval}
-                    height={550}
+                    height={630}
                     orders={orders.filter((o: any) => o.symbol === `${token}${quote}` && o.status === 'pending')}
                   />
                 </Card>
@@ -318,19 +318,19 @@ export default function Spot() {
 
               {/* OrderBook */}
               <Grid.Col span={{ base: 10, lg: 2 }}>
-                <Card padding={0} radius="md" withBorder shadow="sm" h={550}>
-                  <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-                    <Text size="sm" fw={600}>Order Book</Text>
+                <Card padding={0} radius="md" withBorder shadow="xs" h={630}>
+                  <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
+                    <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Order Book</Text>
                   </Box>
-                  <Box h={510} style={{ overflowY: 'auto' }}> {/* Adjusted to fit 550px card height minus header */}
-                    <OrderBook symbol={`${token}${quote}`} market="spot" depth={10} />
+                  <Box h={600} style={{ overflowY: 'auto' }}>
+                    <OrderBook symbol={`${token}${quote}`} market="spot" depth={12} />
                   </Box>
                 </Card>
               </Grid.Col>
             </Grid>
 
             {/* Tables aligned to complete the sidebar pillar height */}
-            <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }}>
+            <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }} shadow="xs">
               <Tabs defaultValue="history" variant="outline">
                 <Tabs.List pt={4} px={12}>
                   <Tabs.Tab value="history">Trade History</Tabs.Tab>
@@ -356,12 +356,12 @@ export default function Spot() {
 
         {/* Right Side: Sidebar Trade Panel */}
         <Grid.Col span={{ base: 12, lg: 2 }}>
-          <Card padding={0} withBorder radius="md" h={1091} style={{ overflowY: 'auto' }}>
-            <Box p="xs" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-              <Text size="sm" fw={500}>Spot</Text>
+          <Card padding={0} withBorder radius="md" h={1171} style={{ overflowY: 'auto' }} shadow="xs">
+            <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
+              <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Spot Trade</Text>
             </Box>
             <Flex direction="column" gap="md" p="md">
-              <Group gap={4} p={4} style={{ background: 'var(--bg-3)', borderRadius: 'var(--mantine-radius-md)' }}>
+              <Group gap={4} p={4} style={{ background: 'var(--bg-2)', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button
                   size="xs"
                   variant={tradeSide === 'buy' ? 'filled' : 'subtle'}
@@ -382,11 +382,7 @@ export default function Spot() {
                 </Button>
               </Group>
 
-              <Text size="xs" c="dimmed">
-                Available: {tradeSide === 'buy' ? `${Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${quote} ` : `${Number(baseAvail).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token} `}
-              </Text>
-
-              <Group gap={4} p={4} style={{ background: 'var(--mantine-color-dark-filled)', borderRadius: 'var(--mantine-radius-md)' }}>
+              <Group gap={4} p={4} style={{ background: 'var(--bg-2)', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button
                   size="xs"
                   variant={orderType === 'market' ? 'filled' : 'subtle'}
@@ -404,6 +400,10 @@ export default function Spot() {
                   Limit
                 </Button>
               </Group>
+
+              <Text size="xs" c="dimmed">
+                Available: {tradeSide === 'buy' ? `${Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${quote} ` : `${Number(baseAvail).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token} `}
+              </Text>
 
               {orderType === 'limit' && (
                 <TextInput
@@ -473,6 +473,14 @@ export default function Spot() {
                 )}
               </Flex>
               <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
+              <Button
+                variant="filled"
+                color="blue"
+                radius="md"
+                onClick={() => window.location.href = '/deposit'}
+              >
+                Deposit
+              </Button>
               {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
             </Flex>
           </Card>
