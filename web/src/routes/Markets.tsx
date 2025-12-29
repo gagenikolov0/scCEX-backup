@@ -17,7 +17,7 @@ const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' |
   const vol = item.volume24h ? parseFloat(item.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : ''
 
   const changeNum = parseFloat(String(change)) || 0
-  const changeColor = changeNum > 0 ? 'green' : changeNum < 0 ? 'red' : 'dimmed'
+  const changeColor = changeNum > 0 ? '--green' : changeNum < 0 ? '--red' : 'dimmed'
 
   return (
     <Anchor key={`${type}-${quote.toLowerCase()}-${item.symbol}`} component={Link} to={`/${type}?base=${base.replace('/', '_')}&quote=${quote}`} underline="never" c="inherit">

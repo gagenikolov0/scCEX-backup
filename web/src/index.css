@@ -5,36 +5,9 @@
   --fz-md: 16px;
   --fz-lg: 18px;
   --fz-xl: 20px;
-
-  /* Global Colors (Source of Truth) */
   --green: #12b886;
   --red: #ff4761;
   --liq: #e8590c;
-
-
-  --fg-1: #1a1b1e;
-  /* #1a1b1e -> #ffffff */
-  --fg-2: #5c5f66;
-  /* #5c5f66 -> #a6a7ab */
-  --fg-3: #adb5bd;
-  /* #adb5bd -> #5c5f66 */
-  --bg-5: #dee2e6;
-  /* #dee2e6 -> #25262b */
-  --bg-4: #e9ecef;
-  /* #e9ecef -> #1a1b1e */
-  --bg-3: #f1f3f5;
-  /* #f1f3f5 -> #141517 */
-  --bg-2: #f8f9fa;
-  /* #f8f9fa -> #0a0a0a */
-  --bg-1: #ffffff;
-  /* #ffffff -> #000000 */
-
-
-  --border-1: #e9ecef;
-  /* #e9ecef -> #373a40 */
-  --border-2: #dee2e6;
-  /* #dee2e6 -> #2c2e33 */
-
 
   /* Alias Mapping */
   --background: var(--bg-1);
@@ -42,33 +15,21 @@
   --border: var(--border-1);
   --chart-text: var(--fg-2);
   --chart-line: var(--border-1);
+
+
+  --bg-2: #f8f9fa;
+  --bg-4: #e9ecef;
+  --border-1: #e9ecef;
   --qr-bg: #f8f9fa;
 }
 
 .dark,
 [data-mantine-color-scheme="dark"] {
+
   --fg-1: #ffffff;
-  /* #ffffff -> #1a1b1e */
-  --fg-2: #a6a7ab;
-  /* #a6a7ab -> #5c5f66 */
-  --fg-3: #5c5f66;
-  /* #5c5f66 -> #adb5bd */
-  --bg-5: #25262b;
-  /* #25262b -> #dee2e6 */
-  --bg-4: #1a1b1e;
-  /* #1a1b1e -> #e9ecef */
-  --bg-3: #141517;
-  /* #141517 -> #f1f3f5 */
   --bg-2: #0a0a0a;
-  /* #0a0a0a -> #f8f9fa */
-  --bg-1: #000000;
-  /* #000000 -> #ffffff */
-
-
-
   --border-1: #373a40;
-  --border-2: #2c2e33;
-
+  --bg-4: #1a1b1e;
   --qr-bg: #ffffff;
 }
 

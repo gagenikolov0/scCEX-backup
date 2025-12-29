@@ -536,7 +536,7 @@ export default function PriceChart(props: Props) {
           {/* Dynamic: Close Position Button (on the entry line) */}
           <Button
             size="compact-xs"
-            color="red"
+            color="var(--red)"
             variant="filled"
             onClick={() => props.onClosePosition && props.onClosePosition(activePosition)}
             style={{
