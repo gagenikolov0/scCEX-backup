@@ -349,7 +349,7 @@ export default function PriceChart(props: Props) {
       if (isNaN(price)) return
       const line = seriesRef.current.createPriceLine({
         price,
-        color: o.side === 'buy' ? 'var(--green)' : 'var(--red)',
+        color: o.side === 'buy' ? '#0BBA74' : '#fe445c',
         lineWidth: 1,
         lineStyle: 2, // Dotted
         axisLabelVisible: true,

@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from './AuthContext'
 import { API_BASE } from '../config/api'
+import { useLocation } from 'react-router-dom'
 
 interface Position {
   asset: string
@@ -54,6 +55,12 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   const [futuresPositions, setFuturesPositions] = useState<any[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [totalPortfolioUSD, setTotalPortfolioUSD] = useState<number>(0)
+
+  const location = useLocation()
+  const shouldFetch = useMemo(() => {
+    const relevant = ['/spot', '/futures', '/wallet', '/deposit', '/settings']
+    return relevant.some(r => location.pathname.startsWith(r))
+  }, [location.pathname])
 
 
 
@@ -134,16 +141,17 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
 
   // Load balances immediately when accessToken is available
+  // Load balances immediately when accessToken is available and on relevant pages
   useEffect(() => {
-    if (accessToken) {
+    if (accessToken && shouldFetch) {
       refreshBalances()
       refreshOrders()
     }
-  }, [accessToken])
+  }, [accessToken, shouldFetch])
 
   // WebSocket Connection
   useEffect(() => {
-    if (!accessToken) return
+    if (!accessToken || !shouldFetch) return
 
     let ws: WebSocket | null = null
     let reconnectTimer: NodeJS.Timeout
@@ -258,7 +266,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       }
       clearTimeout(reconnectTimer)
     }
-  }, [accessToken])
+  }, [accessToken, shouldFetch])
 
 
   return (

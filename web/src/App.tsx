@@ -17,10 +17,10 @@ import Settings from './routes/Settings'
 function App() {
   return (
     <AuthProvider>
-      <AccountProvider>
-        <PriceProvider>
-          <MarketProvider>
-            <BrowserRouter>
+      <BrowserRouter>
+        <AccountProvider>
+          <PriceProvider>
+            <MarketProvider>
               <AppShell>
                 <AuthWrapper>
                   <Routes>
@@ -42,10 +42,10 @@ function App() {
                   </Routes>
                 </AuthWrapper>
               </AppShell>
-            </BrowserRouter>
-          </MarketProvider>
-        </PriceProvider>
-      </AccountProvider>
+            </MarketProvider>
+          </PriceProvider>
+        </AccountProvider>
+      </BrowserRouter>
     </AuthProvider>
   )
 }
