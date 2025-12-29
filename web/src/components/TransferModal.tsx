@@ -77,22 +77,21 @@ export default function TransferModal({ opened, onClose, currentSide, asset, onT
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title={`Transfer ${asset}`} centered>
-      <Group gap="sm" mb="sm">
-        <SegmentedControl
-          value={direction}
-          onChange={(v) => {
-            setDirection(v as any)
-            setAmount('')
-            setPercent(0)
-          }}
-          data={[
-            { label: `${currentSide} → ${other}`, value: 'to-other' },
-            { label: `${other} → ${currentSide}`, value: 'from-other' },
-          ]}
-          fullWidth
-        />
-      </Group>
+    <Modal opened={opened} onClose={onClose} title={`Transfer ${asset}`} centered lockScroll={false}>
+      <SegmentedControl
+        value={direction}
+        onChange={(v) => {
+          setDirection(v as any)
+          setAmount('')
+          setPercent(0)
+        }}
+        data={[
+          { label: `${currentSide} → ${other}`, value: 'to-other' },
+          { label: `${other} → ${currentSide}`, value: 'from-other' },
+        ]}
+        fullWidth
+        mb="sm"
+      />
 
       <Text size="xs" c="dimmed" ta="right" mb={4}>
         Available: <Text component="span" fw={600} style={{ color: 'var(--foreground)' }}>{Number(maxAmount).toLocaleString(undefined, { maximumFractionDigits: 4 })} {asset}</Text>

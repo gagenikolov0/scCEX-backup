@@ -17,7 +17,8 @@ const minuteOpens = new Map<string, { minute: number; price: number }>()
 
 async function tick(symbol: string) {
 	try {
-		const resp = await fetch(`https://api.mexc.com/api/v3/ticker/price?symbol=${symbol}`)
+		const normalized = symbol.replace('_', '').toUpperCase()
+		const resp = await fetch(`https://api.mexc.com/api/v3/ticker/price?symbol=${normalized}`)
 		if (!resp.ok) return
 		const j = await resp.json() as any
 		const price = parseFloat(j?.price)

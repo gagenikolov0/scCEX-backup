@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom'
 import { useMarket } from '../contexts/MarketContext'
 
 function splitSymbol(sym: string): { base: string; quote: string } {
-  if (sym.endsWith('USDT')) return { base: sym.slice(0, -4), quote: 'USDT' }
-  if (sym.endsWith('USDC')) return { base: sym.slice(0, -4), quote: 'USDC' }
-  return { base: sym, quote: '' }
+  const clean = sym.replace('_', '')
+  if (clean.endsWith('USDT')) return { base: clean.slice(0, -4), quote: 'USDT' }
+  if (clean.endsWith('USDC')) return { base: clean.slice(0, -4), quote: 'USDC' }
+  return { base: clean, quote: '' }
 }
 
 const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' | 'futures', base: string, quote: string }) => {
@@ -20,7 +21,7 @@ const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' |
   const changeColor = changeNum > 0 ? '--green' : changeNum < 0 ? '--red' : 'dimmed'
 
   return (
-    <Anchor key={`${type}-${quote.toLowerCase()}-${item.symbol}`} component={Link} to={`/${type}?base=${base.replace('/', '_')}&quote=${quote}`} underline="never" c="inherit">
+    <Anchor key={`${type}-${quote.toLowerCase()}-${item.symbol}`} component={Link} to={`/${type}?base=${base}&quote=${quote}`} underline="never" c="inherit">
       <Flex direction="column" px="md" py="sm" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', transition: 'background-color 0.1s ease' }} className="market-row-hover">
         <Flex justify="space-between" align="center" mb={4}>
           <Group gap={8}>
@@ -56,7 +57,7 @@ const RenderMarketCard = memo(({ title, data, type }: { title: string, data: any
     </Flex>
     <Box style={{ maxHeight: '440px', overflow: 'auto' }}>
       {data.map(item => {
-        const baseInfo = type === 'spot' ? splitSymbol(item.symbol) : { base: item.symbol.replace('_USDT', '').replace('_USDC', '').replace('_', '/'), quote: item.symbol.includes('_USDT') ? 'USDT' : 'USDC' }
+        const baseInfo = splitSymbol(item.symbol)
         return <MarketRow key={`${type}-${item.symbol}`} item={item} type={type} base={baseInfo.base} quote={baseInfo.quote} />
       })}
     </Box>

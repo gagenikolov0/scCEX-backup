@@ -6,7 +6,6 @@ import { FuturesPosition } from '../models/FuturesPosition'
 import { FuturesAccount } from '../models/FuturesAccount'
 import { FuturesPositionHistory } from '../models/FuturesPositionHistory'
 import { priceService } from '../utils/priceService'
-import { moveMoney } from '../utils/moneyMovement'
 import { syncFuturesBalances, syncOrder, syncFuturesPosition } from '../utils/emitters'
 import { futuresEngine } from '../utils/futuresEngine'
 
@@ -69,11 +68,92 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
             if (type === 'market') {
                 let position = await FuturesPosition.findOne({ userId, symbol }).session(session)
                 if (position) {
-                    position.quantity += baseQuantity
-                    position.margin += marginRequired
-                    position.updatedAt = new Date()
-                    // 3. Update the position
-                    await position.save({ session })
+                    if (position.side === side) {
+                        // Same side: Weighted average entry price
+                        const oldTotalValue = position.quantity * position.entryPrice
+                        const newBatchValue = baseQuantity * executionPrice
+
+                        position.quantity += baseQuantity
+                        position.margin += marginRequired
+                        position.entryPrice = (oldTotalValue + newBatchValue) / position.quantity
+
+                        // Recalculate liquidation price
+                        position.liquidationPrice = position.side === 'long'
+                            ? position.entryPrice - (0.9 * position.margin / position.quantity)
+                            : position.entryPrice + (0.9 * position.margin / position.quantity)
+
+                        position.updatedAt = new Date()
+                        await position.save({ session })
+                    } else {
+                        // Opposite side: Reduce position
+                        if (baseQuantity >= position.quantity) {
+                            const remainingQty = baseQuantity - position.quantity
+                            const pnl = position.side === 'long'
+                                ? (executionPrice - position.entryPrice) * position.quantity
+                                : (position.entryPrice - executionPrice) * position.quantity
+
+                            const marginToRelease = position.margin
+                            const quoteAsset = symbol.endsWith('USDT') ? 'USDT' : 'USDC'
+                            const futAcc = await FuturesAccount.findOne({ userId, asset: quoteAsset }).session(session)
+                            if (futAcc) {
+                                futAcc.available += (marginToRelease + pnl)
+                                await futAcc.save({ session })
+                            }
+
+                            await FuturesPositionHistory.create([{
+                                userId, symbol, side: position.side,
+                                entryPrice: position.entryPrice, exitPrice: executionPrice,
+                                quantity: position.quantity, margin: position.margin,
+                                realizedPnL: pnl, closedAt: new Date()
+                            }], { session })
+
+                            await position.deleteOne({ session })
+
+                            if (remainingQty > 0.00000001) {
+                                const remainingMargin = (remainingQty / baseQuantity) * marginRequired
+                                const liqPrice = side === 'long'
+                                    ? executionPrice - (0.9 * remainingMargin / remainingQty)
+                                    : executionPrice + (0.9 * remainingMargin / remainingQty)
+
+                                await FuturesPosition.create([{
+                                    userId, symbol, side, entryPrice: executionPrice,
+                                    quantity: remainingQty, leverage: levNum, margin: remainingMargin,
+                                    liquidationPrice: liqPrice
+                                }], { session })
+                            }
+                        } else {
+                            // Partially reduce
+                            const pnl = position.side === 'long'
+                                ? (executionPrice - position.entryPrice) * baseQuantity
+                                : (position.entryPrice - executionPrice) * baseQuantity
+
+                            const marginToRelease = (baseQuantity / position.quantity) * position.margin
+
+                            position.quantity -= baseQuantity
+                            position.margin -= marginToRelease
+
+                            position.liquidationPrice = position.side === 'long'
+                                ? position.entryPrice - (0.9 * position.margin / position.quantity)
+                                : position.entryPrice + (0.9 * position.margin / position.quantity)
+
+                            position.updatedAt = new Date()
+                            await position.save({ session })
+
+                            const quoteAsset = symbol.endsWith('USDT') ? 'USDT' : 'USDC'
+                            const futAcc = await FuturesAccount.findOne({ userId, asset: quoteAsset }).session(session)
+                            if (futAcc) {
+                                futAcc.available += (marginToRelease + pnl)
+                                await futAcc.save({ session })
+                            }
+
+                            await FuturesPositionHistory.create([{
+                                userId, symbol, side: position.side,
+                                entryPrice: position.entryPrice, exitPrice: executionPrice,
+                                quantity: baseQuantity, margin: marginToRelease,
+                                realizedPnL: pnl, closedAt: new Date(), note: 'Partial Close'
+                            }], { session })
+                        }
+                    }
                 } else {
                     const liqPrice = side === 'long'
                         ? executionPrice - (0.9 * marginRequired / baseQuantity)
@@ -91,13 +171,9 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
         // Sync UI
         const userId = req.user!.id
         const symbol = (req as any).body.symbol;
-        (async () => {
-            try {
-                await syncFuturesBalances(userId)
-                await syncFuturesPosition(userId, symbol)
-                if (orderDoc) syncOrder(userId, { id: orderDoc._id, status: orderDoc.status })
-            } catch { }
-        })();
+        syncFuturesBalances(userId).catch(() => { });
+        syncFuturesPosition(userId, symbol).catch(() => { });
+        if (orderDoc) syncOrder(userId, { id: orderDoc._id, status: orderDoc.status });
 
         return res.json(orderDoc)
     } catch (e: any) {
@@ -135,13 +211,9 @@ router.delete('/orders/:id', requireAuth, async (req: AuthRequest, res: Response
 
         const userId = (req as any).user?.id
         const orderId = req.params.id;
-        (async () => {
-            try {
-                await syncFuturesBalances(userId)
-                await syncFuturesPosition(userId, canceledSymbol)
-                syncOrder(userId, { id: orderId, status: 'cancelled' })
-            } catch { }
-        })();
+        syncFuturesBalances(userId).catch(() => { });
+        syncFuturesPosition(userId, canceledSymbol).catch(() => { });
+        syncOrder(userId, { id: orderId, status: 'cancelled' });
 
         return res.json({ success: true })
     } catch (e: any) {

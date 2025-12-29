@@ -19,7 +19,7 @@ export async function matchSpotLimitOrders(symbol: string, currentPrice: number)
         const quantityBase = parseFloat(order.quantityBase.toString());
         const quoteAmount = parseFloat(order.quoteAmount.toString());
 
-        let shouldExecute = order.side === "buy" ? currentPrice <= limitPrice : currentPrice >= limitPrice;
+        const shouldExecute = order.side === "buy" ? currentPrice <= limitPrice : currentPrice >= limitPrice;
 
         if (shouldExecute) {
           const userId = order.userId;
@@ -48,13 +48,9 @@ export async function matchSpotLimitOrders(symbol: string, currentPrice: number)
     });
 
     for (const order of executedOrders) {
-      (async () => {
-        try {
-          await syncStableBalances(order.userId);
-          await syncSpotPosition(order.userId, order.asset);
-          syncOrder(order.userId, { id: order.id, status: "filled" });
-        } catch { }
-      })();
+      syncStableBalances(order.userId).catch(() => { });
+      syncSpotPosition(order.userId, order.asset).catch(() => { });
+      syncOrder(order.userId, { id: order.id, status: "filled" });
     }
 
     if (executedOrders.length > 0) {

@@ -75,7 +75,7 @@ export default function BigPrice({ symbol, market = 'futures' }: BigPriceProps) 
             c={color}
             style={{ fontSize: '1.6rem', lineHeight: 1 }}
         >
-            {price.toFixed(market === 'futures' ? 1 : 2)}
+            {price < 0.1 ? price.toFixed(6) : price < 1 ? price.toFixed(4) : price.toFixed(2)}
         </Text>
     )
 }

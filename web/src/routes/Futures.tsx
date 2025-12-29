@@ -72,7 +72,7 @@ export default function Futures() {
     const sym = `${token}_${quote}`
     let stopped = false
 
-    ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym })) // why per syb?
+    ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym }))
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data as string)
@@ -89,7 +89,6 @@ export default function Futures() {
 
   const [history, setHistory] = useState<any[]>([])
 
-  // HTTP POST for history
   const fetchHistory = async () => {
     if (!isAuthed) return
     try {
@@ -104,7 +103,6 @@ export default function Futures() {
     fetchHistory()
   }, [isAuthed])
 
-  // Sync quantity in "Open" mode when leverage or percent changes
   useEffect(() => {
     if (tradeMode === 'open' && percent > 0) {
       const max = parseFloat(available)
@@ -202,7 +200,7 @@ export default function Futures() {
         })
       })
       if (res.ok) {
-        refreshBalances() // This usually syncs everything
+        refreshBalances()
         setTpslData(null)
       } else {
         const j = await res.json()
@@ -550,8 +548,9 @@ export default function Futures() {
                     title="Adjust Leverage"
                     centered
                     size="xs"
+                    lockScroll={false}
                   >
-                    <Stack gap="xl">
+                    <Stack gap="md">
                       <NumberInput
                         label="Leverage"
                         value={Number(tempLeverage)}
@@ -588,7 +587,6 @@ export default function Futures() {
                           { value: 250, label: '250x' },
                           { value: 500, label: '500x' },
                         ]}
-                        mb="xl"
                       />
 
                       <Group grow mt="md">
@@ -636,6 +634,14 @@ export default function Futures() {
                 onChange={(e) => setQty(e.currentTarget.value)}
                 size="xs"
               />
+
+              {tradeMode === 'open' && (
+                <Text size="xs" c="dimmed" mt={-8}>
+                  Est. Margin: <Text component="span" fw={600} c="var(--mantine-color-text)">
+                    {(Number(qty || 0) / Number(leverage || 1)).toFixed(2)} {quote}
+                  </Text>
+                </Text>
+              )}
 
               <TradeSlider
                 value={percent}
@@ -691,9 +697,10 @@ export default function Futures() {
       <Modal
         opened={!!partialCloseData}
         onClose={() => setPartialCloseData(null)}
-        title={`Close Position: ${partialCloseData?.symbol}`}
+        title={`Close Position: ${partialCloseData?.symbol.replace('_', '')}`}
         centered
         size="sm"
+        lockScroll={false}
       >
         <Flex direction="column" gap="md" py="xs">
           <Text size="sm" c="dimmed">
@@ -743,63 +750,69 @@ export default function Futures() {
         }}
       />
 
-      <Modal opened={!!tpslData} onClose={() => setTpslData(null)} title={`TP/SL Settings - ${tpslData?.symbol}`} centered size="sm">
-        <Box p="md" style={{ background: 'var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-md)' }}>
-          <Text size="sm" fw={600} color="var(--green)">Take Profit (TP)</Text>
-          <Flex direction="column" gap="sm" mt="sm">
-            <TextInput
-              label="Trigger Price"
-              placeholder="0.00"
-              value={tpslPrices.tp}
-              onChange={(e) => setTpslPrices({ ...tpslPrices, tp: e.currentTarget.value })}
-            />
-            <TextInput
-              label="Quantity to Close"
-              placeholder="All"
-              value={tpslPrices.tpQty}
-              onChange={(e) => setTpslPrices({ ...tpslPrices, tpQty: e.currentTarget.value })}
-            />
-            <TradeSlider
-              value={tpslPercents.tp}
-              onChange={(val) => {
-                setTpslPercents({ ...tpslPercents, tp: val })
-                const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
-                setTpslPrices({ ...tpslPrices, tpQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
-              }}
-            />
-          </Flex>
-        </Box>
+      <Modal opened={!!tpslData} onClose={() => setTpslData(null)} title={`TP/SL Settings - ${tpslData?.symbol.replace('_', '')}`} centered size="sm" lockScroll={false}>
+        <Stack gap="md">
+          <Box>
+            <Text size="sm" fw={600} color="var(--green)">Take Profit (TP)</Text>
+            <Flex direction="column" gap="sm" mt="xs">
+              <TextInput
+                label="Trigger Price"
+                placeholder="0.00"
+                value={tpslPrices.tp}
+                onChange={(e) => setTpslPrices({ ...tpslPrices, tp: e.currentTarget.value })}
+                size="xs"
+              />
+              <TextInput
+                label="Quantity to Close"
+                placeholder="All"
+                value={tpslPrices.tpQty}
+                onChange={(e) => setTpslPrices({ ...tpslPrices, tpQty: e.currentTarget.value })}
+                size="xs"
+              />
+              <TradeSlider
+                value={tpslPercents.tp}
+                onChange={(val) => {
+                  setTpslPercents({ ...tpslPercents, tp: val })
+                  const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
+                  setTpslPrices({ ...tpslPrices, tpQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
+                }}
+              />
+            </Flex>
+          </Box>
 
-        <Box p="md" style={{ background: 'var(--mantine-color-default-border)', borderRadius: 'var(--mantine-radius-md)' }}>
-          <Text size="sm" fw={600} color="var(--red)">Stop Loss (SL)</Text>
-          <Flex direction="column" gap="sm" mt="sm">
-            <TextInput
-              label="Trigger Price"
-              placeholder="0.00"
-              value={tpslPrices.sl}
-              onChange={(e) => setTpslPrices({ ...tpslPrices, sl: e.currentTarget.value })}
-            />
-            <TextInput
-              label="Quantity to Close"
-              placeholder="All"
-              value={tpslPrices.slQty}
-              onChange={(e) => setTpslPrices({ ...tpslPrices, slQty: e.currentTarget.value })}
-            />
-            <TradeSlider
-              value={tpslPercents.sl}
-              onChange={(val) => {
-                setTpslPercents({ ...tpslPercents, sl: val })
-                const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
-                setTpslPrices({ ...tpslPrices, slQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
-              }}
-            />
-          </Flex>
-        </Box>
-        <Group grow mt="md">
-          <Button variant="light" color="gray" onClick={() => setTpslData(null)}>Cancel</Button>
-          <Button color="blue" onClick={() => updateTPSL(tpslData!.symbol, tpslPrices.tp, tpslPrices.sl, tpslPrices.tpQty, tpslPrices.slQty)}>Save TP/SL</Button>
-        </Group>
+          <Box>
+            <Text size="sm" fw={600} color="var(--red)">Stop Loss (SL)</Text>
+            <Flex direction="column" gap="sm" mt="xs">
+              <TextInput
+                label="Trigger Price"
+                placeholder="0.00"
+                value={tpslPrices.sl}
+                onChange={(e) => setTpslPrices({ ...tpslPrices, sl: e.currentTarget.value })}
+                size="xs"
+              />
+              <TextInput
+                label="Quantity to Close"
+                placeholder="All"
+                value={tpslPrices.slQty}
+                onChange={(e) => setTpslPrices({ ...tpslPrices, slQty: e.currentTarget.value })}
+                size="xs"
+              />
+              <TradeSlider
+                value={tpslPercents.sl}
+                onChange={(val) => {
+                  setTpslPercents({ ...tpslPercents, sl: val })
+                  const q = val === 100 ? tpslData!.totalQty : (tpslData!.totalQty * val) / 100
+                  setTpslPrices({ ...tpslPrices, slQty: q > 0 ? q.toFixed(8).replace(/\.?0+$/, '') : '' })
+                }}
+              />
+            </Flex>
+          </Box>
+          <Group grow mt="md">
+            <Button variant="light" color="gray" onClick={() => setTpslData(null)}>Cancel</Button>
+            <Button color="blue" onClick={() => updateTPSL(tpslData!.symbol, tpslPrices.tp, tpslPrices.sl, tpslPrices.tpQty, tpslPrices.slQty)}>Save TP/SL</Button>
+          </Group>
+        </Stack>
       </Modal>
-    </Box>
+    </Box >
   )
 }
