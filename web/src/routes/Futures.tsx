@@ -548,7 +548,7 @@ export default function Futures() {
                 </Text>
               )}
 
-              <Group gap={4} p={4} style={{ background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))', borderRadius: 'var(--mantine-radius-md)' }}>
+              <Group gap={4} p={4} style={{ background: 'var(--bg-3)', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} flex={1}>Market</Button>
                 <Button size="xs" variant={orderType === 'limit' ? 'filled' : 'subtle'} onClick={() => setOrderType('limit')} flex={1}>Limit</Button>
               </Group>

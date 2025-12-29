@@ -6,29 +6,69 @@
   --fz-lg: 18px;
   --fz-xl: 20px;
 
-  /* Basic Colors (Light Mode) */
-  --background: #ffffff;
-  --foreground: #1a1b1e;
-  --border: #e9ecef;
-  --liq: #e8590c;
-
-  /* Global Source of Truth for Colors */
+  /* Global Colors (Source of Truth) */
   --green: #0BBA74;
   --red: #ff4761;
-  --chart-text: #808080;
-  --chart-line: #808080;
-  --qr-bg: #ffffff;
-}
+  --liq: #e8590c;
 
+  /* Perfect Theme Symmetry (Light Mode) */
+  /* Level 1 (Extreme) <---> Level 5 (Soft) */
+  --bg-1: #ffffff;
+  /* lightest  | #ffffff -> #000000 */
+  --bg-2: #f8f9fa;
+  /* lighter   | #f8f9fa -> #0a0a0a */
+  --bg-3: #f1f3f5;
+  /* light     | #f1f3f5 -> #141517 */
+  --bg-4: #e9ecef;
+  /* less light| #e9ecef -> #1a1b1e */
+  --bg-5: #dee2e6;
+  /* least light| #dee2e6 -> #25262b */
+
+  --fg-1: #1a1b1e;
+  /* darkest   | #1a1b1e -> #ffffff */
+  --fg-2: #5c5f66;
+  /* darker    | #5c5f66 -> #a6a7ab */
+  --fg-3: #adb5bd;
+  /* dark      | #adb5bd -> #5c5f66 */
+
+  --border-1: #e9ecef;
+  /* #e9ecef -> #373a40 */
+  --border-2: #dee2e6;
+  /* #dee2e6 -> #2c2e33 */
+
+  /* Alias Mapping */
+  --background: var(--bg-1);
+  --foreground: var(--fg-1);
+  --border: var(--border-1);
+  --chart-text: var(--fg-2);
+  --chart-line: var(--border-1);
+  --qr-bg: #f8f9fa;
+}
 
 .dark,
 [data-mantine-color-scheme="dark"] {
-  --background: #020202;
-  --foreground: #ffffff;
-  --border: #373a40;
-  --liq: #e8590c;
-  --chart-text: #a0a0a0;
-  --chart-line: #373a40;
+  /* Perfect Theme Symmetry (Dark Mode) */
+  --bg-1: #000000;
+  /* darkest    | #000000 -> #ffffff */
+  --bg-2: #0a0a0a;
+  /* darker     | #0a0a0a -> #f8f9fa */
+  --bg-3: #141517;
+  /* dark       | #141517 -> #f1f3f5 */
+  --bg-4: #1a1b1e;
+  /* less dark  | #1a1b1e -> #e9ecef */
+  --bg-5: #25262b;
+  /* least dark | #25262b -> #dee2e6 */
+
+  --fg-1: #ffffff;
+  /* lightest   | #ffffff -> #1a1b1e */
+  --fg-2: #a6a7ab;
+  /* lighter    | #a6a7ab -> #5c5f66 */
+  --fg-3: #5c5f66;
+  /* light      | #5c5f66 -> #adb5bd */
+
+  --border-1: #373a40;
+  --border-2: #2c2e33;
+
   --qr-bg: #ffffff;
 }
 

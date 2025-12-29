@@ -361,7 +361,7 @@ export default function Spot() {
               <Text size="sm" fw={500}>Spot</Text>
             </Box>
             <Flex direction="column" gap="md" p="md">
-              <Group gap={4} p={4} style={{ background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))', borderRadius: 'var(--mantine-radius-md)' }}>
+              <Group gap={4} p={4} style={{ background: 'var(--bg-3)', borderRadius: 'var(--mantine-radius-md)' }}>
                 <Button
                   size="xs"
                   variant={tradeSide === 'buy' ? 'filled' : 'subtle'}

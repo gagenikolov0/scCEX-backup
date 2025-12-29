@@ -30,8 +30,16 @@ const theme = createTheme({
     // Custom colors to match the exchange UI
 
     dark: [
-      '#C1C2C5', '#A6A7AB', '#909296', '#5C5F66', '#373A40',
-      '#2C2E33', '#25262B', '#020202', '#141517', '#101113',
+      '#ffffff', // 0: lightest (fg-1)
+      '#a6a7ab', // 1: lighter (fg-2)
+      '#5c5f66', // 2: light
+      '#373a40', // 3: less light (border-1)
+      '#25262b', // 4: bg-5
+      '#1a1b1e', // 5: bg-4
+      '#141517', // 6: bg-3
+      '#0a0a0a', // 7: bg-2
+      '#050505', // 8: near black
+      '#000000', // 9: darkest (bg-1)
     ],
   },
   components: {
