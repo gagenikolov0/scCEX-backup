@@ -23,8 +23,8 @@ type FuturesStats = {
 type MarketContextValue = {
   spotStats: SpotStats[]
   futuresStats: FuturesStats[]
-  listen: () => void
-  unlisten: () => void
+  listen: (type: 'spot' | 'futures') => void
+  unlisten: (type: 'spot' | 'futures') => void
 }
 
 const MarketContext = createContext<MarketContextValue | undefined>(undefined)
@@ -32,10 +32,17 @@ const MarketContext = createContext<MarketContextValue | undefined>(undefined)
 export function MarketProvider({ children }: { children: React.ReactNode }) {
   const [spotStats, setSpotStats] = useState<SpotStats[]>([])
   const [futuresStats, setFuturesStats] = useState<FuturesStats[]>([])
-  const [listenerCount, setListenerCount] = useState(0)
+  const [spotListenerCount, setSpotListenerCount] = useState(0)
+  const [futuresListenerCount, setFuturesListenerCount] = useState(0)
 
-  const listen = () => setListenerCount(c => c + 1)
-  const unlisten = () => setListenerCount(c => Math.max(0, c - 1))
+  const listen = (type: 'spot' | 'futures') => {
+    if (type === 'spot') setSpotListenerCount(c => c + 1)
+    else setFuturesListenerCount(c => c + 1)
+  }
+  const unlisten = (type: 'spot' | 'futures') => {
+    if (type === 'spot') setSpotListenerCount(c => Math.max(0, c - 1))
+    else setFuturesListenerCount(c => Math.max(0, c - 1))
+  }
 
   // initial load (REST) - The Snapshot for the list in asset selector
   useEffect(() => {
@@ -60,7 +67,7 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
 
   // Connect to spot stats WebSocket (bulk) 
   useEffect(() => {
-    if (listenerCount === 0) return
+    if (spotListenerCount === 0) return
 
     const wsBase = API_BASE.replace(/^http/, 'ws')
     let ws: WebSocket | null = null
@@ -110,11 +117,11 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
       stopped = true
       try { ws?.close() } catch { }
     }
-  }, [listenerCount])
+  }, [spotListenerCount])
 
   // Connect to futures stats WebSocket (bulk)
   useEffect(() => {
-    if (listenerCount === 0) return
+    if (futuresListenerCount === 0) return
 
     const wsBase = API_BASE.replace(/^http/, 'ws')
     let ws: WebSocket | null = null
@@ -164,7 +171,7 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
       stopped = true
       try { ws?.close() } catch { }
     }
-  }, [listenerCount])
+  }, [futuresListenerCount])
 
   const value = useMemo(() => ({ spotStats, futuresStats, listen, unlisten }), [spotStats, futuresStats])
 
@@ -176,5 +183,3 @@ export function useMarket() {
   if (!ctx) throw new Error('useMarket must be used within MarketProvider')
   return ctx
 }
-
-

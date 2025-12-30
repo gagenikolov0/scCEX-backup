@@ -1,6 +1,6 @@
 import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group, Table } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, memo } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
 import TransferModal from '../components/TransferModal'
@@ -11,6 +11,98 @@ import { useMarket } from '../contexts/MarketContext'
 import { useIntervals } from '../lib/useIntervals'
 import BigPrice from '../components/BigPrice'
 import TradeSlider from '../components/TradeSlider'
+
+const MemoizedTable = memo(({ data, columns, emptyMessage, showCancel, statsMap, quote, cancelOrder }: any) => {
+  const formatDate = (date: string) => date ? new Date(date).toLocaleString() : '-'
+
+  return (
+    <Box style={{ height: '430px', overflowY: 'auto' }}>
+      <Box style={{ overflowX: 'auto', flex: 1 }} px="xs">
+        <Table verticalSpacing="xs" horizontalSpacing={4} highlightOnHover fs="sm" withRowBorders={false}>
+          <Table.Thead bg="var(--bg-2)" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+            <Table.Tr>
+              {columns.map((col: string) => <Table.Th key={col} c="dimmed" fw={600} py={10}>{col}</Table.Th>)}
+              {showCancel && <Table.Th c="dimmed" fw={600} py={10}>Action</Table.Th>}
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody style={{ verticalAlign: 'middle' }}>
+            {data.length === 0 ? (
+              <Table.Tr>
+                <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Table.Td>
+              </Table.Tr>
+            ) : (
+              data.map((item: any, index: number) => (
+                <Table.Tr key={item.id || item._id || index}>
+                  {columns.map((col: string) => {
+                    let val: any = '-'
+                    const c = col.toLowerCase()
+
+                    const getVal = (v: any) => {
+                      if (v && typeof v === 'object' && v.$numberDecimal) return v.$numberDecimal
+                      return v
+                    }
+
+                    if (c === 'symbol') {
+                      const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
+                      val = (
+                        <Flex direction="column" lh={1.2} gap={0}>
+                          <Text size="sm" fw={700}>{cleanSymbol}</Text>
+                          {item.side && (
+                            <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                              {item.side}
+                            </Text>
+                          )}
+                        </Flex>
+                      )
+                    }
+
+                    else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
+                    else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
+                    else if (c === 'price') val = getVal(item.price || item.priceQuote)
+                    else if (c === 'total' || c === 'quote amount') {
+                      const t = getVal(item.total || item.quoteAmount)
+                      val = t ? `${Number(t).toFixed(2)} ${quote} ` : '-'
+                    }
+                    else if (c === 'status') val = item.status
+                    else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
+                    else if (c === 'asset') val = item.asset
+                    else if (c === 'available') val = getVal(item.available)
+                    else if (c === 'reserved') val = getVal(item.reserved)
+                    else if (c === 'value') {
+                      const asset = item.asset
+                      const available = parseFloat(getVal(item.available) || '0')
+                      if (asset === 'USDT' || asset === 'USDC') {
+                        val = `${available.toFixed(2)} ${quote}`
+                      } else {
+                        const pairStats = statsMap.get(`${asset}${quote}`)
+                        const price = parseFloat(pairStats?.lastPrice || '0')
+                        val = price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
+                      }
+                    }
+                    else if (c === 'updated') val = formatDate(item.updatedAt)
+
+                    return (
+                      <Table.Td key={col}>
+                        {val}
+                      </Table.Td>
+                    )
+                  })}
+                  {showCancel && (
+                    <Table.Td>
+                      <Button size="compact-xs" variant="light" color="var(--red)" onClick={() => cancelOrder(item.id)}>
+                        Cancel
+                      </Button>
+                    </Table.Td>
+                  )}
+                </Table.Tr>
+              ))
+            )}
+          </Table.Tbody>
+        </Table>
+      </Box>
+    </Box>
+  )
+})
 
 export default function Spot() {
   const { isAuthed } = useAuth()
@@ -34,11 +126,13 @@ export default function Spot() {
   const { orders, spotAvailable, refreshOrders, refreshBalances, positions } = useAccount()
 
   useEffect(() => {
-    listen()
-    return () => unlisten()
+    listen('spot')
+    return () => unlisten('spot')
   }, [])
 
   useEffect(() => setToken(initialBase), [initialBase])
+
+  const statsMap = useMemo(() => new Map(spotStats.map(s => [s.symbol, s])), [spotStats])
 
   const tokenOptions = useMemo(() => {
     const list = spotStats.filter(t => t.symbol.endsWith(quote)).map(t => t.symbol.replace('_', '').replace(quote, ''))
@@ -135,99 +229,6 @@ export default function Spot() {
         alert(j?.error || 'Cancel failed')
       }
     } catch (e) { alert('Cancel failed') }
-  }
-
-  const formatDate = (date: string) => date ? new Date(date).toLocaleString() : '-'
-
-  const renderTable = (data: any[], columns: string[], emptyMessage: string, showCancel = false) => {
-    const statsMap = new Map(spotStats.map(s => [s.symbol, s]))
-    return (
-      <Box style={{ height: '430px', overflowY: 'auto' }}>
-        <Box style={{ overflowX: 'auto', flex: 1 }} px="xs">
-          <Table verticalSpacing="xs" horizontalSpacing={4} highlightOnHover fs="sm" withRowBorders={false}>
-            <Table.Thead bg="var(--bg-2)" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
-              <Table.Tr>
-                {columns.map(col => <Table.Th key={col} c="dimmed" fw={600} py={10}>{col}</Table.Th>)}
-                {showCancel && <Table.Th c="dimmed" fw={600} py={10}>Action</Table.Th>}
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody style={{ verticalAlign: 'middle' }}>
-              {data.length === 0 ? (
-                <Table.Tr>
-                  <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Table.Td>
-                </Table.Tr>
-              ) : (
-                data.map((item, index) => (
-                  <Table.Tr key={item.id || item._id || index}>
-                    {columns.map(col => {
-                      let val: any = '-'
-                      const c = col.toLowerCase()
-
-                      const getVal = (v: any) => {
-                        if (v && typeof v === 'object' && v.$numberDecimal) return v.$numberDecimal
-                        return v
-                      }
-
-                      if (c === 'symbol') {
-                        const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
-                        val = (
-                          <Flex direction="column" lh={1.2} gap={0}>
-                            <Text size="sm" fw={700}>{cleanSymbol}</Text>
-                            {item.side && (
-                              <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                                {item.side}
-                              </Text>
-                            )}
-                          </Flex>
-                        )
-                      }
-
-                      else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
-                      else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
-                      else if (c === 'price') val = getVal(item.price || item.priceQuote)
-                      else if (c === 'total' || c === 'quote amount') {
-                        const t = getVal(item.total || item.quoteAmount)
-                        val = t ? `${Number(t).toFixed(2)} ${quote} ` : '-'
-                      }
-                      else if (c === 'status') val = item.status
-                      else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
-                      else if (c === 'asset') val = item.asset
-                      else if (c === 'available') val = getVal(item.available)
-                      else if (c === 'reserved') val = getVal(item.reserved)
-                      else if (c === 'value') {
-                        const asset = item.asset
-                        const available = parseFloat(getVal(item.available) || '0')
-                        if (asset === 'USDT' || asset === 'USDC') {
-                          val = `${available.toFixed(2)} ${quote}`
-                        } else {
-                          const pairStats = statsMap.get(`${asset}${quote}`)
-                          const price = parseFloat(pairStats?.lastPrice || '0')
-                          val = price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
-                        }
-                      }
-                      else if (c === 'updated') val = formatDate(item.updatedAt)
-
-                      return (
-                        <Table.Td key={col}>
-                          {val}
-                        </Table.Td>
-                      )
-                    })}
-                    {showCancel && (
-                      <Table.Td>
-                        <Button size="compact-xs" variant="light" color="var(--red)" onClick={() => cancelOrder(item.id)}>
-                          Cancel
-                        </Button>
-                      </Table.Td>
-                    )}
-                  </Table.Tr>
-                ))
-              )}
-            </Table.Tbody>
-          </Table>
-        </Box>
-      </Box>
-    )
   }
 
   const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders])
@@ -337,15 +338,15 @@ export default function Spot() {
                 </Tabs.List>
 
                 <Tabs.Panel value="history" p={0}>
-                  {renderTable(history, ['Symbol', 'Quantity', 'Price', 'Quote Amount', 'Time'], 'No trade history')}
+                  <MemoizedTable data={history} columns={['Symbol', 'Quantity', 'Price', 'Quote Amount', 'Time']} emptyMessage="No trade history" statsMap={statsMap} quote={quote} />
                 </Tabs.Panel>
 
                 <Tabs.Panel value="pending" p={0}>
-                  {renderTable(pendingOrders, ['Symbol', 'Quantity', 'Price', 'Status', 'Time'], 'No open orders', true)}
+                  <MemoizedTable data={pendingOrders} columns={['Symbol', 'Quantity', 'Price', 'Status', 'Time']} emptyMessage="No open orders" showCancel cancelOrder={cancelOrder} statsMap={statsMap} quote={quote} />
                 </Tabs.Panel>
 
                 <Tabs.Panel value="positions" p={0}>
-                  {renderTable(positions, ['Asset', 'Available', 'Reserved', 'Value', 'Updated'], 'No assets')}
+                  <MemoizedTable data={positions} columns={['Asset', 'Available', 'Reserved', 'Value', 'Updated']} emptyMessage="No assets" statsMap={statsMap} quote={quote} />
                 </Tabs.Panel>
               </Tabs>
             </Card>

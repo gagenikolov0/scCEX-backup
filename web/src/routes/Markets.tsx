@@ -69,8 +69,12 @@ export default function Markets() {
   const [q, setQ] = useState('')
 
   useEffect(() => {
-    listen()
-    return () => unlisten()
+    listen('spot')
+    listen('futures')
+    return () => {
+      unlisten('spot')
+      unlisten('futures')
+    }
   }, [])
 
   const filterFn = (t: any) => !q || t.symbol.toLowerCase().includes(q.toLowerCase())
