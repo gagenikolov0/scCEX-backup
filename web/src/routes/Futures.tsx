@@ -24,6 +24,7 @@ export default function Futures() {
   const { futuresStats, listen, unlisten } = useMarket()
   const { isAuthed } = useAuth()
   const { futuresAvailable, refreshBalances, futuresPositions, orders: recentOrders } = useAccount()
+  const statsMap = useMemo(() => new Map(futuresStats.map(s => [s.symbol, s])), [futuresStats])
 
   useEffect(() => {
     listen()
@@ -265,7 +266,7 @@ export default function Futures() {
                     else if (c === 'price') val = item.price
                     else if (c === 'liq. price') val = <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
                     else if (c === 'pnl') {
-                      const itemStats = futuresStats.find(s => s.symbol === item.symbol)
+                      const itemStats = statsMap.get(item.symbol)
                       const lastPrice = Number(itemStats?.lastPrice || 0)
                       const entryPrice = Number(item.entryPrice || 0)
                       const qty = Number(item.quantity || 0)

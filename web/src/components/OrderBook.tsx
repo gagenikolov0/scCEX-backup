@@ -32,19 +32,33 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
           retries = 0
           try { ws?.send(JSON.stringify({ type: 'sub', symbol: sym, depth })) } catch { }
         }
+
+        let pendingBids: SideRow[] | null = null
+        let pendingAsks: SideRow[] | null = null
+
+        const throttleInterval = setInterval(() => {
+          if (pendingBids || pendingAsks) {
+            if (pendingBids) setBids(pendingBids)
+            if (pendingAsks) setAsks(pendingAsks)
+            pendingBids = null
+            pendingAsks = null
+          }
+        }, 500)
+
         ws.onmessage = (ev) => {
           try {
             if (stopped) return
             const msg = JSON.parse(ev.data as string)
             if (msg?.type === 'depth' && msg?.symbol === sym && Array.isArray(msg?.bids) && Array.isArray(msg?.asks)) {
               lastUpdateRef.current = Date.now()
-              setBids(msg.bids as SideRow[])
-              setAsks(msg.asks as SideRow[])
+              pendingBids = msg.bids as SideRow[]
+              pendingAsks = msg.asks as SideRow[]
             }
           } catch { }
         }
         ws.onerror = () => { if (!stopped) { setStatus('error'); setError('Orderbook connection error') } }
         ws.onclose = () => {
+          clearInterval(throttleInterval)
           if (stopped) return
           setStatus('closed')
           setTimeout(connect, Math.min(1500 * Math.max(1, ++retries), 8000))

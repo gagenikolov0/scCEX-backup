@@ -8,18 +8,3 @@ FUNCTIONALITY
 🟡 Implementation: Favorite assets inside market page and asset selector as separate toggle
 Should have assets divided into Futures and then optionally into 2 MORE - USDT and USDC lists
 ❓If we split spot and futures into USDT and USDC, would that save a lot of energy or just a bit?
-
-
-✅ [FIXED] When opening a position with limit order on the pair that already is in postition instead of normally wait for price to become limit price and than just add the margin, it actually only deducts the available balance and nothing happens.
-✅ [FIXED] When opening position on same pair that we already have position on, the amount should just add to the existing position margin change entry price and liquidation price. But if opening position on already having position with different side then just deduct the margin from available position, no change in entry and liquidation price.
-
-✅ [FIXED] Limit orders in futures dont work at all.
-
-
-✅ [FIXED] Futures total price doesn't work well not accurate
-
-
-═════════════════════════════
-USER INTERFACE
-═════════════════════════════
-✅ [FIXED] for some reason the poopup modals when apear make the elements in the background move to the right

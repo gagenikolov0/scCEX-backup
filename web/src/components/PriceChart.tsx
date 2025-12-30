@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts'
 import { Pencil, PencilOff } from 'lucide-react'
 import { Box, Flex, Button, ActionIcon, Tooltip, useMantineColorScheme } from '@mantine/core'
@@ -18,7 +18,7 @@ type Props = {
   availableIntervals?: string[]
 }
 
-export default function PriceChart(props: Props) {
+function PriceChart(props: Props) {
   const { symbol, height = 420, interval = '1m', market = 'spot', orders = [], positions = [] } = props
   const { colorScheme } = useMantineColorScheme()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -31,6 +31,7 @@ export default function PriceChart(props: Props) {
   const [closeBtnTop, setCloseBtnTop] = useState<number | null>(null)
   const positionsRef = useRef(positions)
   const previewSeriesRef = useRef<any>(null)
+  const lastYRef = useRef<number | null>(null)
 
   useEffect(() => {
     positionsRef.current = positions
@@ -150,9 +151,13 @@ export default function PriceChart(props: Props) {
       const activePos = positionsRef.current.find(p => p.symbol === symbol || p.symbol === deUnderscore(normalizeFuturesSymbol(symbol)))
       if (activePos) {
         const y = seriesRef.current.priceToCoordinate(parseFloat(activePos.entryPrice))
-        setCloseBtnTop(y)
-      } else {
+        if (y !== null && (lastYRef.current === null || Math.abs(y - lastYRef.current) > 0.5)) {
+          setCloseBtnTop(y)
+          lastYRef.current = y
+        }
+      } else if (lastYRef.current !== null) {
         setCloseBtnTop(null)
+        lastYRef.current = null
       }
     }
 
@@ -555,3 +560,5 @@ export default function PriceChart(props: Props) {
     </Box>
   )
 }
+
+export default memo(PriceChart)
