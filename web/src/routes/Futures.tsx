@@ -171,11 +171,6 @@ export default function Futures() {
   const { futuresAvailable, refreshBalances, futuresPositions, orders: recentOrders } = useAccount()
   const statsMap = useMemo(() => new Map(futuresStats.map(s => [s.symbol, s])), [futuresStats])
 
-  useEffect(() => {
-    listen('futures')
-    return () => unlisten('futures')
-  }, [])
-
   const [qty, setQty] = useState('')
   const [leverage, setLeverage] = useState('10')
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
@@ -372,7 +367,18 @@ export default function Futures() {
   return (
     <Box>
       <Flex align="center" gap="lg" py={4}>
-        <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={0} closeDelay={50} transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}>
+        <Menu
+          shadow="md"
+          width={260}
+          position="bottom-start"
+          withinPortal
+          trigger="hover"
+          openDelay={0}
+          closeDelay={50}
+          transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}
+          onOpen={() => listen('futures')}
+          onClose={() => unlisten('futures')}
+        >
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
               <Flex direction="column" align="flex-start" lh={1.2}>
@@ -827,6 +833,6 @@ export default function Futures() {
           </Group>
         </Stack>
       </Modal>
-    </Box >
+    </Box>
   )
 }

@@ -125,11 +125,6 @@ export default function Spot() {
   const { spotStats, listen, unlisten } = useMarket()
   const { orders, spotAvailable, refreshOrders, refreshBalances, positions } = useAccount()
 
-  useEffect(() => {
-    listen('spot')
-    return () => unlisten('spot')
-  }, [])
-
   useEffect(() => setToken(initialBase), [initialBase])
 
   const statsMap = useMemo(() => new Map(spotStats.map(s => [s.symbol, s])), [spotStats])
@@ -238,7 +233,18 @@ export default function Spot() {
   return (
     <Box>
       <Flex align="center" gap="lg" py={4}>
-        <Menu shadow="md" width={260} position="bottom-start" withinPortal trigger="hover" openDelay={0} closeDelay={50} transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}>
+        <Menu
+          shadow="md"
+          width={260}
+          position="bottom-start"
+          withinPortal
+          trigger="hover"
+          openDelay={0}
+          closeDelay={50}
+          transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}
+          onOpen={() => listen('spot')}
+          onClose={() => unlisten('spot')}
+        >
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
               <Flex direction="column" align="flex-start" lh={1.2}>
