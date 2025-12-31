@@ -9,6 +9,7 @@
   --red: #ff4761;
   --liq: #e8590c;
   --qr-bg: #ffffff;
+  --hover-bg: var(--mantine-color-gray-0);
 
   /* Mantine Global Colors */
   --mantine-color-black: #020202;
@@ -41,6 +42,7 @@
   --bg-4: var(--mantine-color-dark-5);
   --bg-2: var(--mantine-color-dark-6);
   --bg-1: var(--mantine-color-dark-9);
+  --hover-bg: var(--mantine-color-dark-6);
 }
 
 * {

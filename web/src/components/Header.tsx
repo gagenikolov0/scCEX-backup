@@ -1,19 +1,23 @@
 import { Link, NavLink } from 'react-router-dom'
-import { IconUser, IconSun, IconMoon } from '@tabler/icons-react'
+import { IconUser, IconSun, IconMoon, IconCurrencyDollar, IconCoin } from '@tabler/icons-react'
 import {
   Anchor,
   Box,
+  Burger,
   Button,
   Center,
   Collapse,
   Divider,
   Drawer,
   Group,
-  HoverCard,
+  Menu,
   ScrollArea,
   ActionIcon,
   useMantineColorScheme,
   Stack,
+  UnstyledButton,
+  ThemeIcon,
+  Text,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 
@@ -31,6 +35,46 @@ function HomeIcon() {
         className={classes.homeIcon}
       />
     </Center>
+  )
+}
+
+function DropdownItem({ title, description, icon, to }: any) {
+  return (
+    <Menu.Item component={Link} to={to} className={classes.dropdownItem}>
+      <Group wrap="nowrap" align="center">
+        <ThemeIcon size={34} variant="default" radius="md">
+          {icon}
+        </ThemeIcon>
+        <div>
+          <Text size="sm" fw={500}>
+            {title}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {description}
+          </Text>
+        </div>
+      </Group>
+    </Menu.Item>
+  )
+}
+
+function MobileNavItem({ title, description, icon, to, onClick }: any) {
+  return (
+    <UnstyledButton component={NavLink} to={to} onClick={onClick} className={classes.dropdownItem}>
+      <Group wrap="nowrap" align="center">
+        <ThemeIcon size={34} variant="default" radius="md">
+          {icon}
+        </ThemeIcon>
+        <div>
+          <Text size="sm" fw={500}>
+            {title}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {description}
+          </Text>
+        </div>
+      </Group>
+    </UnstyledButton>
   )
 }
 
@@ -58,38 +102,72 @@ export default function Header() {
           {/* Desktop menus only */}
           <Group h="100%" gap={0}>
             {/* Futures hover menu */}
-            <HoverCard width={260} position="bottom" radius="md" shadow="md" withinPortal openDelay={50} closeDelay={50} transitionProps={{ duration: 220 }}>
-              <HoverCard.Target>
+            <Menu
+              trigger="hover"
+              openDelay={50}
+              closeDelay={50}
+              width={300}
+              position="bottom-start"
+              radius="md"
+              shadow="md"
+              withinPortal
+            >
+              <Menu.Target>
                 <Box component="span" className={classes.trigger}>
                   <Center inline>
                     <Box component="span" mr={5}>Futures</Box>
                   </Center>
                 </Box>
-              </HoverCard.Target>
-              <HoverCard.Dropdown>
-                <Stack gap="xs">
-                  <Anchor component={Link} to="/futures?quote=USDT">USDT Perps</Anchor>
-                  <Anchor component={Link} to="/futures?quote=USDC">USDC Perps</Anchor>
-                </Stack>
-              </HoverCard.Dropdown>
-            </HoverCard>
+              </Menu.Target>
+              <Menu.Dropdown p={4}>
+                <DropdownItem
+                  to="/futures?quote=USDT"
+                  title="USDT-M Futures"
+                  description="Trade perpetual contracts settled in USDT"
+                  icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />}
+                />
+                <DropdownItem
+                  to="/futures?quote=USDC"
+                  title="USDC-M Futures"
+                  description="Trade perpetual contracts settled in USDC"
+                  icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />}
+                />
+              </Menu.Dropdown>
+            </Menu>
 
             {/* Spot hover menu */}
-            <HoverCard width={220} position="bottom" radius="md" shadow="md" withinPortal openDelay={50} closeDelay={50} transitionProps={{ duration: 220 }}>
-              <HoverCard.Target>
+            <Menu
+              trigger="hover"
+              openDelay={50}
+              closeDelay={50}
+              width={300}
+              position="bottom-start"
+              radius="md"
+              shadow="md"
+              withinPortal
+            >
+              <Menu.Target>
                 <Box component="span" className={classes.trigger}>
                   <Center inline>
                     <Box component="span" mr={5}>Spot</Box>
                   </Center>
                 </Box>
-              </HoverCard.Target>
-              <HoverCard.Dropdown>
-                <Stack gap="xs">
-                  <Anchor component={Link} to="/spot?quote=USDT">USDT</Anchor>
-                  <Anchor component={Link} to="/spot?quote=USDC">USDC</Anchor>
-                </Stack>
-              </HoverCard.Dropdown>
-            </HoverCard>
+              </Menu.Target>
+              <Menu.Dropdown p={4}>
+                <DropdownItem
+                  to="/spot?quote=USDT"
+                  title="USDT Market"
+                  description="Trade top tokens with USDT pairs"
+                  icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />}
+                />
+                <DropdownItem
+                  to="/spot?quote=USDC"
+                  title="USDC Market"
+                  description="Trade top tokens with USDC pairs"
+                  icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />}
+                />
+              </Menu.Dropdown>
+            </Menu>
           </Group>
         </Group>
 
@@ -115,7 +193,7 @@ export default function Header() {
         </Group>
 
         {/* Mobile burger */}
-        <Button onClick={toggleDrawer} hiddenFrom="sm" variant="subtle" size="compact-sm">Menu</Button>
+        <Burger opened={drawerOpened} onClick={toggleDrawer} hiddenFrom="sm" size="sm" />
       </Group>
 
       <Drawer opened={drawerOpened} onClose={closeDrawer} size="100%" padding="md" title="Navigation" hiddenFrom="sm" zIndex={1000000}>
@@ -126,17 +204,41 @@ export default function Header() {
 
           <Button variant="subtle" className={classes.link} onClick={toggleFutures}>Futures</Button>
           <Collapse in={futuresOpen}>
-            <Stack gap="xs" pl="xl">
-              <NavLink to="/futures?quote=USDT" onClick={closeDrawer}>USDT Perps</NavLink>
-              <NavLink to="/futures?quote=USDC" onClick={closeDrawer}>USDC Perps</NavLink>
+            <Stack gap={0} pl="md">
+              <MobileNavItem
+                to="/futures?quote=USDT"
+                title="USDT-M Futures"
+                description="Trade perpetual contracts settled in USDT"
+                icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />}
+                onClick={closeDrawer}
+              />
+              <MobileNavItem
+                to="/futures?quote=USDC"
+                title="USDC-M Futures"
+                description="Trade perpetual contracts settled in USDC"
+                icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />}
+                onClick={closeDrawer}
+              />
             </Stack>
           </Collapse>
 
           <Button variant="subtle" className={classes.link} onClick={toggleSpot}>Spot</Button>
           <Collapse in={spotOpen}>
-            <Stack gap="xs" pl="xl">
-              <NavLink to="/spot?quote=USDT" onClick={closeDrawer}>USDT</NavLink>
-              <NavLink to="/spot?quote=USDC" onClick={closeDrawer}>USDC</NavLink>
+            <Stack gap={0} pl="md">
+              <MobileNavItem
+                to="/spot?quote=USDT"
+                title="USDT Market"
+                description="Trade top tokens with USDT pairs"
+                icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />}
+                onClick={closeDrawer}
+              />
+              <MobileNavItem
+                to="/spot?quote=USDC"
+                title="USDC Market"
+                description="Trade top tokens with USDC pairs"
+                icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />}
+                onClick={closeDrawer}
+              />
             </Stack>
           </Collapse>
 

@@ -79,3 +79,21 @@
   display: block;
   object-fit: contain;
 }
+
+.dropdownItem {
+  width: 100%;
+  padding: var(--mantine-spacing-xs);
+  border-radius: var(--mantine-radius-md);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.dropdownItem:hover {
+  background-color: var(--mantine-color-gray-0);
+}
+
+:global([data-mantine-color-scheme="dark"]) .dropdownItem:hover,
+:global(.dark) .dropdownItem:hover {
+  background-color: var(--mantine-color-dark-5);
+}

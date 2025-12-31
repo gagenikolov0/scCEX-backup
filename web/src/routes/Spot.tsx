@@ -246,7 +246,7 @@ export default function Spot() {
           trigger="hover"
           openDelay={0}
           closeDelay={50}
-          transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}
+          transitionProps={{ transition: 'pop-top-left', duration: 0, timingFunction: 'ease' }}
         >
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
