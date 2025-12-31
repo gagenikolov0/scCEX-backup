@@ -12,20 +12,20 @@ class PriceService extends EventEmitter {
 
     // Called by streams to fill the bucket
     updatePrice(symbol: string, price: number) {
-        const normalized = symbol.replace('_', '').toUpperCase();
+        const key = symbol.toUpperCase(); // Keep underscore for futures
         const update: PriceUpdate = {
-            symbol: normalized,
+            symbol: key,
             price,
             timestamp: Date.now()
         };
-        this.prices.set(normalized, update);
+        this.prices.set(key, update);
         this.emit('price', update);
     }
 
     // Call this to use the bucket
     async getPrice(symbol: string): Promise<number> {
-        const normalized = symbol.replace('_', '').toUpperCase();
-        const cached = this.prices.get(normalized);
+        const key = symbol.toUpperCase();
+        const cached = this.prices.get(key);
         const now = Date.now();
 
         if (cached && (now - cached.timestamp) < 1000) {
@@ -33,32 +33,38 @@ class PriceService extends EventEmitter {
         }
 
         try {
-            const freshPrice = await this.fetchSpotPrice(normalized);
-            this.updatePrice(normalized, freshPrice);
+            const isFutures = key.includes('_');
+            const freshPrice = isFutures ? await this.fetchFuturesPrice(key) : await this.fetchSpotPrice(key);
+            this.updatePrice(key, freshPrice);
             return freshPrice;
         } catch (error) {
             // If fetch fails and we have a cached price (even if old), use it
             if (cached && (now - cached.timestamp) < this.MAX_AGE) {
-                console.warn(`Using stale price for ${normalized}: ${cached.price}`);
+                console.warn(`Using stale price for ${key}: ${cached.price}`);
                 return cached.price;
             }
             throw error;
         }
     }
 
-    /**
-     * Why the api.mexc link exists (The "Safety Net")
-     * If the Liquidation Engine needs to check the price of ETH_USDT, but no user is currently watching the ETH chart, 
-     * then spotTicks.ts is asleep!!! It's not feeding the bucket.
-     * This prevents escape so now the only escape of liquidation is if server crashes and fetchSpotPrice() can't call MEXC API.
-    */
     private async fetchSpotPrice(symbol: string): Promise<number> {
         const normalized = symbol.replace('_', '').toUpperCase();
         const url = `https://api.mexc.com/api/v3/ticker/price?symbol=${normalized}`;
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`Upstream price error for ${symbol}`);
+        if (!res.ok) throw new Error(`Upstream spot price error for ${symbol}`);
         const j = (await res.json()) as any;
         const p = parseFloat(j?.price ?? j?.data?.price ?? "NaN");
+        if (!Number.isFinite(p) || p <= 0) throw new Error("Invalid price");
+        return p;
+    }
+
+    private async fetchFuturesPrice(symbol: string): Promise<number> {
+        const sym = symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1');
+        const url = `https://contract.mexc.com/api/v1/contract/ticker?symbol=${sym}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Upstream futures price error for ${symbol}`);
+        const j = (await res.json()) as any;
+        const p = parseFloat(j?.data?.lastPrice ?? j?.lastPrice ?? "NaN");
         if (!Number.isFinite(p) || p <= 0) throw new Error("Invalid price");
         return p;
     }

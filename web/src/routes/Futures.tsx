@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, SegmentedControl, Modal, NumberInput, Slider, Badge, Flex, Box, Stack, Table } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, Modal, NumberInput, Slider, Badge, Flex, Box, Stack, Table, Tooltip } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState, memo } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -104,7 +104,9 @@ const MemoizedTable = memo(({ data, columns, emptyMessage, statsMap, quote, onAc
                               {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                             </Text>
                             {item.note === 'Liquidated' && (
-                              <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
+                              <Tooltip label={`Liquidated at ${item.exitPrice}`}>
+                                <Badge color="var(--red)" size="xs" variant="filled" onMouseEnter={() => console.log('LIQ Item:', item)}>LIQ</Badge>
+                              </Tooltip>
                             )}
                           </Group>
                           <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
@@ -204,6 +206,11 @@ export default function Futures() {
     symbol: `${token}_${quote}`,
     market: 'futures'
   })
+
+  useEffect(() => {
+    listen('futures')
+    return () => unlisten('futures')
+  }, [listen, unlisten])
 
   // For Futures Header (selected pair)
   useEffect(() => {
@@ -376,8 +383,6 @@ export default function Futures() {
           openDelay={0}
           closeDelay={50}
           transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}
-          onOpen={() => listen('futures')}
-          onClose={() => unlisten('futures')}
         >
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
@@ -473,7 +478,7 @@ export default function Futures() {
 
             {/* Tables aligned to complete the sidebar pillar height */}
             <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }} shadow="xs">
-              <Tabs defaultValue="positions" variant="outline">
+              <Tabs defaultValue="positions" variant="pills" radius="md">
                 <Tabs.List pt={4} px={12}>
                   <Tabs.Tab value="positions">Positions</Tabs.Tab>
                   <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
@@ -534,17 +539,12 @@ export default function Futures() {
               <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Futures Trade</Text>
             </Box>
             <Flex direction="column" gap="md" p="md">
-              <SegmentedControl
-                value={tradeMode}
-                onChange={(val) => setTradeMode(val as 'open' | 'close')}
-                data={[
-                  { label: 'Open', value: 'open' },
-                  { label: 'Close', value: 'close' },
-                ]}
-                size="xs"
-                color="blue"
-                bg="var(--bg-2)"
-              />
+              <Tabs value={tradeMode} onChange={(val) => setTradeMode(val as 'open' | 'close')} variant="pills" radius="md" color="blue">
+                <Tabs.List grow>
+                  <Tabs.Tab value="open">Open</Tabs.Tab>
+                  <Tabs.Tab value="close">Close</Tabs.Tab>
+                </Tabs.List>
+              </Tabs>
 
               {tradeMode === 'open' && (
                 <>
@@ -625,10 +625,12 @@ export default function Futures() {
                 </>
               )}
 
-              <Group gap={4} p={4} style={{ background: 'var(--bg-2)', borderRadius: 'var(--mantine-radius-md)' }}>
-                <Button size="xs" variant={orderType === 'market' ? 'filled' : 'subtle'} onClick={() => setOrderType('market')} flex={1}>Market</Button>
-                <Button size="xs" variant={orderType === 'limit' ? 'filled' : 'subtle'} onClick={() => setOrderType('limit')} flex={1}>Limit</Button>
-              </Group>
+              <Tabs value={orderType} onChange={(v) => setOrderType(v as 'market' | 'limit')} variant="pills" radius="md">
+                <Tabs.List grow>
+                  <Tabs.Tab value="market">Market</Tabs.Tab>
+                  <Tabs.Tab value="limit">Limit</Tabs.Tab>
+                </Tabs.List>
+              </Tabs>
 
               {orderType === 'limit' && (
                 <TextInput label="Limit Price" placeholder="0.00" value={limitPrice} onChange={(e) => setLimitPrice(e.currentTarget.value)} size="xs" />
@@ -648,7 +650,7 @@ export default function Futures() {
               )}
 
               <TextInput
-                label={tradeMode === 'open' ? "Quantity (USDT)" : `Quantity (${token})`}
+                label={tradeMode === 'open' ? `Quantity (${quote})` : `Quantity (${token})`}
                 placeholder="0.00"
                 value={qty}
                 onChange={(e) => setQty(e.currentTarget.value)}

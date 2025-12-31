@@ -29,8 +29,8 @@ export default function BigPrice({ symbol, market = 'futures' }: BigPriceProps) 
         // Initial fetch for faster first render
         const fetchInitialOpen = async () => {
             try {
-                const klinePath = 'spot/klines'
-                const cleanSym = symbol.replace('_', '')
+                const klinePath = market === 'spot' ? 'spot/klines' : 'futures/klines'
+                const cleanSym = market === 'spot' ? symbol.replace('_', '') : (symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1'))
                 const url = `${API_BASE}/api/markets/${klinePath}?symbol=${cleanSym}&interval=1m&limit=1`
 
                 const res = await fetch(url)
@@ -79,4 +79,3 @@ export default function BigPrice({ symbol, market = 'futures' }: BigPriceProps) 
         </Text>
     )
 }
-

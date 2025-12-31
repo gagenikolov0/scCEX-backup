@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Modal, Button, TextInput, SegmentedControl, Group, Text } from '@mantine/core'
+import { Modal, Button, TextInput, Tabs, Group, Text } from '@mantine/core'
 import { API_BASE } from '../config/api'
 import { useAccount } from '../contexts/AccountContext'
 import TradeSlider from './TradeSlider'
@@ -78,20 +78,22 @@ export default function TransferModal({ opened, onClose, currentSide, asset, onT
 
   return (
     <Modal opened={opened} onClose={onClose} title={`Transfer ${asset}`} centered lockScroll={false}>
-      <SegmentedControl
+      <Tabs
         value={direction}
         onChange={(v) => {
           setDirection(v as any)
           setAmount('')
           setPercent(0)
         }}
-        data={[
-          { label: `${currentSide} → ${other}`, value: 'to-other' },
-          { label: `${other} → ${currentSide}`, value: 'from-other' },
-        ]}
-        fullWidth
+        variant="pills"
+        radius="md"
         mb="sm"
-      />
+      >
+        <Tabs.List grow>
+          <Tabs.Tab value="to-other" style={{ textTransform: 'capitalize' }}>{currentSide} → {other}</Tabs.Tab>
+          <Tabs.Tab value="from-other" style={{ textTransform: 'capitalize' }}>{other} → {currentSide}</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
 
       <Text size="xs" c="dimmed" ta="right" mb={4}>
         Available: <Text component="span" fw={600} style={{ color: 'var(--foreground)' }}>{Number(maxAmount).toLocaleString(undefined, { maximumFractionDigits: 4 })} {asset}</Text>
@@ -118,5 +120,3 @@ export default function TransferModal({ opened, onClose, currentSide, asset, onT
     </Modal>
   )
 }
-
-

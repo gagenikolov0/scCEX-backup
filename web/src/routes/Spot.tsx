@@ -127,6 +127,11 @@ export default function Spot() {
 
   useEffect(() => setToken(initialBase), [initialBase])
 
+  useEffect(() => {
+    listen('spot')
+    return () => unlisten('spot')
+  }, [listen, unlisten])
+
   const statsMap = useMemo(() => new Map(spotStats.map(s => [s.symbol, s])), [spotStats])
 
   const tokenOptions = useMemo(() => {
@@ -242,8 +247,6 @@ export default function Spot() {
           openDelay={0}
           closeDelay={50}
           transitionProps={{ transition: 'pop-top-left', duration: 150, timingFunction: 'ease' }}
-          onOpen={() => listen('spot')}
-          onClose={() => unlisten('spot')}
         >
           <Menu.Target>
             <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
@@ -336,7 +339,7 @@ export default function Spot() {
 
             {/* Tables aligned to complete the sidebar pillar height */}
             <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }} shadow="xs">
-              <Tabs defaultValue="history" variant="outline">
+              <Tabs defaultValue="history" variant="pills" radius="md">
                 <Tabs.List pt={4} px={12}>
                   <Tabs.Tab value="history">Trade History</Tabs.Tab>
                   <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
@@ -366,45 +369,19 @@ export default function Spot() {
               <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Spot Trade</Text>
             </Box>
             <Flex direction="column" gap="md" p="md">
-              <Group gap={4} p={4} style={{ background: 'var(--bg-2)', borderRadius: 'var(--mantine-radius-md)' }}>
-                <Button
-                  size="xs"
-                  variant={tradeSide === 'buy' ? 'filled' : 'subtle'}
-                  color="var(--green)"
-                  onClick={() => setTradeSide('buy')}
-                  flex={1}
-                >
-                  Buy
-                </Button>
-                <Button
-                  size="xs"
-                  variant={tradeSide === 'sell' ? 'filled' : 'subtle'}
-                  color="var(--red)"
-                  onClick={() => setTradeSide('sell')}
-                  flex={1}
-                >
-                  Sell
-                </Button>
-              </Group>
+              <Tabs value={tradeSide} onChange={(v) => setTradeSide(v as 'buy' | 'sell')} variant="pills" radius="md" color={tradeSide === 'buy' ? 'var(--green)' : 'var(--red)'}>
+                <Tabs.List grow>
+                  <Tabs.Tab value="buy">Buy</Tabs.Tab>
+                  <Tabs.Tab value="sell">Sell</Tabs.Tab>
+                </Tabs.List>
+              </Tabs>
 
-              <Group gap={4} p={4} style={{ background: 'var(--bg-2)', borderRadius: 'var(--mantine-radius-md)' }}>
-                <Button
-                  size="xs"
-                  variant={orderType === 'market' ? 'filled' : 'subtle'}
-                  onClick={() => setOrderType('market')}
-                  flex={1}
-                >
-                  Market
-                </Button>
-                <Button
-                  size="xs"
-                  variant={orderType === 'limit' ? 'filled' : 'subtle'}
-                  onClick={() => setOrderType('limit')}
-                  flex={1}
-                >
-                  Limit
-                </Button>
-              </Group>
+              <Tabs value={orderType} onChange={(v) => setOrderType(v as 'market' | 'limit')} variant="pills" radius="md">
+                <Tabs.List grow>
+                  <Tabs.Tab value="market">Market</Tabs.Tab>
+                  <Tabs.Tab value="limit">Limit</Tabs.Tab>
+                </Tabs.List>
+              </Tabs>
 
               <Text size="xs" c="dimmed">
                 Available: {tradeSide === 'buy' ? `${Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${quote} ` : `${Number(baseAvail).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token} `}
