@@ -479,7 +479,7 @@ export default function Futures() {
             {/* Tables aligned to complete the sidebar pillar height */}
             <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }} shadow="xs">
               <Tabs defaultValue="positions" variant="pills" radius="md">
-                <Tabs.List pt={4} px={12}>
+                <Tabs.List pt={4} px={4}>
                   <Tabs.Tab value="positions">Positions</Tabs.Tab>
                   <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
                   <Tabs.Tab value="history" onClick={fetchHistory}>Position History</Tabs.Tab>

@@ -340,7 +340,7 @@ export default function Spot() {
             {/* Tables aligned to complete the sidebar pillar height */}
             <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }} shadow="xs">
               <Tabs defaultValue="history" variant="pills" radius="md">
-                <Tabs.List pt={4} px={12}>
+                <Tabs.List pt={4} px={4}>
                   <Tabs.Tab value="history">Trade History</Tabs.Tab>
                   <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
                   <Tabs.Tab value="positions">Assets</Tabs.Tab>
