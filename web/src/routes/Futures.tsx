@@ -26,7 +26,15 @@ export default function Futures() {
   const { isAuthed } = useAuth()
   const { futuresAvailable, refreshBalances, futuresPositions, orders: recentOrders } = useAccount()
   const { stats, loading: loadingStats } = useSymbolStats('futures', token, quote)
-  const statsMap = useMemo(() => new Map(futuresStats.map(s => [s.symbol, s])), [futuresStats])
+  const statsMap = useMemo(() => {
+    const map = new Map();
+    futuresStats.forEach(s => {
+      // Store both formats to be safe
+      map.set(s.symbol, s);
+      map.set(s.symbol.replace('_', ''), s);
+    });
+    return map;
+  }, [futuresStats])
 
   const [qty, setQty] = useState('')
   const [leverage, setLeverage] = useState('10')
@@ -347,7 +355,12 @@ export default function Futures() {
                         label: 'Unrealized PNL',
                         key: 'pnl',
                         render: (item) => {
-                          const itemStats = statsMap.get(item.symbol)
+                          // Try exact match, then de-underscored, then manual
+                          const itemStats = statsMap.get(item.symbol) ||
+                            statsMap.get(item.symbol.replace('_', '')) ||
+                            statsMap.get(item.symbol + quote);
+
+
                           const lastPrice = Number(itemStats?.lastPrice || 0)
                           const entryPrice = Number(item.entryPrice || 0)
                           const qty = Number(item.quantity || 0)

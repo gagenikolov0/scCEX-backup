@@ -170,6 +170,7 @@ router.get('/futures/klines', async (req: Request, res: Response) => {
     })
     return res.json(data)
   } catch (e: any) {
+    console.error('[Futures Klines] Error for symbol ' + req.query.symbol + ':', e)
     return res.status(502).json({ error: 'Upstream error', detail: e?.message ?? null })
   }
 })

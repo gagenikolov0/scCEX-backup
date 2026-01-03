@@ -34,6 +34,12 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
 
             const qtyUSDT = Number(quantity)
             const levNum = Number(leverage)
+
+            if (isNaN(qtyUSDT) || qtyUSDT <= 0) throw new Error('Invalid quantity')
+            if (isNaN(levNum) || levNum <= 0) throw new Error('Invalid leverage')
+            if (type === 'limit' && (isNaN(Number(price)) || Number(price) <= 0)) throw new Error('Invalid price for limit order')
+            if (isNaN(executionPrice) || executionPrice <= 0) throw new Error('Invalid execution price')
+
             const marginRequired = qtyUSDT / levNum
 
             const futAcc = await FuturesAccount.findOne({ userId, asset: quote }).session(session)
@@ -73,9 +79,31 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
                         const oldTotalValue = position.quantity * position.entryPrice
                         const newBatchValue = baseQuantity * executionPrice
 
+                        console.log('Updating EXISTING position (Same Side):', {
+                            posId: position._id,
+                            currentEntry: position.entryPrice,
+                            currentQty: position.quantity,
+                            addQty: baseQuantity,
+                            execPrice: executionPrice,
+                            oldVal: oldTotalValue,
+                            newVal: newBatchValue
+                        });
+
+                        if (isNaN(position.entryPrice)) console.error('CRITICAL: Existing position has NaN entryPrice!', position);
+
                         position.quantity += baseQuantity
                         position.margin += marginRequired
-                        position.entryPrice = (oldTotalValue + newBatchValue) / position.quantity
+                        let newEntryPrice = (oldTotalValue + newBatchValue) / position.quantity
+
+                        if (isNaN(newEntryPrice)) {
+                            console.error('CRITICAL: New entryPrice is NaN! Fallback to executionPrice.', {
+                                oldTotalValue, newBatchValue, posQty: position.quantity,
+                                oldEntry: position.entryPrice, execPrice: executionPrice
+                            });
+                            newEntryPrice = executionPrice;
+                        }
+
+                        position.entryPrice = newEntryPrice
 
                         // Recalculate liquidation price
                         position.liquidationPrice = position.side === 'long'
@@ -104,6 +132,7 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
                                 userId, symbol, side: position.side,
                                 entryPrice: position.entryPrice, exitPrice: executionPrice,
                                 quantity: position.quantity, margin: position.margin,
+                                leverage: position.leverage,
                                 realizedPnL: pnl, closedAt: new Date()
                             }], { session })
 
@@ -150,6 +179,7 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
                                 userId, symbol, side: position.side,
                                 entryPrice: position.entryPrice, exitPrice: executionPrice,
                                 quantity: baseQuantity, margin: marginToRelease,
+                                leverage: position.leverage,
                                 realizedPnL: pnl, closedAt: new Date(), note: 'Partial Close'
                             }], { session })
                         }
@@ -158,6 +188,16 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
                     const liqPrice = side === 'long'
                         ? executionPrice - (0.9 * marginRequired / baseQuantity)
                         : executionPrice + (0.9 * marginRequired / baseQuantity)
+
+                    if (isNaN(executionPrice)) console.error('CRITICAL: executionPrice is NaN right before position create!', { symbol, side, executionPrice });
+                    if (isNaN(marginRequired)) console.error('CRITICAL: marginRequired is NaN right before position create!', { qtyUSDT, levNum });
+
+                    console.log('Creating NEW position with:', {
+                        userId, symbol, side,
+                        entryPrice: executionPrice, quantity: baseQuantity,
+                        leverage: levNum, margin: marginRequired,
+                        liquidationPrice: liqPrice
+                    });
 
                     await FuturesPosition.create([{
                         userId, symbol, side, entryPrice: executionPrice,

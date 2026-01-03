@@ -351,32 +351,36 @@ function PriceChart(props: Props) {
     // Draw Limit Orders
     orders.forEach(o => {
       const price = parseFloat(o.price)
-      if (isNaN(price)) return
-      const line = seriesRef.current.createPriceLine({
-        price,
-        color: o.side === 'buy' ? '#0BBA74' : '#fe445c',
-        lineWidth: 1,
-        lineStyle: 2, // Dotted
-        axisLabelVisible: true,
-        title: `${o.side.toUpperCase()} ${o.quantity || o.amount || ''}`,
-      })
-      orderLinesRef.current.push(line)
+      if (isNaN(price) || price <= 0) return
+      try {
+        const line = seriesRef.current.createPriceLine({
+          price,
+          color: o.side === 'buy' ? '#0BBA74' : '#fe445c',
+          lineWidth: 1,
+          lineStyle: 2, // Dotted
+          axisLabelVisible: true,
+          title: `${o.side.toUpperCase()} ${o.quantity || o.amount || ''}`,
+        })
+        orderLinesRef.current.push(line)
+      } catch { }
     })
 
     // Draw Positions
     positions.forEach(p => {
       // Entry Line
       const entryPrice = parseFloat(p.entryPrice)
-      if (!isNaN(entryPrice)) {
-        const line = seriesRef.current.createPriceLine({
-          price: entryPrice,
-          color: p.side === 'long' ? '#0BBA74' : '#fe445c',
-          lineWidth: 1,
-          lineStyle: 2, // Dotted/Dashed
-          axisLabelVisible: true,
-          title: `${p.side.charAt(0).toUpperCase() + p.side.slice(1)}`,
-        })
-        positionLinesRef.current.push(line)
+      if (!isNaN(entryPrice) && entryPrice > 0) {
+        try {
+          const line = seriesRef.current.createPriceLine({
+            price: entryPrice,
+            color: p.side === 'long' ? '#0BBA74' : '#fe445c',
+            lineWidth: 1,
+            lineStyle: 2, // Dotted/Dashed
+            axisLabelVisible: true,
+            title: `${p.side.charAt(0).toUpperCase() + p.side.slice(1)}`,
+          })
+          positionLinesRef.current.push(line)
+        } catch { }
       }
 
       // Liquidation Line

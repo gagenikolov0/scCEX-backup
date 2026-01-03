@@ -30,8 +30,16 @@ export default function BigPrice({ symbol, market = 'futures' }: BigPriceProps) 
         const fetchInitialOpen = async () => {
             try {
                 const klinePath = market === 'spot' ? 'spot/klines' : 'futures/klines'
-                const cleanSym = market === 'spot' ? symbol.replace('_', '') : (symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1'))
-                const url = `${API_BASE}/api/markets/${klinePath}?symbol=${cleanSym}&interval=1m&limit=1`
+                // Ensure symbol is safe for URL
+                let cleanSym = symbol.trim();
+                if (market === 'spot') {
+                    cleanSym = cleanSym.replace('_', '');
+                } else if (!cleanSym.includes('_')) {
+                    // Try to insert underscore before quota if missing
+                    cleanSym = cleanSym.replace(/(USDT|USDC)$/i, '_$1');
+                }
+
+                const url = `${API_BASE}/api/markets/${klinePath}?symbol=${encodeURIComponent(cleanSym)}&interval=1m&limit=1`
 
                 const res = await fetch(url)
                 if (!res.ok) return

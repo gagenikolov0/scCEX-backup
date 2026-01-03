@@ -59,7 +59,12 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
           const res = await fetch(`${API_BASE}/api/markets/futures/24h`) //without symbol calls the expensive all symbols
           const j = await res.json().catch(() => ({}))
           const arr = Array.isArray(j?.data) ? j.data : []
-          if (!cancelled) setFuturesStats(arr)
+          // Normalize symbols to ensure they have underscore
+          const normalized = arr.map((item: any) => ({
+            ...item,
+            symbol: item.symbol.includes('_') ? item.symbol : item.symbol.replace(/(USDT|USDC)$/i, '_$1')
+          }))
+          if (!cancelled) setFuturesStats(normalized)
         } catch { }
       })()
     return () => { cancelled = true }
@@ -141,7 +146,12 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
         let pendingData: FuturesStats[] | null = null
         const throttleInterval = setInterval(() => {
           if (pendingData) {
-            setFuturesStats(pendingData)
+            // Normalize symbols
+            const normalized = pendingData.map((item: any) => ({
+              ...item,
+              symbol: item.symbol.includes('_') ? item.symbol : item.symbol.replace(/(USDT|USDC)$/i, '_$1')
+            }))
+            setFuturesStats(normalized)
             pendingData = null
           }
         }, 1000)
@@ -150,7 +160,12 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
           try {
             const msg = JSON.parse(String(ev.data))
             if (msg?.type === 'stats_all' && Array.isArray(msg?.data)) {
-              pendingData = msg.data
+              // Normalize symbols
+              const normalized = msg.data.map((item: any) => ({
+                ...item,
+                symbol: item.symbol.includes('_') ? item.symbol : item.symbol.replace(/(USDT|USDC)$/i, '_$1')
+              }))
+              pendingData = normalized
             }
           } catch { }
         }

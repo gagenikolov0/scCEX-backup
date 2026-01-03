@@ -144,7 +144,9 @@ class FuturesEngine {
 
                         position.quantity += order.quantity;
                         position.margin += marginUsed;
-                        position.entryPrice = (oldTotalValue + newBatchValue) / position.quantity;
+                        const newEntryPrice = (oldTotalValue + newBatchValue) / position.quantity;
+                        position.entryPrice = isNaN(newEntryPrice) ? fillPrice : newEntryPrice;
+                        if (isNaN(newEntryPrice)) console.error('CRITICAL: Engine entryPrice NaN, fixed.');
 
                         position.liquidationPrice = position.side === 'long'
                             ? position.entryPrice - (0.9 * position.margin / position.quantity)
@@ -171,6 +173,7 @@ class FuturesEngine {
                                 userId: order.userId, symbol: order.symbol, side: position.side,
                                 entryPrice: position.entryPrice, exitPrice: fillPrice,
                                 quantity: position.quantity, margin: position.margin,
+                                leverage: position.leverage,
                                 realizedPnL: pnl, closedAt: new Date()
                             }], { session });
 
@@ -217,6 +220,7 @@ class FuturesEngine {
                                 userId: order.userId, symbol: order.symbol, side: position.side,
                                 entryPrice: position.entryPrice, exitPrice: fillPrice,
                                 quantity: order.quantity, margin: marginToRelease,
+                                leverage: position.leverage,
                                 realizedPnL: pnl, closedAt: new Date(), note: 'Partial Close'
                             }], { session });
                         }
