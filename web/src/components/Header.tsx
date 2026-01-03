@@ -89,89 +89,91 @@ export default function Header() {
   return (
     <Box component="header" className={classes.header}>
       <Group justify="space-between" h="100%">
-        {/* Left: Home icon and menus (desktop only) */}
-        <Group h="100%" gap={0} visibleFrom="sm">
+        {/* Left: Home icon (always visible) and menus (desktop only) */}
+        <Group h="100%" gap={0}>
           <Anchor component={Link} to="/" className={`${classes.trigger} ${classes.homeTrigger}`} aria-label="Home">
             <HomeIcon />
           </Anchor>
 
-          <NavLink to="/markets" className={({ isActive }) => `${classes.trigger} ${classes.pill} ${isActive ? classes.pillActive : ''}`} aria-label="Markets">
-            Markets
-          </NavLink>
+          <Group h="100%" gap={0} visibleFrom="sm">
+            <NavLink to="/markets" className={({ isActive }) => `${classes.trigger} ${classes.pill} ${isActive ? classes.pillActive : ''}`} aria-label="Markets">
+              Markets
+            </NavLink>
 
-          {/* Desktop menus only */}
-          <Group h="100%" gap={0}>
-            {/* Futures hover menu */}
-            <Menu
-              trigger="hover"
-              openDelay={50}
-              closeDelay={50}
-              width={300}
-              position="bottom-start"
-              radius="md"
-              shadow="md"
-              withinPortal
-            >
-              <Menu.Target>
-                <Box component="span" className={classes.trigger}>
-                  <Center inline>
-                    <Box component="span" mr={5}>Futures</Box>
-                  </Center>
-                </Box>
-              </Menu.Target>
-              <Menu.Dropdown p={4}>
-                <DropdownItem
-                  to="/futures?quote=USDT"
-                  title="USDT-M Futures"
-                  description="Trade perpetual contracts settled in USDT"
-                  icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />}
-                />
-                <DropdownItem
-                  to="/futures?quote=USDC"
-                  title="USDC-M Futures"
-                  description="Trade perpetual contracts settled in USDC"
-                  icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />}
-                />
-              </Menu.Dropdown>
-            </Menu>
+            {/* Desktop menus only */}
+            <Group h="100%" gap={0}>
+              {/* Futures hover menu */}
+              <Menu
+                trigger="hover"
+                openDelay={50}
+                closeDelay={50}
+                width={300}
+                position="bottom-start"
+                radius="md"
+                shadow="md"
+                withinPortal
+              >
+                <Menu.Target>
+                  <Box component="span" className={classes.trigger}>
+                    <Center inline>
+                      <Box component="span" mr={5}>Futures</Box>
+                    </Center>
+                  </Box>
+                </Menu.Target>
+                <Menu.Dropdown p={4}>
+                  <DropdownItem
+                    to="/futures?quote=USDT"
+                    title="USDT-M Futures"
+                    description="Trade perpetual contracts settled in USDT"
+                    icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />}
+                  />
+                  <DropdownItem
+                    to="/futures?quote=USDC"
+                    title="USDC-M Futures"
+                    description="Trade perpetual contracts settled in USDC"
+                    icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />}
+                  />
+                </Menu.Dropdown>
+              </Menu>
 
-            {/* Spot hover menu */}
-            <Menu
-              trigger="hover"
-              openDelay={50}
-              closeDelay={50}
-              width={300}
-              position="bottom-start"
-              radius="md"
-              shadow="md"
-              withinPortal
-            >
-              <Menu.Target>
-                <Box component="span" className={classes.trigger}>
-                  <Center inline>
-                    <Box component="span" mr={5}>Spot</Box>
-                  </Center>
-                </Box>
-              </Menu.Target>
-              <Menu.Dropdown p={4}>
-                <DropdownItem
-                  to="/spot?quote=USDT"
-                  title="USDT Market"
-                  description="Trade top tokens with USDT pairs"
-                  icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />}
-                />
-                <DropdownItem
-                  to="/spot?quote=USDC"
-                  title="USDC Market"
-                  description="Trade top tokens with USDC pairs"
-                  icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />}
-                />
-              </Menu.Dropdown>
-            </Menu>
+              {/* Spot hover menu */}
+              <Menu
+                trigger="hover"
+                openDelay={50}
+                closeDelay={50}
+                width={300}
+                position="bottom-start"
+                radius="md"
+                shadow="md"
+                withinPortal
+              >
+                <Menu.Target>
+                  <Box component="span" className={classes.trigger}>
+                    <Center inline>
+                      <Box component="span" mr={5}>Spot</Box>
+                    </Center>
+                  </Box>
+                </Menu.Target>
+                <Menu.Dropdown p={4}>
+                  <DropdownItem
+                    to="/spot?quote=USDT"
+                    title="USDT Market"
+                    description="Trade top tokens with USDT pairs"
+                    icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />}
+                  />
+                  <DropdownItem
+                    to="/spot?quote=USDC"
+                    title="USDC Market"
+                    description="Trade top tokens with USDC pairs"
+                    icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />}
+                  />
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
           </Group>
         </Group>
 
-        {/* Right: auth links */}
+        {/* Right: auth links (desktop) */}
         <Group visibleFrom="sm">
           {isAuthed ? (
             <>
@@ -192,14 +194,25 @@ export default function Header() {
           )}
         </Group>
 
-        {/* Mobile burger */}
-        <Burger opened={drawerOpened} onClick={toggleDrawer} hiddenFrom="sm" size="sm" />
+        {/* Mobile Right Section: [Theme] [User] [Burger] */}
+        <Group gap={5} hiddenFrom="sm">
+          {isAuthed && (
+            <>
+              <ActionIcon onClick={toggleTheme} variant="subtle" radius="xl" size="lg" aria-label="Toggle theme">
+                {colorScheme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
+              </ActionIcon>
+              <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
+                <IconUser size={18} />
+              </ActionIcon>
+            </>
+          )}
+          <Burger opened={drawerOpened} onClick={toggleDrawer} size="sm" />
+        </Group>
       </Group>
 
       <Drawer opened={drawerOpened} onClose={closeDrawer} size="100%" padding="md" title="Navigation" hiddenFrom="sm" zIndex={1000000}>
         <ScrollArea h="calc(100vh - 80px)" mx="-md">
           <Divider my="sm" />
-          <NavLink to="/" className={classes.link} onClick={closeDrawer}>Home</NavLink>
           <NavLink to="/markets" className={classes.link} onClick={closeDrawer}>Markets</NavLink>
 
           <Button variant="subtle" className={classes.link} onClick={toggleFutures}>Futures</Button>
@@ -247,7 +260,7 @@ export default function Header() {
             {isAuthed ? (
               <>
                 <Button variant="default" component={Link} to="/wallet" onClick={closeDrawer}>Wallet</Button>
-                <Button variant="default" component={Link} to="/settings" onClick={closeDrawer}>Settings</Button>
+                <Button variant="default" component={Link} to="/deposit" onClick={closeDrawer}>Deposit</Button>
               </>
             ) : (
               <>

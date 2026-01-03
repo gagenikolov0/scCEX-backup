@@ -1,13 +1,11 @@
 import { Group, Text, Stack, Badge, Grid, Paper, NavLink, Box, Flex } from '@mantine/core'
 import { useAccount } from '../contexts/AccountContext'
 import { useState } from 'react'
+import { formatUSD, formatBalance } from '../lib/utils'
 
 export default function Wallet() {
   const { spotAvailable, futuresAvailable, positions, totalPortfolioUSD } = useAccount()
   const [activeTab, setActiveTab] = useState('overview')
-
-  const formatUSD = (amount: number) => amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-  const formatBalance = (amount: string) => parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })
 
   const tabs = [
     { id: 'overview', label: 'Overview' },

@@ -1,6 +1,6 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, Modal, NumberInput, Slider, Badge, Flex, Box, Stack, Table, Tooltip } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, Modal, NumberInput, Slider, Badge, Flex, Box, Stack, Tooltip } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
-import { useEffect, useMemo, useState, memo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
 import { API_BASE } from '../config/api'
@@ -11,153 +11,9 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAccount } from '../contexts/AccountContext'
 import TransferModal from '../components/TransferModal'
 import TradeSlider from '../components/TradeSlider'
-
-const MemoizedTable = memo(({ data, columns, emptyMessage, statsMap, quote, onAction, onTpsl }: any) => {
-  return (
-    <Box style={{ height: '430px', overflowY: 'auto' }}>
-      <Box style={{ overflowX: 'auto', flex: 1 }} px="xs">
-        <Table verticalSpacing="xs" horizontalSpacing={4} highlightOnHover fs="sm" withRowBorders={false}>
-          <Table.Thead bg="var(--bg-2)" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
-            <Table.Tr>
-              {columns.map((col: any) => {
-                const label = typeof col === 'string' ? col : col.label
-                return (
-                  <Table.Th key={label} c="dimmed" fw={600} style={{ whiteSpace: 'nowrap' }} py={10}>
-                    {label}
-                  </Table.Th>
-                )
-              })}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody style={{ verticalAlign: 'middle' }}>
-            {data.length === 0 ? (
-              <Table.Tr>
-                <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length}>
-                  {emptyMessage}
-                </Table.Td>
-              </Table.Tr>
-            ) : (
-              data.map((item: any, idx: number) => (
-                <Table.Tr key={item._id || idx}>
-                  {columns.map((column: any) => {
-                    let val: any = '-'
-                    const key = typeof column === 'string' ? column : column.key
-                    const c = key.toLowerCase()
-
-                    if (c === 'symbol') {
-                      const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
-                      val = (
-                        <Flex direction="column" lh={1.2} gap={0}>
-                          <Text size="sm" fw={700}>{cleanSymbol}</Text>
-                          {(item.leverage || item.side) && (
-                            <Group gap={2}>
-                              {item.leverage && <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>}
-                              {item.side && (
-                                <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                                  {item.side}
-                                </Text>
-                              )}
-                            </Group>
-                          )}
-                        </Flex>
-                      )
-                    }
-                    else if (c === 'side') val = <Text size="xs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
-                    else if (c === 'size') val = Number(item.quantity).toFixed(4)
-                    else if (c === 'entry') val = item.entryPrice
-                    else if (c === 'exit') val = item.exitPrice
-                    else if (c === 'price') val = item.price
-                    else if (c === 'liq. price') val = <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text>
-                    else if (c === 'pnl') {
-                      const itemStats = statsMap.get(item.symbol)
-                      const lastPrice = Number(itemStats?.lastPrice || 0)
-                      const entryPrice = Number(item.entryPrice || 0)
-                      const qty = Number(item.quantity || 0)
-                      const margin = Number(item.margin || 0)
-
-                      let pnlValue = 0
-                      if (lastPrice > 0) {
-                        pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
-                      }
-
-                      const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
-                      val = (
-                        <Flex direction="column" lh={1.2}>
-                          <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
-                            {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
-                          </Text>
-                          <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}>
-                            ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                          </Text>
-                        </Flex>
-                      )
-                    }
-                    else if (c === 'realized pnl') {
-                      const realizedPnl = Number(item.realizedPnL || 0)
-                      const margin = Number(item.margin || item.marginToRelease || 0)
-                      const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
-
-                      val = (
-                        <Flex direction="column" lh={1.2}>
-                          <Group gap={4}>
-                            <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
-                              {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
-                            </Text>
-                            {item.note === 'Liquidated' && (
-                              <Tooltip label={`Liquidated at ${item.exitPrice}`}>
-                                <Badge color="var(--red)" size="xs" variant="filled" onMouseEnter={() => console.log('LIQ Item:', item)}>LIQ</Badge>
-                              </Tooltip>
-                            )}
-                          </Group>
-                          <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
-                            ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                          </Text>
-                        </Flex>
-                      )
-                    }
-                    else if (c === 'leverage') val = `${item.leverage}x`
-                    else if (c === 'margin') val = `${Number(item.margin || 0).toFixed(2)} ${quote}`
-                    else if (c === 'tp/sl') {
-                      val = (
-                        <Flex direction="column" gap={2} lh={1}>
-                          <Text size="xxs" color="var(--green)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => onTpsl(item)}>
-                            TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
-                          </Text>
-                          <Text size="xxs" color="var(--red)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => onTpsl(item)}>
-                            SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
-                          </Text>
-                        </Flex>
-                      )
-                    }
-                    else if (c === 'status') val = item.status
-                    else if (c === 'time') val = new Date(item.createdAt || item.updatedAt || item.closedAt).toLocaleString()
-                    else if (c === 'action') {
-                      const isPosTable = columns.some((col: any) => {
-                        const k = typeof col === 'string' ? col : col.key
-                        return k.toLowerCase() === 'pnl'
-                      })
-                      if (isPosTable) {
-                        val = <Button size="compact-xs" color="#fe445c" variant="light" onClick={() => onAction(item)}>Close</Button>
-                      } else {
-                        val = item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => onAction(item)}>Cancel</Button> : '-'
-                      }
-                    }
-
-                    return (
-                      <Table.Td key={typeof column === 'string' ? column : column.label}>
-                        {val}
-                      </Table.Td>
-                    )
-                  })}
-                </Table.Tr>
-              ))
-            )}
-          </Table.Tbody>
-        </Table>
-      </Box>
-    </Box>
-  )
-})
+import DataTable from '../components/DataTable'
+import { useSymbolStats } from '../lib/useSymbolStats'
+import { formatDate, cleanSymbol } from '../lib/utils'
 
 export default function Futures() {
   const [search] = useSearchParams()
@@ -165,12 +21,11 @@ export default function Futures() {
   const initialBase = (search.get('base') || 'BTC').toUpperCase()
   const [token, setToken] = useState(initialBase)
   const [pairQuery, setPairQuery] = useState('')
-  const [stats, setStats] = useState<any | null>(null)
-  const [loadingStats, setLoadingStats] = useState(false)
 
   const { futuresStats, listen, unlisten } = useMarket()
   const { isAuthed } = useAuth()
   const { futuresAvailable, refreshBalances, futuresPositions, orders: recentOrders } = useAccount()
+  const { stats, loading: loadingStats } = useSymbolStats('futures', token, quote)
   const statsMap = useMemo(() => new Map(futuresStats.map(s => [s.symbol, s])), [futuresStats])
 
   const [qty, setQty] = useState('')
@@ -211,27 +66,6 @@ export default function Futures() {
     listen('futures')
     return () => unlisten('futures')
   }, [listen, unlisten])
-
-  // For Futures Header (selected pair)
-  useEffect(() => {
-    setStats(null)
-    setLoadingStats(true)
-    const ws = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/futures-24h`)
-    const sym = `${token}_${quote}`
-    let stopped = false
-
-    ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym }))
-    ws.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data as string)
-        if (!stopped && msg?.type === 'stats' && msg?.symbol === sym) { setStats(msg.data); setLoadingStats(false) }
-      } catch { }
-    }
-    ws.onclose = () => !stopped && setLoadingStats(false)
-    ws.onerror = () => !stopped && setLoadingStats(false)
-
-    return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
-  }, [token, quote])
 
   const available = (futuresAvailable as any)?.[quote] ?? '0'
 
@@ -486,45 +320,192 @@ export default function Futures() {
                 </Tabs.List>
 
                 <Tabs.Panel value="positions" p={0}>
-                  <MemoizedTable
+                  <DataTable
                     data={futuresPositions}
-                    columns={[
-                      { label: 'Trading Pair', key: 'Symbol' },
-                      { label: 'Size (Qty)', key: 'Size' },
-                      { label: 'Avg Entry Price', key: 'Entry' },
-                      'Margin',
-                      'Liq. Price',
-                      { label: 'Unrealized PNL', key: 'PnL' },
-                      { label: 'Realized PNL', key: 'Realized PnL' },
-                      'TP/SL',
-                      { label: 'Close', key: 'Action' }
-                    ]}
                     emptyMessage="No active positions"
-                    statsMap={statsMap}
-                    quote={quote}
-                    onAction={(item: any) => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}
-                    onTpsl={handleTpslClick}
+                    columns={[
+                      {
+                        label: 'Trading Pair',
+                        key: 'symbol',
+                        render: (item) => (
+                          <Flex direction="column" lh={1.2} gap={0}>
+                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                            <Group gap={2}>
+                              <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
+                              <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                {item.side}
+                              </Text>
+                            </Group>
+                          </Flex>
+                        )
+                      },
+                      { label: 'Size (Qty)', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
+                      { label: 'Avg Entry Price', key: 'entryPrice' },
+                      { label: 'Margin', key: 'margin', render: (item) => `${Number(item.margin || 0).toFixed(2)} ${quote}` },
+                      { label: 'Liq. Price', key: 'liquidationPrice', render: (item) => <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text> },
+                      {
+                        label: 'Unrealized PNL',
+                        key: 'pnl',
+                        render: (item) => {
+                          const itemStats = statsMap.get(item.symbol)
+                          const lastPrice = Number(itemStats?.lastPrice || 0)
+                          const entryPrice = Number(item.entryPrice || 0)
+                          const qty = Number(item.quantity || 0)
+                          const margin = Number(item.margin || 0)
+
+                          let pnlValue = 0
+                          if (lastPrice > 0) {
+                            pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
+                          }
+
+                          const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
+                          return (
+                            <Flex direction="column" lh={1.2}>
+                              <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                                {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
+                              </Text>
+                              <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}>
+                                ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                              </Text>
+                            </Flex>
+                          )
+                        }
+                      },
+                      {
+                        label: 'Realized PNL',
+                        key: 'realizedPnL',
+                        render: (item) => {
+                          const realizedPnl = Number(item.realizedPnL || 0)
+                          const margin = Number(item.margin || item.marginToRelease || 0)
+                          const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
+
+                          return (
+                            <Flex direction="column" lh={1.2}>
+                              <Group gap={4}>
+                                <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                                  {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
+                                </Text>
+                                {item.note === 'Liquidated' && (
+                                  <Tooltip label={`Liquidated at ${item.exitPrice}`}>
+                                    <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
+                                  </Tooltip>
+                                )}
+                              </Group>
+                              <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
+                                ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                              </Text>
+                            </Flex>
+                          )
+                        }
+                      },
+                      {
+                        label: 'TP/SL',
+                        key: 'tpsl',
+                        render: (item) => (
+                          <Flex direction="column" gap={2} lh={1}>
+                            <Text size="xxs" color="var(--green)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleTpslClick(item)}>
+                              TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
+                            </Text>
+                            <Text size="xxs" color="var(--red)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleTpslClick(item)}>
+                              SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
+                            </Text>
+                          </Flex>
+                        )
+                      },
+                      {
+                        label: 'Close',
+                        key: 'action',
+                        render: (item) => <Button size="compact-xs" color="#fe445c" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
+                      }
+                    ]}
                   />
                 </Tabs.Panel>
 
                 <Tabs.Panel value="orders" p={0}>
-                  <MemoizedTable
+                  <DataTable
                     data={recentOrders.filter(o => o.symbol?.includes('_'))}
-                    columns={['Symbol', 'Size', 'Price', 'Status', 'Time', 'Action']}
                     emptyMessage="No recent orders"
-                    statsMap={statsMap}
-                    quote={quote}
-                    onAction={(item: any) => cancelOrder(item._id)}
+                    columns={[
+                      {
+                        label: 'Symbol',
+                        key: 'symbol',
+                        render: (item) => (
+                          <Flex direction="column" lh={1.2} gap={0}>
+                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                            <Group gap={2}>
+                              <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
+                              <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                {item.side}
+                              </Text>
+                            </Group>
+                          </Flex>
+                        )
+                      },
+                      { label: 'Size', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
+                      { label: 'Price', key: 'price' },
+                      { label: 'Status', key: 'status' },
+                      { label: 'Time', key: 'createdAt', render: (item) => formatDate(item.createdAt) },
+                      {
+                        label: 'Action',
+                        key: 'action',
+                        render: (item) => item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
+                      }
+                    ]}
                   />
                 </Tabs.Panel>
 
                 <Tabs.Panel value="history" p={0}>
-                  <MemoizedTable
+                  <DataTable
                     data={history}
-                    columns={['Symbol', 'Size', 'Entry', 'Exit', 'Realized PnL', 'Time']}
                     emptyMessage="No trade history"
-                    statsMap={statsMap}
-                    quote={quote}
+                    columns={[
+                      {
+                        label: 'Symbol',
+                        key: 'symbol',
+                        render: (item) => (
+                          <Flex direction="column" lh={1.2} gap={0}>
+                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                            <Group gap={2}>
+                              <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
+                              <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                {item.side}
+                              </Text>
+                            </Group>
+                          </Flex>
+                        )
+                      },
+                      { label: 'Size', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
+                      { label: 'Entry', key: 'entryPrice' },
+                      { label: 'Exit', key: 'exitPrice' },
+                      {
+                        label: 'Realized PnL',
+                        key: 'realizedPnL',
+                        render: (item) => {
+                          const realizedPnl = Number(item.realizedPnL || 0)
+                          const margin = Number(item.margin || item.marginToRelease || 0)
+                          const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
+
+                          return (
+                            <Flex direction="column" lh={1.2}>
+                              <Group gap={4}>
+                                <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                                  {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
+                                </Text>
+                                {item.note === 'Liquidated' && (
+                                  <Tooltip label={`Liquidated at ${item.exitPrice}`}>
+                                    <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
+                                  </Tooltip>
+                                )}
+                              </Group>
+                              <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
+                                ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                              </Text>
+                            </Flex>
+                          )
+                        }
+                      },
+                      { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt || item.updatedAt || item.closedAt) }
+                    ]}
                   />
                 </Tabs.Panel>
               </Tabs>

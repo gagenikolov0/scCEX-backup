@@ -1,6 +1,6 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group, Table } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group } from '@mantine/core'
 import { useSearchParams } from 'react-router-dom'
-import { useEffect, useMemo, useState, memo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
 import TransferModal from '../components/TransferModal'
@@ -11,98 +11,9 @@ import { useMarket } from '../contexts/MarketContext'
 import { useIntervals } from '../lib/useIntervals'
 import BigPrice from '../components/BigPrice'
 import TradeSlider from '../components/TradeSlider'
-
-const MemoizedTable = memo(({ data, columns, emptyMessage, showCancel, statsMap, quote, cancelOrder }: any) => {
-  const formatDate = (date: string) => date ? new Date(date).toLocaleString() : '-'
-
-  return (
-    <Box style={{ height: '430px', overflowY: 'auto' }}>
-      <Box style={{ overflowX: 'auto', flex: 1 }} px="xs">
-        <Table verticalSpacing="xs" horizontalSpacing={4} highlightOnHover fs="sm" withRowBorders={false}>
-          <Table.Thead bg="var(--bg-2)" style={{ position: 'sticky', top: 0, zIndex: 2 }}>
-            <Table.Tr>
-              {columns.map((col: string) => <Table.Th key={col} c="dimmed" fw={600} py={10}>{col}</Table.Th>)}
-              {showCancel && <Table.Th c="dimmed" fw={600} py={10}>Action</Table.Th>}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody style={{ verticalAlign: 'middle' }}>
-            {data.length === 0 ? (
-              <Table.Tr>
-                <Table.Td py={16} ta="center" c="dimmed" colSpan={columns.length + (showCancel ? 1 : 0)}>{emptyMessage}</Table.Td>
-              </Table.Tr>
-            ) : (
-              data.map((item: any, index: number) => (
-                <Table.Tr key={item.id || item._id || index}>
-                  {columns.map((col: string) => {
-                    let val: any = '-'
-                    const c = col.toLowerCase()
-
-                    const getVal = (v: any) => {
-                      if (v && typeof v === 'object' && v.$numberDecimal) return v.$numberDecimal
-                      return v
-                    }
-
-                    if (c === 'symbol') {
-                      const cleanSymbol = item.symbol?.replace('_', '') || item.symbol
-                      val = (
-                        <Flex direction="column" lh={1.2} gap={0}>
-                          <Text size="sm" fw={700}>{cleanSymbol}</Text>
-                          {item.side && (
-                            <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                              {item.side}
-                            </Text>
-                          )}
-                        </Flex>
-                      )
-                    }
-
-                    else if (c === 'side') val = <Text size="xs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={600} tt="uppercase">{item.side}</Text>
-                    else if (c === 'quantity' || c === 'size') val = Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4)
-                    else if (c === 'price') val = getVal(item.price || item.priceQuote)
-                    else if (c === 'total' || c === 'quote amount') {
-                      const t = getVal(item.total || item.quoteAmount)
-                      val = t ? `${Number(t).toFixed(2)} ${quote} ` : '-'
-                    }
-                    else if (c === 'status') val = item.status
-                    else if (c === 'time' || c === 'closed at') val = formatDate(item.createdAt || item.closedAt)
-                    else if (c === 'asset') val = item.asset
-                    else if (c === 'available') val = getVal(item.available)
-                    else if (c === 'reserved') val = getVal(item.reserved)
-                    else if (c === 'value') {
-                      const asset = item.asset
-                      const available = parseFloat(getVal(item.available) || '0')
-                      if (asset === 'USDT' || asset === 'USDC') {
-                        val = `${available.toFixed(2)} ${quote}`
-                      } else {
-                        const pairStats = statsMap.get(`${asset}${quote}`)
-                        const price = parseFloat(pairStats?.lastPrice || '0')
-                        val = price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
-                      }
-                    }
-                    else if (c === 'updated') val = formatDate(item.updatedAt)
-
-                    return (
-                      <Table.Td key={col}>
-                        {val}
-                      </Table.Td>
-                    )
-                  })}
-                  {showCancel && (
-                    <Table.Td>
-                      <Button size="compact-xs" variant="light" color="var(--red)" onClick={() => cancelOrder(item.id)}>
-                        Cancel
-                      </Button>
-                    </Table.Td>
-                  )}
-                </Table.Tr>
-              ))
-            )}
-          </Table.Tbody>
-        </Table>
-      </Box>
-    </Box>
-  )
-})
+import DataTable from '../components/DataTable'
+import { useSymbolStats } from '../lib/useSymbolStats'
+import { formatDate, getVal, cleanSymbol } from '../lib/utils'
 
 export default function Spot() {
   const { isAuthed } = useAuth()
@@ -116,14 +27,13 @@ export default function Spot() {
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
   const [placing, setPlacing] = useState<null | 'buy' | 'sell'>(null)
   const [transferOpen, setTransferOpen] = useState(false)
-  const [stats, setStats] = useState<any | null>(null)
-  const [loadingStats, setLoadingStats] = useState(false)
   const [tradeSide, setTradeSide] = useState<'buy' | 'sell'>('buy')
   const [history, setHistory] = useState<any[]>([])
   const [percent, setPercent] = useState(0)
 
   const { spotStats, listen, unlisten } = useMarket()
   const { orders, spotAvailable, refreshOrders, refreshBalances, positions } = useAccount()
+  const { stats, loading: loadingStats } = useSymbolStats('spot', token, quote)
 
   useEffect(() => setToken(initialBase), [initialBase])
 
@@ -148,27 +58,6 @@ export default function Spot() {
     symbol: `${token}${quote}`,
     market: 'spot'
   })
-
-  // For Spot Header (selected pair)
-  useEffect(() => {
-    setStats(null)
-    setLoadingStats(true)
-    const ws = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/spot-24h`)
-    const sym = `${token}${quote}`
-    let stopped = false
-
-    ws.onopen = () => !stopped && ws.send(JSON.stringify({ type: 'sub', symbol: sym }))
-    ws.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data as string)
-        if (!stopped && msg?.type === 'stats' && msg?.symbol === sym) { setStats(msg.data); setLoadingStats(false) }
-      } catch { }
-    }
-    ws.onclose = () => !stopped && setLoadingStats(false)
-    ws.onerror = () => !stopped && setLoadingStats(false)
-
-    return () => { stopped = true; ws.readyState === WebSocket.OPEN && ws.close() }
-  }, [token, quote])
 
   const fetchHistory = async () => {
     if (!isAuthed) return
@@ -347,15 +236,99 @@ export default function Spot() {
                 </Tabs.List>
 
                 <Tabs.Panel value="history" p={0}>
-                  <MemoizedTable data={history} columns={['Symbol', 'Quantity', 'Price', 'Quote Amount', 'Time']} emptyMessage="No trade history" statsMap={statsMap} quote={quote} />
+                  <DataTable
+                    data={history}
+                    emptyMessage="No trade history"
+                    columns={[
+                      {
+                        label: 'Symbol',
+                        key: 'symbol',
+                        render: (item) => (
+                          <Flex direction="column" lh={1.2} gap={0}>
+                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                            {item.side && (
+                              <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                {item.side}
+                              </Text>
+                            )}
+                          </Flex>
+                        )
+                      },
+                      { label: 'Quantity', key: 'quantity', render: (item) => Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4) },
+                      { label: 'Price', key: 'price', render: (item) => getVal(item.price || item.priceQuote) },
+                      {
+                        label: 'Quote Amount', key: 'total', render: (item) => {
+                          const t = getVal(item.total || item.quoteAmount)
+                          return t ? `${Number(t).toFixed(2)} ${quote}` : '-'
+                        }
+                      },
+                      { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt || item.closedAt) }
+                    ]}
+                  />
                 </Tabs.Panel>
 
                 <Tabs.Panel value="pending" p={0}>
-                  <MemoizedTable data={pendingOrders} columns={['Symbol', 'Quantity', 'Price', 'Status', 'Time']} emptyMessage="No open orders" showCancel cancelOrder={cancelOrder} statsMap={statsMap} quote={quote} />
+                  <DataTable
+                    data={pendingOrders}
+                    emptyMessage="No open orders"
+                    columns={[
+                      {
+                        label: 'Symbol',
+                        key: 'symbol',
+                        render: (item) => (
+                          <Flex direction="column" lh={1.2} gap={0}>
+                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                            {item.side && (
+                              <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                {item.side}
+                              </Text>
+                            )}
+                          </Flex>
+                        )
+                      },
+                      { label: 'Quantity', key: 'quantity', render: (item) => Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4) },
+                      { label: 'Price', key: 'price', render: (item) => getVal(item.price || item.priceQuote) },
+                      { label: 'Status', key: 'status' },
+                      { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt) },
+                      {
+                        label: 'Action',
+                        key: 'action',
+                        render: (item) => (
+                          <Button size="compact-xs" variant="light" color="var(--red)" onClick={() => cancelOrder(item.id)}>
+                            Cancel
+                          </Button>
+                        )
+                      }
+                    ]}
+                  />
                 </Tabs.Panel>
 
                 <Tabs.Panel value="positions" p={0}>
-                  <MemoizedTable data={positions} columns={['Asset', 'Available', 'Reserved', 'Value', 'Updated']} emptyMessage="No assets" statsMap={statsMap} quote={quote} />
+                  <DataTable
+                    data={positions}
+                    emptyMessage="No assets"
+                    columns={[
+                      { label: 'Asset', key: 'asset' },
+                      { label: 'Available', key: 'available', render: (item) => getVal(item.available) },
+                      { label: 'Reserved', key: 'reserved', render: (item) => getVal(item.reserved) },
+                      {
+                        label: 'Value',
+                        key: 'value',
+                        render: (item) => {
+                          const asset = item.asset
+                          const available = parseFloat(getVal(item.available) || '0')
+                          if (asset === 'USDT' || asset === 'USDC') {
+                            return `${available.toFixed(2)} ${quote}`
+                          } else {
+                            const pairStats = statsMap.get(`${asset}${quote}`)
+                            const price = parseFloat(pairStats?.lastPrice || '0')
+                            return price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
+                          }
+                        }
+                      },
+                      { label: 'Updated', key: 'updated', render: (item) => formatDate(item.updatedAt) }
+                    ]}
+                  />
                 </Tabs.Panel>
               </Tabs>
             </Card>
