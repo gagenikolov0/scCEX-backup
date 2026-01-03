@@ -1,6 +1,7 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, Modal, NumberInput, Slider, Badge, Flex, Box, Stack, Tooltip } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, Modal, Badge, Flex, Box, Stack, Tooltip } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { useSearchParams } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
 import { API_BASE } from '../config/api'
@@ -12,13 +13,14 @@ import { useAccount } from '../contexts/AccountContext'
 import TransferModal from '../components/TransferModal'
 import TradeSlider from '../components/TradeSlider'
 import DataTable from '../components/DataTable'
+import { FuturesTradeForm } from '../components/FuturesTradeForm'
 import { useSymbolStats } from '../lib/useSymbolStats'
 import { formatDate, cleanSymbol } from '../lib/utils'
 
 export default function Futures() {
   const [search] = useSearchParams()
   const quote = (search.get('quote') || 'USDT').toUpperCase()
-  const initialBase = (search.get('base') || 'BTC').toUpperCase()
+  const initialBase = (search.get('base') || 'BTC').toUpperCase().trim().replace(/\s+/g, '')
   const [token, setToken] = useState(initialBase)
   const [pairQuery, setPairQuery] = useState('')
 
@@ -36,16 +38,8 @@ export default function Futures() {
     return map;
   }, [futuresStats])
 
-  const [qty, setQty] = useState('')
-  const [leverage, setLeverage] = useState('10')
-  const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
-  const [limitPrice, setLimitPrice] = useState('')
   const [loadingOrder, setLoadingOrder] = useState<null | 'buy' | 'sell'>(null)
   const [transferOpen, setTransferOpen] = useState(false)
-  const [tradeMode, setTradeMode] = useState<'open' | 'close'>('open')
-  const [percent, setPercent] = useState(0)
-  const [openedLeverage, setOpenedLeverage] = useState(false)
-  const [tempLeverage, setTempLeverage] = useState('10')
   const [partialCloseData, setPartialCloseData] = useState<any | null>(null)
   const [partialCloseQty, setPartialCloseQty] = useState('')
   const [partialClosePercent, setPartialClosePercent] = useState(0)
@@ -93,16 +87,9 @@ export default function Futures() {
     fetchHistory()
   }, [isAuthed])
 
-  useEffect(() => {
-    if (tradeMode === 'open' && percent > 0) {
-      const max = parseFloat(available)
-      const lev = Number(leverage || 1)
-      const newQty = ((max * lev * percent) / 100).toFixed(8).replace(/\.?0+$/, '')
-      if (newQty !== qty) setQty(newQty)
-    }
-  }, [percent, leverage, tradeMode, available])
 
-  const placeOrder = async (side: 'long' | 'short') => {
+
+  const placeOrder = useCallback(async (side: 'long' | 'short', qty: string, orderType: 'market' | 'limit', limitPrice: string, leverage: string) => {
     if (!isAuthed || !qty) return
     setLoadingOrder(side === 'long' ? 'buy' : 'sell')
     try {
@@ -122,20 +109,19 @@ export default function Futures() {
         })
       })
       if (res.ok) {
-        setQty('')
         refreshBalances()
       } else {
         const j = await res.json()
-        alert(j.error || 'Failed to place order')
+        notifications.show({ title: 'Order Error', message: j.error || 'Failed to place order', color: 'red' })
       }
     } catch {
-      alert('Network error')
+      notifications.show({ title: 'Error', message: 'Network error', color: 'red' })
     } finally {
       setLoadingOrder(null)
     }
-  }
+  }, [isAuthed, token, quote, refreshBalances])
 
-  const cancelOrder = async (id: string) => {
+  const cancelOrder = useCallback(async (id: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/futures/orders/${id}`, {
         method: 'DELETE',
@@ -146,12 +132,12 @@ export default function Futures() {
       }
       else {
         const j = await res.json()
-        alert(j.error || 'Failed to cancel')
+        notifications.show({ title: 'Cancel Error', message: j.error || 'Failed to cancel', color: 'red' })
       }
-    } catch { alert('Network error') }
-  }
+    } catch { notifications.show({ title: 'Error', message: 'Network error', color: 'red' }) }
+  }, [refreshBalances])
 
-  const closePosition = async (symbol: string, quantity?: string) => {
+  const closePosition = useCallback(async (symbol: string, quantity?: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/futures/close-position`, {
         method: 'POST',
@@ -168,10 +154,10 @@ export default function Futures() {
       }
       else {
         const j = await res.json()
-        alert(j.error || 'Failed to close')
+        notifications.show({ title: 'Close Error', message: j.error || 'Failed to close', color: 'red' })
       }
-    } catch { alert('Network error') }
-  }
+    } catch { notifications.show({ title: 'Error', message: 'Network error', color: 'red' }) }
+  }, [refreshBalances, fetchHistory])
 
   const updateTPSL = async (symbol: string, tp: string, sl: string, tpQty: string, slQty: string) => {
     try {
@@ -194,9 +180,9 @@ export default function Futures() {
         setTpslData(null)
       } else {
         const j = await res.json()
-        alert(j.error || 'Failed to update TP/SL')
+        notifications.show({ title: 'TP/SL Error', message: j.error || 'Failed to update TP/SL', color: 'red' })
       }
-    } catch { alert('Network error') }
+    } catch { notifications.show({ title: 'Error', message: 'Network error', color: 'red' }) }
   }
 
   const handleTpslClick = (item: any) => {
@@ -528,185 +514,17 @@ export default function Futures() {
 
         {/* Right Side: Sidebar Trade Panel */}
         <Grid.Col span={{ base: 12, lg: 2 }}>
-          <Card padding={0} withBorder radius="md" h={1171} style={{ overflowY: 'auto' }} shadow="xs">
-            <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
-              <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Futures Trade</Text>
-            </Box>
-            <Flex direction="column" gap="md" p="md">
-              <Tabs value={tradeMode} onChange={(val) => setTradeMode(val as 'open' | 'close')} variant="pills" radius="md" color="blue">
-                <Tabs.List grow>
-                  <Tabs.Tab value="open">Open</Tabs.Tab>
-                  <Tabs.Tab value="close">Close</Tabs.Tab>
-                </Tabs.List>
-              </Tabs>
-
-              {tradeMode === 'open' && (
-                <>
-                  <Button
-                    variant="default"
-                    fullWidth
-                    size="sm"
-                    justify="space-between"
-                    onClick={() => {
-                      setTempLeverage(leverage)
-                      setOpenedLeverage(true)
-                    }}
-                    rightSection={<Text size="xs" c="dimmed">Isolated</Text>}
-                  >
-                    {leverage}x
-                  </Button>
-
-                  <Modal
-                    opened={openedLeverage}
-                    onClose={() => setOpenedLeverage(false)}
-                    title="Adjust Leverage"
-                    centered
-                    size="xs"
-                    lockScroll={false}
-                  >
-                    <Stack gap="md">
-                      <NumberInput
-                        label="Leverage"
-                        value={Number(tempLeverage)}
-                        onChange={(val) => setTempLeverage(String(val))}
-                        max={500}
-                        min={1}
-                        size="md"
-                        suffix="x"
-                      />
-
-                      <Group gap="xs">
-                        {['10', '20', '50', '100', '500'].map(lv => (
-                          <Button
-                            key={lv}
-                            size="compact-sm"
-                            variant={tempLeverage === lv ? "filled" : "outline"}
-                            color={tempLeverage === lv ? "blue" : "gray"}
-                            onClick={() => setTempLeverage(lv)}
-                          >
-                            {lv}x
-                          </Button>
-                        ))}
-                      </Group>
-
-                      <Slider
-                        value={Number(tempLeverage)}
-                        onChange={(val) => setTempLeverage(String(val))}
-                        max={500}
-                        min={1}
-                        step={1}
-                        label={(val) => `${val}x`}
-                        marks={[
-                          { value: 1, label: '1x' },
-                          { value: 250, label: '250x' },
-                          { value: 500, label: '500x' },
-                        ]}
-                      />
-
-                      <Group grow mt="md">
-                        <Button variant="light" color="gray" onClick={() => setOpenedLeverage(false)}>
-                          Cancel
-                        </Button>
-                        <Button color="blue" onClick={() => {
-                          setLeverage(tempLeverage)
-                          setOpenedLeverage(false)
-                        }}>
-                          Confirm
-                        </Button>
-                      </Group>
-                    </Stack>
-                  </Modal>
-                </>
-              )}
-
-              <Tabs value={orderType} onChange={(v) => setOrderType(v as 'market' | 'limit')} variant="pills" radius="md">
-                <Tabs.List grow>
-                  <Tabs.Tab value="market">Market</Tabs.Tab>
-                  <Tabs.Tab value="limit">Limit</Tabs.Tab>
-                </Tabs.List>
-              </Tabs>
-
-              {orderType === 'limit' && (
-                <TextInput label="Limit Price" placeholder="0.00" value={limitPrice} onChange={(e) => setLimitPrice(e.currentTarget.value)} size="xs" />
-              )}
-
-              {tradeMode === 'open' ? (
-                <Text size="xs" c="dimmed">Available: {Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} {quote}</Text>
-              ) : (
-                <Text size="xs" c="dimmed">
-                  Position Available: {
-                    (() => {
-                      const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
-                      return pos ? `${Number(pos.quantity).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token}` : `0 ${token}`
-                    })()
-                  }
-                </Text>
-              )}
-
-              <TextInput
-                label={tradeMode === 'open' ? `Quantity (${quote})` : `Quantity (${token})`}
-                placeholder="0.00"
-                value={qty}
-                onChange={(e) => setQty(e.currentTarget.value)}
-                size="xs"
-              />
-
-              {tradeMode === 'open' && (
-                <Text size="xs" c="dimmed" mt={-8}>
-                  Est. Margin: <Text component="span" fw={600} c="var(--mantine-color-text)">
-                    {(Number(qty || 0) / Number(leverage || 1)).toFixed(2)} {quote}
-                  </Text>
-                </Text>
-              )}
-
-              <TradeSlider
-                value={percent}
-                onChange={(val) => {
-                  setPercent(val)
-                  if (tradeMode === 'close') {
-                    const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
-                    if (pos) {
-                      if (val === 100) {
-                        setQty(pos.quantity.toString())
-                      } else {
-                        setQty(((pos.quantity * val) / 100).toFixed(8).replace(/\.?0+$/, ''))
-                      }
-                    }
-                  }
-                }}
-              />
-
-              <Flex gap="md">
-                {tradeMode === 'open' ? (
-                  <>
-                    <Button flex={1} color="var(--green)" loading={loadingOrder === 'buy'} onClick={() => placeOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
-                    <Button flex={1} color="var(--red)" loading={loadingOrder === 'sell'} onClick={() => placeOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
-                  </>
-                ) : (
-                  <Button
-                    flex={1}
-                    color="#fe445c"
-                    variant="filled"
-                    onClick={() => closePosition(`${token}_${quote}`, qty)}
-                    disabled={!isAuthed || !qty}
-                  >
-                    Close Position
-                  </Button>
-                )}
-              </Flex>
-
-              <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
-              <Button
-                variant="filled"
-                color="blue"
-                radius="md"
-                onClick={() => window.location.href = '/deposit'}
-              >
-                Deposit
-              </Button>
-              {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
-            </Flex>
-          </Card>
+          <FuturesTradeForm
+            token={token}
+            quote={quote}
+            isAuthed={isAuthed}
+            available={available}
+            futuresPositions={futuresPositions}
+            onPlaceOrder={placeOrder}
+            onClosePosition={closePosition}
+            onTransferClick={() => setTransferOpen(true)}
+            loadingOrder={loadingOrder}
+          />
         </Grid.Col>
       </Grid>
 
@@ -825,10 +643,60 @@ export default function Futures() {
           </Box>
           <Group grow mt="md">
             <Button variant="light" color="gray" onClick={() => setTpslData(null)}>Cancel</Button>
-            <Button color="blue" onClick={() => updateTPSL(tpslData!.symbol, tpslPrices.tp, tpslPrices.sl, tpslPrices.tpQty, tpslPrices.slQty)}>Save TP/SL</Button>
+            <Button
+              fullWidth
+              color="blue"
+              onClick={() => {
+                // Validation
+                if (tpslData) {
+                  const s = tpslData.symbol
+                  const currentStat = statsMap.get(s) || statsMap.get(s.replace('_', ''))
+                  const currentPrice = parseFloat(currentStat?.lastPrice || '0')
+                  const position = futuresPositions.find(p => p.symbol === s)
+
+                  if (currentPrice > 0 && position) {
+                    const isLong = position.side === 'long'
+                    const tp = parseFloat(tpslPrices.tp)
+                    const sl = parseFloat(tpslPrices.sl)
+
+                    if (tp > 0) {
+                      if (isLong && tp <= currentPrice) {
+                        notifications.show({ title: 'Invalid TP', message: `Long TP (${tp}) must be higher than current price (${currentPrice})`, color: 'red' })
+                        return
+                      }
+                      if (!isLong && tp >= currentPrice) {
+                        notifications.show({ title: 'Invalid TP', message: `Short TP (${tp}) must be lower than current price (${currentPrice})`, color: 'red' })
+                        return
+                      }
+                    }
+
+                    if (sl > 0) {
+                      if (isLong && sl >= currentPrice) {
+                        notifications.show({ title: 'Invalid SL', message: `Long SL (${sl}) must be lower than current price (${currentPrice})`, color: 'red' })
+                        return
+                      }
+                      if (!isLong && sl <= currentPrice) {
+                        notifications.show({ title: 'Invalid SL', message: `Short SL (${sl}) must be higher than current price (${currentPrice})`, color: 'red' })
+                        return
+                      }
+                    }
+                  }
+
+                  updateTPSL(
+                    tpslData.symbol,
+                    tpslPrices.tp,
+                    tpslPrices.sl,
+                    tpslPrices.tpQty,
+                    tpslPrices.slQty
+                  )
+                }
+              }}
+            >
+              Confirm TP/SL
+            </Button>
           </Group>
         </Stack>
       </Modal>
-    </Box>
+    </Box >
   )
 }

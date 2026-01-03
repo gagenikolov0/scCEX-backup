@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Text } from '@mantine/core'
-import { API_BASE } from '../config/api'
 import { usePrice } from '../contexts/PriceContext'
 
 interface BigPriceProps {
@@ -23,45 +22,8 @@ export default function BigPrice({ symbol, market = 'futures' }: BigPriceProps) 
         }
     }, [tick])
 
-    useEffect(() => {
-        let mounted = true
-
-        // Initial fetch for faster first render
-        const fetchInitialOpen = async () => {
-            try {
-                const klinePath = market === 'spot' ? 'spot/klines' : 'futures/klines'
-                // Ensure symbol is safe for URL
-                let cleanSym = symbol.trim();
-                if (market === 'spot') {
-                    cleanSym = cleanSym.replace('_', '');
-                } else if (!cleanSym.includes('_')) {
-                    // Try to insert underscore before quota if missing
-                    cleanSym = cleanSym.replace(/(USDT|USDC)$/i, '_$1');
-                }
-
-                const url = `${API_BASE}/api/markets/${klinePath}?symbol=${encodeURIComponent(cleanSym)}&interval=1m&limit=1`
-
-                const res = await fetch(url)
-                if (!res.ok) return
-
-                const data = await res.json()
-                if (Array.isArray(data) && data.length > 0) {
-                    const latest = data[data.length - 1]
-                    const o = parseFloat(latest[1])
-                    const c = parseFloat(latest[4])
-                    if (mounted) {
-                        setOpenPrice(o)
-                        setPrice(c)
-                    }
-                }
-            } catch (e) {
-                console.error("[BigPrice] Initial fetch failed", e)
-            }
-        }
-
-        fetchInitialOpen()
-        return () => { mounted = false }
-    }, [symbol, market])
+    // Initial fetch removed to prevent console errors/spam.
+    // We rely solely on the WebSocket connection (usePrice) which connects rapidly.
 
     useEffect(() => {
         if (price === null || openPrice === null) return

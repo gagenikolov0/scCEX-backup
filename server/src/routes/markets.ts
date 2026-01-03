@@ -145,6 +145,12 @@ router.get('/futures/klines', async (req: Request, res: Response) => {
     const iv = map[interval] ?? 'Min1'
     // Ensure futures symbol uses underscore format, e.g., BTC_USDT
     const sym = symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1')
+
+    // Validate symbol format for futures (MUST have underscore, e.g. BTC_USDT)
+    if (!sym.includes('_')) {
+      // If we can't determine the pair, fail early instead of 502
+      return res.status(400).json({ error: 'Invalid futures symbol format' })
+    }
     const makeUrls = () => [
       `https://contract.mexc.com/api/v1/contract/kline?symbol=${encodeURIComponent(sym)}&type=${encodeURIComponent(iv)}&page_size=${encodeURIComponent(limit)}`,
       `https://contract.mexc.com/api/v1/contract/kline?symbol=${encodeURIComponent(sym)}&type=${encodeURIComponent(iv)}&limit=${encodeURIComponent(limit)}`,

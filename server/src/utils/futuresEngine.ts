@@ -155,75 +155,19 @@ class FuturesEngine {
                         position.updatedAt = new Date();
                         await position.save({ session });
                     } else {
-                        // Opposite side: Reduce
-                        if (order.quantity >= position.quantity) {
-                            const remainingQty = order.quantity - position.quantity;
-                            const pnl = position.side === 'long'
-                                ? (fillPrice - position.entryPrice) * position.quantity
-                                : (position.entryPrice - fillPrice) * position.quantity;
+                        // Opposite side: Not allowed - cancel the order
+                        order.status = 'cancelled';
+                        await order.save({ session });
 
-                            const marginToRelease = position.margin;
-                            const futAcc = await FuturesAccount.findOne({ userId: order.userId, asset: quote }).session(session);
-                            if (futAcc) {
-                                futAcc.available += (marginToRelease + pnl);
-                                await futAcc.save({ session });
-                            }
+                        // Refund the margin
+                        await FuturesAccount.updateOne(
+                            { userId: order.userId, asset: quote },
+                            { $inc: { reserved: -marginUsed, available: marginUsed }, updatedAt: new Date() },
+                            { session }
+                        );
 
-                            await FuturesPositionHistory.create([{
-                                userId: order.userId, symbol: order.symbol, side: position.side,
-                                entryPrice: position.entryPrice, exitPrice: fillPrice,
-                                quantity: position.quantity, margin: position.margin,
-                                leverage: position.leverage,
-                                realizedPnL: pnl, closedAt: new Date()
-                            }], { session });
-
-                            await position.deleteOne({ session });
-
-                            if (remainingQty > 0.00000001) {
-                                const remainingMargin = (remainingQty / order.quantity) * marginUsed;
-                                const liqPrice = order.side === 'long'
-                                    ? fillPrice - (0.9 * remainingMargin / remainingQty)
-                                    : fillPrice + (0.9 * remainingMargin / remainingQty);
-
-                                await FuturesPosition.create([{
-                                    userId: order.userId, symbol: order.symbol, side: order.side,
-                                    entryPrice: fillPrice, quantity: remainingQty,
-                                    leverage: order.leverage, margin: remainingMargin,
-                                    liquidationPrice: liqPrice
-                                }], { session });
-                            }
-                        } else {
-                            // Partially reduce
-                            const pnl = position.side === 'long'
-                                ? (fillPrice - position.entryPrice) * order.quantity
-                                : (position.entryPrice - fillPrice) * order.quantity;
-
-                            const marginToRelease = (order.quantity / position.quantity) * position.margin;
-
-                            position.quantity -= order.quantity;
-                            position.margin -= marginToRelease;
-
-                            position.liquidationPrice = position.side === 'long'
-                                ? position.entryPrice - (0.9 * position.margin / position.quantity)
-                                : position.entryPrice + (0.9 * position.margin / position.quantity);
-
-                            position.updatedAt = new Date();
-                            await position.save({ session });
-
-                            const futAcc = await FuturesAccount.findOne({ userId: order.userId, asset: quote }).session(session);
-                            if (futAcc) {
-                                futAcc.available += (marginToRelease + pnl);
-                                await futAcc.save({ session });
-                            }
-
-                            await FuturesPositionHistory.create([{
-                                userId: order.userId, symbol: order.symbol, side: position.side,
-                                entryPrice: position.entryPrice, exitPrice: fillPrice,
-                                quantity: order.quantity, margin: marginToRelease,
-                                leverage: position.leverage,
-                                realizedPnL: pnl, closedAt: new Date(), note: 'Partial Close'
-                            }], { session });
-                        }
+                        console.warn(`[Futures Engine] Order ${orderId} cancelled: opposite side position exists`);
+                        return;
                     }
                 } else {
                     const liqPrice = order.side === 'long'

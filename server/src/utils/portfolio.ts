@@ -35,7 +35,9 @@ export async function calculateTotalPortfolioUSD(userId: string): Promise<number
     for (const pos of futuresPositions) {
         totalUSD += (pos.margin || 0);
         try {
-            const currentPrice = await priceService.getPrice(pos.symbol);
+            // Strictly normalize for futures pricing
+            const sym = pos.symbol.includes('_') ? pos.symbol : pos.symbol.replace(/(USDT|USDC)$/i, '_$1');
+            const currentPrice = await priceService.getPrice(sym);
             const diff = pos.side === 'long'
                 ? (currentPrice - pos.entryPrice)
                 : (pos.entryPrice - currentPrice);

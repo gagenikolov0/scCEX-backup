@@ -13,11 +13,12 @@ interface Position {
 
 interface Order {
   id: string
+  _id?: string
   symbol: string
   side: 'buy' | 'sell'
   quantity: string
   price: string
-  status: 'filled' | 'rejected' | 'pending'
+  status: 'filled' | 'rejected' | 'pending' | 'cancelled'
   createdAt: string
 }
 
@@ -115,17 +116,35 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
     if (!accessToken) return
 
     try {
-      const response = await fetch(`${API_BASE}/api/spot/orders`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      })
+      const [spotRes, futuresRes] = await Promise.all([
+        fetch(`${API_BASE}/api/spot/orders`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        }),
+        fetch(`${API_BASE}/api/futures/data`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        })
+      ])
 
-      if (response.ok) {
-        const data = await response.json()
-        // Backend returns orders array directly, not wrapped in { orders: [...] }
-        setOrders(Array.isArray(data) ? data : [])
+      let allOrders: any[] = []
+
+      if (spotRes.ok) {
+        const spotData = await spotRes.json()
+        if (Array.isArray(spotData)) {
+          allOrders = [...allOrders, ...spotData]
+        }
       }
+
+      if (futuresRes.ok) {
+        const futuresData = await futuresRes.json()
+        if (futuresData.orders && Array.isArray(futuresData.orders)) {
+          allOrders = [...allOrders, ...futuresData.orders]
+        }
+      }
+
+      // Sort by newest first
+      allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+      setOrders(allOrders)
     } catch (error) {
       // Silent fail for orders refresh
     }
@@ -220,13 +239,22 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             })
           } else if (msg.kind === 'order' && msg.order) {
             setOrders(prev => {
-              const idx = prev.findIndex(o => o.id === msg.order.id)
+              // Match by either id or _id since futures orders use _id
+              const idx = prev.findIndex(o =>
+                o.id === msg.order.id ||
+                o._id === msg.order._id ||
+                o.id === msg.order._id ||
+                o._id === msg.order.id
+              )
               const newOrder = {
-                id: msg.order.id,
+                id: msg.order.id || msg.order._id,
+                _id: msg.order._id || msg.order.id,
                 symbol: msg.order.symbol,
                 side: msg.order.side,
+                type: msg.order.type,
                 quantity: msg.order.quantity,
                 price: msg.order.price,
+                leverage: msg.order.leverage,
                 status: msg.order.status,
                 createdAt: msg.order.createdAt
               }

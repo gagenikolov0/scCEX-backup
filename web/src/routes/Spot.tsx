@@ -1,4 +1,5 @@
 import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
@@ -19,7 +20,7 @@ export default function Spot() {
   const { isAuthed } = useAuth()
   const [search] = useSearchParams()
   const quote = (search.get('quote') || 'USDT').toUpperCase()
-  const initialBase = (search.get('base') || 'BTC').toUpperCase()
+  const initialBase = (search.get('base') || 'BTC').toUpperCase().trim().replace(/\s+/g, '')
   const [token, setToken] = useState(initialBase)
   const [pairQuery, setPairQuery] = useState('')
   const [qty, setQty] = useState('')
@@ -42,7 +43,15 @@ export default function Spot() {
     return () => unlisten('spot')
   }, [listen, unlisten])
 
-  const statsMap = useMemo(() => new Map(spotStats.map(s => [s.symbol, s])), [spotStats])
+  // Robust stats map
+  const statsMap = useMemo(() => {
+    const map = new Map();
+    spotStats.forEach(s => {
+      map.set(s.symbol, s);
+      map.set(s.symbol.replace('_', ''), s);
+    });
+    return map;
+  }, [spotStats])
 
   const tokenOptions = useMemo(() => {
     const list = spotStats.filter(t => t.symbol.endsWith(quote)).map(t => t.symbol.replace('_', '').replace(quote, ''))
@@ -98,9 +107,9 @@ export default function Spot() {
         fetchHistory()
       } else {
         const j = await res.json().catch(() => null)
-        alert(j?.error || 'Order failed')
+        notifications.show({ title: 'Order Error', message: j?.error || 'Order failed', color: 'red' })
       }
-    } catch (e) { alert('Order failed') } finally { setPlacing(null) }
+    } catch (e) { notifications.show({ title: 'Error', message: 'Order failed', color: 'red' }) } finally { setPlacing(null) }
   }
 
   const cancelOrder = async (orderId: string) => {
@@ -115,12 +124,12 @@ export default function Spot() {
         refreshBalances()
       } else {
         const j = await res.json().catch(() => null)
-        alert(j?.error || 'Cancel failed')
+        notifications.show({ title: 'Cancel Error', message: j?.error || 'Cancel failed', color: 'red' })
       }
-    } catch (e) { alert('Cancel failed') }
+    } catch (e) { notifications.show({ title: 'Error', message: 'Cancel failed', color: 'red' }) }
   }
 
-  const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders])
+  const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending' && !o.symbol.includes('_')), [orders])
   const available = (spotAvailable as any)?.[quote] ?? '0'
   const baseAvail = positions.find((r: any) => (r?.asset || '').toUpperCase() === token.toUpperCase())?.available ?? '0'
 
@@ -320,7 +329,8 @@ export default function Spot() {
                           if (asset === 'USDT' || asset === 'USDC') {
                             return `${available.toFixed(2)} ${quote}`
                           } else {
-                            const pairStats = statsMap.get(`${asset}${quote}`)
+                            const sym = `${asset}${quote}`;
+                            const pairStats = statsMap.get(sym) || statsMap.get(sym.replace('_', ''));
                             const price = parseFloat(pairStats?.lastPrice || '0')
                             return price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
                           }

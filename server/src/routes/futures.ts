@@ -113,76 +113,8 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
                         position.updatedAt = new Date()
                         await position.save({ session })
                     } else {
-                        // Opposite side: Reduce position
-                        if (baseQuantity >= position.quantity) {
-                            const remainingQty = baseQuantity - position.quantity
-                            const pnl = position.side === 'long'
-                                ? (executionPrice - position.entryPrice) * position.quantity
-                                : (position.entryPrice - executionPrice) * position.quantity
-
-                            const marginToRelease = position.margin
-                            const quoteAsset = symbol.endsWith('USDT') ? 'USDT' : 'USDC'
-                            const futAcc = await FuturesAccount.findOne({ userId, asset: quoteAsset }).session(session)
-                            if (futAcc) {
-                                futAcc.available += (marginToRelease + pnl)
-                                await futAcc.save({ session })
-                            }
-
-                            await FuturesPositionHistory.create([{
-                                userId, symbol, side: position.side,
-                                entryPrice: position.entryPrice, exitPrice: executionPrice,
-                                quantity: position.quantity, margin: position.margin,
-                                leverage: position.leverage,
-                                realizedPnL: pnl, closedAt: new Date()
-                            }], { session })
-
-                            await position.deleteOne({ session })
-
-                            if (remainingQty > 0.00000001) {
-                                const remainingMargin = (remainingQty / baseQuantity) * marginRequired
-                                const liqPrice = side === 'long'
-                                    ? executionPrice - (0.9 * remainingMargin / remainingQty)
-                                    : executionPrice + (0.9 * remainingMargin / remainingQty)
-
-                                await FuturesPosition.create([{
-                                    userId, symbol, side, entryPrice: executionPrice,
-                                    quantity: remainingQty, leverage: levNum, margin: remainingMargin,
-                                    liquidationPrice: liqPrice
-                                }], { session })
-                            }
-                        } else {
-                            // Partially reduce
-                            const pnl = position.side === 'long'
-                                ? (executionPrice - position.entryPrice) * baseQuantity
-                                : (position.entryPrice - executionPrice) * baseQuantity
-
-                            const marginToRelease = (baseQuantity / position.quantity) * position.margin
-
-                            position.quantity -= baseQuantity
-                            position.margin -= marginToRelease
-
-                            position.liquidationPrice = position.side === 'long'
-                                ? position.entryPrice - (0.9 * position.margin / position.quantity)
-                                : position.entryPrice + (0.9 * position.margin / position.quantity)
-
-                            position.updatedAt = new Date()
-                            await position.save({ session })
-
-                            const quoteAsset = symbol.endsWith('USDT') ? 'USDT' : 'USDC'
-                            const futAcc = await FuturesAccount.findOne({ userId, asset: quoteAsset }).session(session)
-                            if (futAcc) {
-                                futAcc.available += (marginToRelease + pnl)
-                                await futAcc.save({ session })
-                            }
-
-                            await FuturesPositionHistory.create([{
-                                userId, symbol, side: position.side,
-                                entryPrice: position.entryPrice, exitPrice: executionPrice,
-                                quantity: baseQuantity, margin: marginToRelease,
-                                leverage: position.leverage,
-                                realizedPnL: pnl, closedAt: new Date(), note: 'Partial Close'
-                            }], { session })
-                        }
+                        // Opposite side: Not allowed - user must close position first
+                        throw new Error('Please close your existing position before opening a position in the opposite direction')
                     }
                 } else {
                     const liqPrice = side === 'long'
@@ -213,7 +145,20 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
         const symbol = (req as any).body.symbol;
         syncFuturesBalances(userId).catch(() => { });
         syncFuturesPosition(userId, symbol).catch(() => { });
-        if (orderDoc) syncOrder(userId, { id: orderDoc._id, status: orderDoc.status });
+        if (orderDoc) {
+            syncOrder(userId, {
+                _id: orderDoc._id.toString(),
+                id: orderDoc._id.toString(),
+                symbol: orderDoc.symbol,
+                side: orderDoc.side,
+                type: orderDoc.type,
+                quantity: orderDoc.quantity,
+                price: orderDoc.price,
+                leverage: orderDoc.leverage,
+                status: orderDoc.status,
+                createdAt: orderDoc.createdAt
+            });
+        }
 
         return res.json(orderDoc)
     } catch (e: any) {
@@ -253,7 +198,7 @@ router.delete('/orders/:id', requireAuth, async (req: AuthRequest, res: Response
         const orderId = req.params.id;
         syncFuturesBalances(userId).catch(() => { });
         syncFuturesPosition(userId, canceledSymbol).catch(() => { });
-        syncOrder(userId, { id: orderId, status: 'cancelled' });
+        syncOrder(userId, { _id: orderId, id: orderId, status: 'cancelled' });
 
         return res.json({ success: true })
     } catch (e: any) {

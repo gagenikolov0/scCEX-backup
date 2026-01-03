@@ -283,7 +283,8 @@ function PriceChart(props: Props) {
     ; (async () => {
       try {
         const path = 'spot/klines'
-        const sym = market === 'futures' ? deUnderscore(normalizeFuturesSymbol(symbol)) : symbol
+        const cleanSym = symbol.replace(/\s+/g, '')
+        const sym = market === 'futures' ? deUnderscore(normalizeFuturesSymbol(cleanSym)) : cleanSym
         const url = `${API_BASE}/api/markets/${path}?symbol=${sym}&interval=${interval}&limit=2000`
         const res = await fetch(url)
         if (!res.ok) return
@@ -303,7 +304,7 @@ function PriceChart(props: Props) {
       } catch { }
     })()
     return () => { cancelled = true }
-  }, [symbol, interval, market])
+  }, [symbol, interval, market, colorScheme])
 
 
   const tick = usePrice(market, symbol)
@@ -545,20 +546,25 @@ function PriceChart(props: Props) {
           )}
 
           {/* Dynamic: Close Position Button (on the entry line) */}
-          <Button
-            size="compact-xs"
-            color="var(--red)"
-            variant="filled"
-            onClick={() => props.onClosePosition && props.onClosePosition(activePosition)}
-            style={{
-              fontSize: 'var(--fz-xxs)',
-              fontWeight: 700,
-              boxShadow: 'var(--mantine-shadow-md)',
-              textTransform: 'uppercase'
-            }}
-          >
-            Close
-          </Button>
+          <Tooltip label="Open Position Close Modal" position="bottom" withArrow>
+            <Button
+              size="compact-xs"
+              color="var(--red)"
+              variant="filled"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent chart click
+                props.onClosePosition && props.onClosePosition(activePosition)
+              }}
+              style={{
+                fontSize: 'var(--fz-xxs)',
+                fontWeight: 700,
+                boxShadow: 'var(--mantine-shadow-md)',
+                textTransform: 'uppercase'
+              }}
+            >
+              Close Pos
+            </Button>
+          </Tooltip>
         </Flex>
       )}
     </Box>

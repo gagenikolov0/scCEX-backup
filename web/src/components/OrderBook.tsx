@@ -18,7 +18,10 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
     setBids([]); setAsks([]); setError(null); setStatus('connecting')
     const wsBase = API_BASE.replace(/^http/, 'ws')
     const path = market === 'futures' ? '/ws/futures-depth' : '/ws/spot-depth'
-    const sym = market === 'futures' && !symbol.includes('_') ? symbol.replace(/(USDT|USDC)$/, '_$1') : symbol
+    // Strict symbol normalization: Spot = No underscore, Futures = Underscore
+    const sym = market === 'futures'
+      ? (symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1'))
+      : symbol.replace('_', '');
     let stopped = false
     let ws: WebSocket | null = null
     let retries = 0
