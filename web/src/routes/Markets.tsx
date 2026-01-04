@@ -65,7 +65,7 @@ const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' |
   return (
     <Anchor component={Link} to={`/${type}?base=${base}&quote=${quote}`} underline="never" c="inherit">
       <Flex
-        px="xl"
+        px={{ base: 'md', md: 'xl' }}
         py="md"
         align="center"
         justify="space-between"
@@ -128,7 +128,7 @@ const MarketTable = memo(({ data, type }: { data: any[], type: 'spot' | 'futures
     <Box>
       <Paper radius="lg" className="glass-card no-move" style={{ overflow: 'hidden' }}>
         {/* Table Header */}
-        <Flex px="xl" py="md" bg="var(--mantine-color-default-hover)" style={{ borderBottom: '1px solid var(--glass-border)' }}>
+        <Flex px={{ base: 'md', md: 'xl' }} py="md" bg="var(--mantine-color-default-hover)" style={{ borderBottom: '1px solid var(--glass-border)' }}>
           <Group gap="xl" grow flex={1}>
             <Text size="xs" fw={700} c="dimmed" tt="uppercase">Market</Text>
             <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right">Price</Text>
@@ -215,7 +215,7 @@ export default function Markets() {
     <Box style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 60px)' }}>
       <ParticlesBackground />
 
-      <Container size="xl" py="xl" style={{ position: 'relative', zIndex: 1 }}>
+      <Container size="xl" py="xl" px={{ base: 'md', md: 'md' }} style={{ position: 'relative', zIndex: 1 }}>
         <Stack gap={40}>
           {/* Header & Search */}
           <Group justify="space-between" align="flex-end">

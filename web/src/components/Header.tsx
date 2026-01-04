@@ -94,21 +94,23 @@ function WalletDropdownContent() {
 
   return (
     <Stack gap="md">
-      <Box>
-        <Text size="xs" c="dimmed" fw={700} tt="uppercase">Total Balance</Text>
-        <CountUp
-          end={totalPortfolioUSD}
-          prefix="$"
-          decimals={2}
-          size="xl"
-          fw={800}
-          className="text-glow"
-        />
-        <Group gap="xs" mt={4}>
-          <Badge size="xs" variant="dot" color="cyan">Spot: ${totalSpot.toFixed(2)}</Badge>
-          <Badge size="xs" variant="dot" color="blue">Fut: ${totalFutures.toFixed(2)}</Badge>
-        </Group>
-      </Box>
+      <UnstyledButton component={Link} to="/wallet?tab=overview" className={classes.dropdownItem}>
+        <Box>
+          <Text size="xs" c="dimmed" fw={700} tt="uppercase">Total Balance</Text>
+          <CountUp
+            end={totalPortfolioUSD}
+            prefix="$"
+            decimals={2}
+            size="xl"
+            fw={800}
+            className="text-glow"
+          />
+          <Group gap="xs" mt={4}>
+            <Badge size="xs" variant="dot" color="cyan">Spot: ${totalSpot.toFixed(2)}</Badge>
+            <Badge size="xs" variant="dot" color="blue">Fut: ${totalFutures.toFixed(2)}</Badge>
+          </Group>
+        </Box>
+      </UnstyledButton>
 
       <Divider />
 
@@ -120,9 +122,9 @@ function WalletDropdownContent() {
       <Divider />
 
       <Stack gap={4}>
-        <Menu.Item component={Link} to="/wallet?tab=overview" leftSection={<IconWallet size={16} />}>Overview</Menu.Item>
-        <Menu.Item component={Link} to="/wallet?tab=spot" leftSection={<IconCoin size={16} />}>Spot Wallet</Menu.Item>
-        <Menu.Item component={Link} to="/wallet?tab=futures" leftSection={<IconCurrencyDollar size={16} />}>Futures Wallet</Menu.Item>
+        <Menu.Item component={Link} to="/wallet?tab=overview" leftSection={<IconWallet size={18} />} py="md" fz="sm">Overview</Menu.Item>
+        <Menu.Item component={Link} to="/wallet?tab=spot" leftSection={<IconCoin size={18} />} py="md" fz="sm">Spot Wallet</Menu.Item>
+        <Menu.Item component={Link} to="/wallet?tab=futures" leftSection={<IconCurrencyDollar size={18} />} py="md" fz="sm">Futures Wallet</Menu.Item>
       </Stack>
     </Stack>
   )
@@ -214,7 +216,16 @@ export default function Header() {
               Markets
             </NavLink>
 
-            <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-start" radius="md" shadow="md" withinPortal>
+            <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-start" radius="md" shadow="md" withinPortal
+              styles={{
+                dropdown: {
+                  backgroundColor: 'var(--glass-bg)',
+                  backdropFilter: 'blur(var(--glass-blur))',
+                  border: '1px solid var(--glass-border)',
+                  boxShadow: '0 10px 40px var(--glass-shadow)'
+                }
+              }}
+            >
               <Menu.Target>
                 <Box component="span" className={classes.trigger}>
                   <Center inline>
@@ -228,7 +239,16 @@ export default function Header() {
               </Menu.Dropdown>
             </Menu>
 
-            <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-start" radius="md" shadow="md" withinPortal>
+            <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-start" radius="md" shadow="md" withinPortal
+              styles={{
+                dropdown: {
+                  backgroundColor: 'var(--glass-bg)',
+                  backdropFilter: 'blur(var(--glass-blur))',
+                  border: '1px solid var(--glass-border)',
+                  boxShadow: '0 10px 40px var(--glass-shadow)'
+                }
+              }}
+            >
               <Menu.Target>
                 <Box component="span" className={classes.trigger}>
                   <Center inline>
@@ -245,7 +265,7 @@ export default function Header() {
         </Group>
 
         {/* Middle: Omni Search Bar */}
-        <Box style={{ flex: 1, maxWidth: 400, margin: '0 20px' }} visibleFrom="md">
+        <Box style={{ flex: 1, maxWidth: 320, margin: '0 20px' }} visibleFrom="md">
           <Select
             ref={searchInputRef}
             placeholder="Search assets or traders (Ctrl + K)"
@@ -296,10 +316,11 @@ export default function Header() {
                 }
               },
               dropdown: {
-                backgroundColor: 'var(--bg-1)',
-                border: '1px solid var(--border-1)',
+                backgroundColor: 'var(--glass-bg)',
+                backdropFilter: 'blur(var(--glass-blur))',
+                border: '1px solid var(--glass-border)',
                 borderRadius: 'var(--mantine-radius-md)',
-                boxShadow: 'var(--mantine-shadow-lg)'
+                boxShadow: '0 10px 40px var(--glass-shadow)'
               }
             }}
           />
@@ -311,7 +332,16 @@ export default function Header() {
             {isAuthed ? (
               <>
                 <Button component={Link} to="/deposit" color="blue" radius="xl" size="xs" px="md">Deposit</Button>
-                <Menu trigger="hover" openDelay={50} closeDelay={50} width={320} position="bottom-end" radius="lg" shadow="lg" withinPortal>
+                <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-end" radius="lg" shadow="lg" withinPortal
+                  styles={{
+                    dropdown: {
+                      backgroundColor: 'var(--glass-bg)',
+                      backdropFilter: 'blur(var(--glass-blur))',
+                      border: '1px solid var(--glass-border)',
+                      boxShadow: '0 20px 40px var(--glass-shadow)'
+                    }
+                  }}
+                >
                   <Menu.Target>
                     <UnstyledButton component={Link} to="/wallet" className={classes.trigger}>
                       <Center inline>

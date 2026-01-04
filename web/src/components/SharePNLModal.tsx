@@ -131,7 +131,7 @@ export default function SharePNLModal({ opened, onClose, data }: SharePNLModalPr
                                 </Avatar>
                                 <Stack gap={0} justify="center">
                                     <Text size="md" color="#ffffff" fw={800} style={{ lineHeight: 1 }}>
-                                        {username || (email ? email.split('@')[0] : 'Institutional Trader')}
+                                        {username || (email ? email.split('@')[0] : 'Trader')}
                                     </Text>
                                 </Stack>
                             </Group>

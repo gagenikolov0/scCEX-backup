@@ -61,7 +61,7 @@ export default function UserInsight() {
                             <Stack gap={4}>
                                 <Title order={1} fw={900} style={{ letterSpacing: '-0.02em' }}>{data.user.username}</Title>
                                 <Group gap="xs">
-                                    <Badge variant="dot" color="blue">Institutional TRADER</Badge>
+                                    <Badge variant="dot" color="blue">TRADER</Badge>
                                     <Group gap={4}>
                                         <IconCalendarTime size={14} color="var(--mantine-color-dimmed)" />
                                         <Text size="xs" c="dimmed">Joined {new Date(data.user.createdAt).toLocaleDateString()}</Text>
@@ -105,7 +105,6 @@ export default function UserInsight() {
                                                 <Table.Th>Symbol</Table.Th>
                                                 <Table.Th>Size</Table.Th>
                                                 <Table.Th>Entry Price</Table.Th>
-                                                <Table.Th>PnL (ROE%)</Table.Th>
                                             </Table.Tr>
                                         </Table.Thead>
                                         <Table.Tbody>
@@ -124,15 +123,10 @@ export default function UserInsight() {
                                                     <Table.Td>
                                                         <Text size="sm">${pos.entryPrice.toLocaleString()}</Text>
                                                     </Table.Td>
-                                                    <Table.Td>
-                                                        <Text size="sm" color={pos.realizedPnL >= 0 ? 'green' : 'red'} fw={700}>
-                                                            {pos.realizedPnL >= 0 ? '+' : ''}{pos.realizedPnL.toLocaleString()} USDT
-                                                        </Text>
-                                                    </Table.Td>
                                                 </Table.Tr>
                                             ))}
                                             {data.activePositions.length === 0 && (
-                                                <Table.Tr><Table.Td colSpan={4} align="center"><Text c="dimmed" py="xl">No active positions</Text></Table.Td></Table.Tr>
+                                                <Table.Tr><Table.Td colSpan={3} align="center"><Text c="dimmed" py="xl">No active positions</Text></Table.Td></Table.Tr>
                                             )}
                                         </Table.Tbody>
                                     </Table>

@@ -206,7 +206,7 @@ export default function Settings() {
                 <Stack gap="xl">
                   <Box>
                     <Text fw={700} size="lg">Profile Settings</Text>
-                    <Text size="sm" c="dimmed">Your institutional identity on VirCEX</Text>
+                    <Text size="sm" c="dimmed">Your identity on VirCEX</Text>
                   </Box>
 
                   <Divider opacity={0.1} />

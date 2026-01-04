@@ -136,7 +136,7 @@ export const AssetSelector = React.memo(({ currentSymbol, currentQuote, market, 
     const cleanBase = useCallback((sym: string) => sym.replace('_', '').replace(currentQuote, ''), [currentQuote])
 
     return (
-        <Box ref={containerRef} style={{ position: 'relative', zIndex: 1000 }}>
+        <Box ref={containerRef} style={{ position: 'relative', zIndex: 100 }}>
             <UnstyledButton
                 onClick={() => setIsOpen(!isOpen)}
                 style={{
@@ -179,7 +179,7 @@ export const AssetSelector = React.memo(({ currentSymbol, currentQuote, market, 
                         position: 'absolute',
                         top: '64px',
                         left: '0',
-                        width: '400px',
+                        width: '320px',
                         background: 'var(--glass-bg)',
                         backdropFilter: 'blur(var(--glass-blur))',
                         border: '1px solid var(--glass-border)',

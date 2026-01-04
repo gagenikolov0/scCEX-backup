@@ -23,13 +23,13 @@
   --chart-line: var(--border-1);
 
   /* Glassmorphism Tokens - Light Mode Default */
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-bg-hover: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-border-hover: rgba(0, 150, 255, 0.2);
-  --glass-shadow: rgba(0, 0, 0, 0.05);
-  --glass-shadow-hover: rgba(0, 100, 255, 0.1);
-  --glass-blur: 16px;
+  --glass-bg: rgba(255, 255, 255, 0.45);
+  --glass-bg-hover: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-border-hover: rgba(0, 150, 255, 0.15);
+  --glass-shadow: rgba(0, 0, 0, 0.03);
+  --glass-shadow-hover: rgba(0, 100, 255, 0.08);
+  --glass-blur: 20px;
 
   /* Input Theme Tokens - Light Mode */
   --input-bg: rgba(0, 0, 0, 0.02);
@@ -37,6 +37,15 @@
   --input-color: var(--mantine-color-black);
   --input-border: rgba(0, 0, 0, 0.08);
   --input-placeholder: var(--mantine-color-gray-5);
+  --wallet-hero-p: 20px;
+  --auth-padding: 20px;
+}
+
+@media (min-width: 48em) {
+  :root {
+    --wallet-hero-p: 40px;
+    --auth-padding: 60px;
+  }
 }
 
 .dark,

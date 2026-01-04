@@ -55,7 +55,7 @@ export default function Wallet() {
         return (
           <Stack gap="xl">
             {/* Hero Balance Card */}
-            <Paper className="glass-card no-move" style={{ padding: '40px', position: 'relative', overflow: 'hidden' }} radius="lg">
+            <Paper className="glass-card no-move" style={{ padding: 'var(--wallet-hero-p)', position: 'relative', overflow: 'hidden' }} radius="lg">
               <Box style={{
                 position: 'absolute', top: '-20%', right: '-10%', width: '300px', height: '300px',
                 background: 'radial-gradient(circle, rgba(50, 255, 100, 0.15) 0%, transparent 70%)',
@@ -66,10 +66,16 @@ export default function Wallet() {
                 <Stack gap="xs">
                   <Text c="dimmed" size="lg" fw={500}>Estimated Total Value</Text>
                   <Flex align="flex-start" gap={4}>
-                    <Title order={1} size={60} lh={1} className="text-glow">
-                      <CountUp end={totalPortfolioUSD} prefix="$" decimals={2} />
-                    </Title>
-                    <Badge variant="light" color="green" size="lg" mt={10}>+2.4%</Badge>
+                    <CountUp
+                      end={totalPortfolioUSD}
+                      prefix="$"
+                      decimals={2}
+                      fz={56}
+                      fw={950}
+                      lh={1}
+                      className="text-glow"
+                      style={{ letterSpacing: '-0.02em' }}
+                    />
                   </Flex>
                   <Text c="dimmed" size="sm">Last updated: just now</Text>
                 </Stack>
@@ -258,8 +264,8 @@ export default function Wallet() {
           {/* Mobile Tab Fallback (Simple) - could be improved but focusing on desktop polish as requested usually */}
 
           {/* Main Content */}
-          <Box flex={1} p="xl" style={{ overflowY: 'auto' }}>
-            <Container size="xl">
+          <Box flex={1} p={{ base: 'md', md: 'xl' }} style={{ overflowY: 'auto' }}>
+            <Container size="xl" px={{ base: 0, md: 'md' }}>
               {renderContent()}
             </Container>
           </Box>

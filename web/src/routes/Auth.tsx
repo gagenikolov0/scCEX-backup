@@ -119,7 +119,7 @@ export default function AuthHub() {
             <Box style={{
               background: 'var(--glass-bg)',
               backdropFilter: 'blur(40px)',
-              padding: '60px',
+              padding: 'var(--auth-padding)',
               position: 'relative'
             }}>
               <Stack gap="xl">
@@ -170,7 +170,7 @@ export default function AuthHub() {
                 </Box>
 
                 <SpotlightCard p={0} radius="24px" className="glass-card no-move" style={{ border: 'none' }}>
-                  <Box p={30}>
+                  <Box p={{ base: 'md', sm: 30 }}>
                     <form onSubmit={handleSubmit(onSubmit)}>
                       <Stack gap="md">
                         <TextInput
