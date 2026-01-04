@@ -4,6 +4,7 @@ import { z } from "zod";
 import { User } from "../models/User";
 import { AddressGroup } from "../models/AddressGroup";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import { requireAuth, AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
@@ -106,6 +107,31 @@ router.post("/refresh", async (req: Request, res: Response) => {
   } catch (_e) {
     return res.status(401).json({ error: "Invalid refresh" });
   }
+});
+
+const changePasswordSchema = z.object({
+  oldPassword: z.string(),
+  newPassword: z.string().min(8).max(128),
+});
+
+router.post("/change-password", requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  const parse = changePasswordSchema.safeParse(req.body);
+  if (!parse.success) return res.status(400).json({ error: "Invalid input" });
+  const { oldPassword, newPassword } = parse.data;
+
+  const user = await User.findById(authReq.user!.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const ok = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!ok) return res.status(401).json({ error: "Invalid old password" });
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  user.passwordHash = passwordHash;
+  user.refreshTokenVersion = (user.refreshTokenVersion || 0) + 1;
+  await user.save();
+
+  res.json({ ok: true });
 });
 
 export default router;
