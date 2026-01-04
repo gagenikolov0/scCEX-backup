@@ -193,50 +193,60 @@ export default function Futures() {
 
   return (
     <Box>
-      <Flex align="center" gap="lg" py={4}>
-        <AssetSelector
-          currentSymbol={token}
-          currentQuote={quote}
-          market="futures"
-          stats={futuresStats}
-          onSelect={setToken}
-        />
+      <Flex
+        direction={{ base: 'column', md: 'row' }}
+        align={{ base: 'stretch', md: 'center' }}
+        gap={{ base: 'sm', md: 'lg' }}
+        pb="4px"
+      >
+        <Box w={{ base: '100%', md: 'auto' }}>
+          <AssetSelector
+            currentSymbol={token}
+            currentQuote={quote}
+            market="futures"
+            stats={futuresStats}
+            onSelect={setToken}
+          />
+        </Box>
 
-        <Flex align="center" style={{ borderLeft: '1px solid var(--mantine-color-default-border)', paddingLeft: '24px' }}>
+        <Box style={{ flex: 1 }}>
           {loadingStats ? <Loader size="xs" /> : (
-            <Group gap={24}>
-              <Box>
-                <Box fs="1.25rem" fw={700}>
-                  <BigPrice symbol={`${token}${quote}`} market="futures" />
+            <Flex gap="md" wrap={{ base: 'wrap', md: 'nowrap' }} align="center">
+              <Group gap="lg" wrap="nowrap">
+                <Box>
+                  <Box fs="1.25rem" fw={700}>
+                    <BigPrice symbol={`${token}${quote}`} market="futures" />
+                  </Box>
                 </Box>
-              </Box>
+                <Flex direction="column">
+                  <Text size="xs" c="dimmed" fw={600}>24h Change</Text>
+                  <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'var(--green)' : 'var(--red)'}>
+                    {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
+                  </Text>
+                </Flex>
+              </Group>
 
-              <Flex direction="column">
-                <Text size="xs" c="dimmed" fw={600}>24h Change</Text>
-                <Text size="xs" fw={500} color={(Number(stats?.change24h) || 0) >= 0 ? 'var(--green)' : 'var(--red)'}>
-                  {stats?.change24h != null ? (Number(stats.change24h) >= 0 ? '+' : '') + `${Number(stats.change24h).toFixed(2)}%` : '-'}
-                </Text>
-              </Flex>
+              <Group gap="lg" wrap="nowrap">
+                <Flex direction="column">
+                  <Text size="xs" c="dimmed" fw={500}>24h High</Text>
+                  <Text size="xs" fw={600}>{stats?.high24h ?? '-'}</Text>
+                </Flex>
 
-              <Flex direction="column">
-                <Text size="xs" c="dimmed" fw={500}>24h High</Text>
-                <Text size="xs" fw={600}>{stats?.high24h ?? '-'}</Text>
-              </Flex>
+                <Flex direction="column">
+                  <Text size="xs" c="dimmed" fw={500}>24h Low</Text>
+                  <Text size="xs" fw={600}>{stats?.low24h ?? '-'}</Text>
+                </Flex>
 
-              <Flex direction="column">
-                <Text size="xs" c="dimmed" fw={500}>24h Low</Text>
-                <Text size="xs" fw={600}>{stats?.low24h ?? '-'}</Text>
-              </Flex>
-
-              <Flex direction="column">
-                <Text size="xs" c="dimmed" fw={500}>24h Volume</Text>
-                <Text size="xs" fw={600}>
-                  {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
-                </Text>
-              </Flex>
-            </Group>
+                <Flex direction="column">
+                  <Text size="xs" c="dimmed" fw={500}>24h Volume</Text>
+                  <Text size="xs" fw={600}>
+                    {stats?.volume24h ? Number(stats.volume24h).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}
+                  </Text>
+                </Flex>
+              </Group>
+            </Flex>
           )}
-        </Flex>
+        </Box>
       </Flex>
 
       <Grid gutter="md">
@@ -305,7 +315,14 @@ export default function Futures() {
                       )
                     },
                     { label: 'Size (Qty)', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
-                    { label: 'Avg Entry Price', key: 'entryPrice' },
+                    {
+                      label: 'Avg Entry Price',
+                      key: 'entryPrice',
+                      render: (item) => {
+                        const val = Number(item.entryPrice)
+                        return val > 1 ? val.toFixed(2) : val.toFixed(6).replace(/\.?0+$/, '')
+                      }
+                    },
                     { label: 'Margin', key: 'margin', render: (item) => `${Number(item.margin || 0).toFixed(2)} ${quote}` },
                     { label: 'Liq. Price', key: 'liquidationPrice', render: (item) => <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text> },
                     {

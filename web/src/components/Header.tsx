@@ -2,7 +2,6 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { IconUser, IconSun, IconMoon, IconCurrencyDollar, IconCoin, IconSearch, IconHash, IconWallet, IconArrowUpRight, IconArrowUp } from '@tabler/icons-react'
 import { useEffect, useState, useRef, useMemo } from 'react'
 import {
-  Anchor,
   Box,
   Burger,
   Button,
@@ -24,6 +23,7 @@ import {
   Select,
   Avatar,
   Loader,
+  Modal,
 } from '@mantine/core'
 import { useDisclosure, useDebouncedValue, useHotkeys } from '@mantine/hooks'
 
@@ -34,13 +34,14 @@ import { API_BASE } from '../config/api'
 import { CountUp } from './CountUp'
 
 // Home icon: prefer custom /icon.png from public
-function HomeIcon() {
+// Home icon: prefer custom /icon.png from public
+function HomeIcon({ size = 28, style, ...props }: any) {
   return (
-    <Center w={24} h={24}>
+    <Center w={size} h={size} style={style} {...props}>
       <img
         src="/icon.png"
         alt="Home"
-        style={{ width: 24, height: 24, objectFit: 'contain' }}
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         className={classes.homeIcon}
       />
     </Center>
@@ -154,6 +155,7 @@ export default function Header() {
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] = useDisclosure(false)
   const [futuresOpen, { toggle: toggleFutures }] = useDisclosure(false)
   const [spotOpen, { toggle: toggleSpot }] = useDisclosure(false)
+  const [searchOpened, { open: openSearch, close: closeSearch }] = useDisclosure(false)
 
   useHotkeys([['mod+K', () => searchInputRef.current?.focus()]])
 
@@ -202,16 +204,102 @@ export default function Header() {
     return [...filteredAssets, ...userResults]
   }, [searchQuery, userResults])
 
+  const renderSelect = (ref?: any, autoFocus?: boolean) => (
+    <Select
+      ref={ref}
+      placeholder="Search assets or traders (Ctrl + K)"
+      leftSection={<IconSearch size={16} stroke={1.5} />}
+      data={combinedData}
+      searchable
+      autoFocus={autoFocus}
+      onSearchChange={setSearchQuery}
+      searchValue={searchQuery}
+      onChange={(value) => {
+        if (value) {
+          navigate(value)
+          // Use a small delay to clear search query to prevent Mantine Select 
+          // from crashing during its internal cleanup while navigation occurs
+          setTimeout(() => {
+            setSearchQuery('')
+            closeSearch()
+          }, 50)
+        }
+      }}
+      nothingFoundMessage="No assets or traders found"
+      rightSection={loading ? <Loader size={16} /> : null}
+      renderOption={({ option }) => {
+        if (!option) return null;
+        const isTrader = (option as any).category === 'Traders';
+
+        return (
+          <Group gap="sm">
+            {isTrader ? (
+              <Avatar src={(option as any).image} size={24} radius="xl" />
+            ) : (
+              <ThemeIcon variant="light" size={24} radius="xl">
+                <IconHash size={14} />
+              </ThemeIcon>
+            )}
+            <div>
+              <Text size="sm">{option.label}</Text>
+              <Text size="xs" c="dimmed">{(option as any).category}</Text>
+            </div>
+          </Group>
+        );
+      }}
+      styles={{
+        input: {
+          backgroundColor: 'var(--bg-1)',
+          border: '1px solid var(--border-1)',
+          borderRadius: 'var(--mantine-radius-xl)',
+          transition: 'all 0.2s ease',
+          '&:focus': {
+            borderColor: 'var(--mantine-primary-color-filled)',
+            boxShadow: '0 0 0 2px rgba(51, 154, 240, 0.1)'
+          }
+        },
+        dropdown: {
+          backgroundColor: 'var(--glass-bg)',
+          backdropFilter: 'blur(var(--glass-blur))',
+          border: '1px solid var(--glass-border)',
+          borderRadius: 'var(--mantine-radius-md)',
+          boxShadow: '0 10px 40px var(--glass-shadow)'
+        }
+      }}
+    />
+  )
+
   return (
     <Box component="header" className={classes.header}>
       <Group justify="space-between" h="100%" wrap="nowrap">
         {/* Left: Home & Navigation */}
         <Group h="100%" gap={0} wrap="nowrap">
-          <Anchor component={Link} to="/" className={`${classes.trigger} ${classes.homeTrigger}`} aria-label="Home">
-            <HomeIcon />
-          </Anchor>
+          <UnstyledButton
+            component={Link}
+            to="/"
+            aria-label="Home"
+            style={{ display: 'flex', alignItems: 'center', marginTop: '-4px' }}
+          >
+            <Group gap={6} align="center" wrap="nowrap">
+              <HomeIcon size={24} style={{ marginTop: 4 }} />
+              <Text
+                visibleFrom="sm"
+                size="22px"
+                fw={900}
+                variant="gradient"
+                gradient={{ from: 'cyan.4', to: 'blue.6', deg: 120 }}
+                style={{
+                  letterSpacing: '-0.5px',
+                  userSelect: 'none',
+                  lineHeight: 1
+                }}
+              >
+                Vircex
+              </Text>
+            </Group>
+          </UnstyledButton>
 
-          <Group h="100%" gap={0} visibleFrom="sm">
+          <Group h="100%" gap={0} visibleFrom="sm" ml="md">
             <NavLink to="/markets" className={({ isActive }) => `${classes.trigger} ${classes.pill} ${isActive ? classes.pillActive : ''}`} aria-label="Markets">
               Markets
             </NavLink>
@@ -265,69 +353,25 @@ export default function Header() {
         </Group>
 
         {/* Middle: Omni Search Bar */}
-        <Box style={{ flex: 1, maxWidth: 320, margin: '0 20px' }} visibleFrom="md">
-          <Select
-            ref={searchInputRef}
-            placeholder="Search assets or traders (Ctrl + K)"
-            leftSection={<IconSearch size={16} stroke={1.5} />}
-            data={combinedData}
-            searchable
-            onSearchChange={setSearchQuery}
-            searchValue={searchQuery}
-            onChange={(value) => {
-              if (value) {
-                navigate(value)
-                // Use a small delay to clear search query to prevent Mantine Select 
-                // from crashing during its internal cleanup while navigation occurs
-                setTimeout(() => setSearchQuery(''), 50)
-              }
-            }}
-            nothingFoundMessage="No assets or traders found"
-            rightSection={loading ? <Loader size={16} /> : null}
-            renderOption={({ option }) => {
-              if (!option) return null;
-              const isTrader = (option as any).category === 'Traders';
-
-              return (
-                <Group gap="sm">
-                  {isTrader ? (
-                    <Avatar src={(option as any).image} size={24} radius="xl" />
-                  ) : (
-                    <ThemeIcon variant="light" size={24} radius="xl">
-                      <IconHash size={14} />
-                    </ThemeIcon>
-                  )}
-                  <div>
-                    <Text size="sm">{option.label}</Text>
-                    <Text size="xs" c="dimmed">{(option as any).category}</Text>
-                  </div>
-                </Group>
-              );
-            }}
-            styles={{
-              input: {
-                backgroundColor: 'var(--bg-1)',
-                border: '1px solid var(--border-1)',
-                borderRadius: 'var(--mantine-radius-xl)',
-                transition: 'all 0.2s ease',
-                '&:focus': {
-                  borderColor: 'var(--mantine-primary-color-filled)',
-                  boxShadow: '0 0 0 2px rgba(51, 154, 240, 0.1)'
-                }
-              },
-              dropdown: {
-                backgroundColor: 'var(--glass-bg)',
-                backdropFilter: 'blur(var(--glass-blur))',
-                border: '1px solid var(--glass-border)',
-                borderRadius: 'var(--mantine-radius-md)',
-                boxShadow: '0 10px 40px var(--glass-shadow)'
-              }
-            }}
-          />
+        <Box style={{ flex: 1, maxWidth: 320, margin: '0 20px' }} visibleFrom="sm">
+          {renderSelect(searchInputRef)}
         </Box>
 
         {/* Right Section: Auth & Settings */}
         <Group wrap="nowrap">
+          {/* Mobile Search Icon */}
+          <ActionIcon
+            hiddenFrom="sm"
+            variant="default"
+            radius="xl"
+            size="lg"
+            onClick={openSearch}
+            aria-label="Search"
+            style={{ border: 'none', background: 'transparent' }}
+          >
+            <IconSearch size={22} color="var(--mantine-color-text)" />
+          </ActionIcon>
+
           <Group visibleFrom="sm" gap="xs" wrap="nowrap">
             {isAuthed ? (
               <>
@@ -422,6 +466,10 @@ export default function Header() {
           </Group>
         </ScrollArea>
       </Drawer>
+
+      <Modal opened={searchOpened} onClose={closeSearch} centered withCloseButton={false} padding="lg">
+        {renderSelect(undefined, true)}
+      </Modal>
     </Box>
   )
 }

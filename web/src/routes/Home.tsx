@@ -1,32 +1,31 @@
-
-import { Box, Title, Text, Stack, Button, Container, SimpleGrid, ThemeIcon, Flex, Badge, Group, Paper, Avatar } from '@mantine/core'
-import { IconRocket, IconShieldLock, IconHeadset, IconArrowRight, IconCurrencyBitcoin, IconTrendingUp, IconUsers, IconCloudComputing, IconUserSearch, IconFingerprint, IconEye, IconSearch } from '@tabler/icons-react'
+import { Box, Title, Text, Stack, Button, Container, SimpleGrid, ThemeIcon, Flex, Badge, Group, Paper } from '@mantine/core'
+import { IconRocket, IconArrowRight, IconCloudComputing, IconFingerprint, IconEye, IconSearch, IconShieldCheck } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { useMarket } from '../contexts/MarketContext'
 import { useMemo, useEffect } from 'react'
 import { SpotlightCard } from '../components/SpotlightCard'
-import { CountUp } from '../components/CountUp'
 import { ParticlesBackground } from '../components/ParticlesBackground'
 import { TradingTerminalPreview } from '../components/TradingTerminalPreview'
+import { SocialTradingVisual } from '../components/SocialTradingVisual'
 
 const FEATURES = [
   {
-    icon: IconShieldLock,
-    title: 'Bank-Grade Security',
-    description: 'Your assets are protected by industry-leading cold storage and encryption protocols.',
+    icon: IconShieldCheck,
+    title: 'Verifiable Performance',
+    description: 'Every PnL card shared on VirCEX is cryptographically verified against real trade history. No fakes.',
     color: 'blue'
   },
   {
-    icon: IconRocket,
-    title: 'Lightning Fast Engine',
-    description: 'Execute trades in microseconds with our ultra-low latency matching engine.',
-    color: 'grape'
+    icon: IconFingerprint,
+    title: 'Identity Assurance',
+    description: 'Verify the proof of funds and historical consistency of any trader on the platform.',
+    color: 'cyan'
   },
   {
-    icon: IconHeadset,
-    title: '24/7 Global Support',
-    description: 'Our dedicated team is always available to help you succeed in your trading journey.',
-    color: 'cyan'
+    icon: IconRocket,
+    title: 'High-Frequency Execution',
+    description: 'Trade with the same low-latency infrastructure used by institutional wholesalers.',
+    color: 'indigo'
   }
 ]
 
@@ -67,81 +66,65 @@ export default function Home() {
       {/* Hero Section */}
       <Box style={{ position: 'relative', zIndex: 1 }} py={120} px="md">
         <Container size="lg">
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={60} style={{ alignItems: 'center' }}>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={80} style={{ alignItems: 'center' }}>
 
             {/* Left Content */}
             <Stack gap="xl" className="reveal-on-scroll visible">
               <Group>
-                <Badge variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }} size="lg" radius="md" style={{ textTransform: 'none' }}>
-                  Next Generation Exchange
+                <Badge variant="gradient" gradient={{ from: 'blue', to: 'cyan' }} size="lg" radius="md" style={{ textTransform: 'none' }}>
+                  Institutional Transparency
                 </Badge>
               </Group>
 
-              <Title order={1} size={72} fw={900} style={{ lineHeight: 1.1, letterSpacing: '-1px' }}>
+              <Title order={1} size={72} fw={950} style={{ lineHeight: 1.05, letterSpacing: '-2px' }}>
                 Trade with <br />
-                <Text span inherit className="animate-text-shimmer">Confidence</Text>
+                <Text span inherit className="animate-text-shimmer" style={{ backgroundClip: 'text', WebkitBackgroundClip: 'text' }}>Transparency.</Text>
               </Title>
 
-              <Text c="dimmed" size="xl" maw={500} lh={1.6}>
-                Experience the world's most advanced crypto exchange. Fast execution, liquid markets, and pro-level tools.
+              <Text c="dimmed" size="xl" maw={500} lh={1.6} fw={500}>
+                The era of fake PnL cards is over. Experience the first exchange where every position, every trade, and every profile is <Text span inherit c="blue" fw={700}>verifiably real.</Text>
               </Text>
 
               <Group pt="md">
-                <Button size="xl" radius="md" variant="gradient" gradient={{ from: 'blue', to: 'cyan' }} onClick={() => navigate('/spot')}>
-                  Start Trading Now
+                <Button size="xl" radius="md" variant="gradient" gradient={{ from: 'blue', to: 'indigo' }} onClick={() => navigate('/spot')}>
+                  Start Trading
                 </Button>
                 <Button size="xl" radius="md" variant="light" color="gray" onClick={() => navigate('/markets')}>
                   Explore Markets
                 </Button>
               </Group>
 
-              {/* Trust Indicators */}
+              {/* Trust Indicators - Non-Hardcoded Labels */}
               <Group gap="xl" mt="xl">
                 <Stack gap={4}>
                   <Flex align="center" gap={4}>
-                    <IconTrendingUp size={24} />
-                    <CountUp end={10} prefix="$" suffix="B+" fw={700} size="xl" />
+                    <IconShieldCheck size={20} color="var(--mantine-color-blue-6)" />
+                    <Text fw={800} size="lg">Verified</Text>
                   </Flex>
-                  <Text size="sm" c="dimmed">Quarterly Volume</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: '1px' }}>PnL Accuracy</Text>
                 </Stack>
-                <Box w={1} h={40} bg="var(--mantine-color-default-border)" />
+                <Box w={1} h={40} bg="rgba(255,255,255,0.1)" />
                 <Stack gap={4}>
                   <Flex align="center" gap={4}>
-                    <IconUsers size={24} />
-                    <CountUp end={2} suffix="M+" fw={700} size="xl" decimals={0} />
+                    <IconFingerprint size={20} color="var(--mantine-color-blue-6)" />
+                    <Text fw={800} size="lg">Public</Text>
                   </Flex>
-                  <Text size="sm" c="dimmed">Verified Users</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: '1px' }}>Proof of Funds</Text>
                 </Stack>
-                <Box w={1} h={40} bg="var(--mantine-color-default-border)" />
+                <Box w={1} h={40} bg="rgba(255,255,255,0.1)" />
                 <Stack gap={4}>
                   <Flex align="center" gap={4}>
-                    <IconCloudComputing size={24} />
-                    <CountUp end={50} prefix="< " suffix="ms" fw={700} size="xl" decimals={0} />
+                    <IconCloudComputing size={20} color="var(--mantine-color-blue-6)" />
+                    <Text fw={800} size="lg">High</Text>
                   </Flex>
-                  <Text size="sm" c="dimmed">Latency</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: '1px' }}>Throughput</Text>
                 </Stack>
               </Group>
             </Stack>
 
-            {/* Right Content - 3D Visuals */}
-            <Box style={{ position: 'relative', height: '500px' }} visibleFrom="md" className="reveal-on-scroll visible">
-              <SpotlightCard
-                style={{ position: 'absolute', top: '50px', right: '0', width: '100%', zIndex: 10, borderRadius: '32px' }}
-              >
-                <TradingTerminalPreview />
-              </SpotlightCard>
-
-              {/* Floating elements behind */}
-              <SpotlightCard className="glass-card" style={{ position: 'absolute', bottom: '0%', left: '-5%', padding: '20px', borderRadius: '24px', width: '220px', zIndex: 11 }}>
-                <Flex align="center" justify="space-between" mb="xs">
-                  <Group gap="xs">
-                    <ThemeIcon color="orange" variant="light" size="sm" radius="lg"><IconCurrencyBitcoin size={16} /></ThemeIcon>
-                    <Text fw={700} size="sm">Bitcoin</Text>
-                  </Group>
-                  <Text fw={700} c="green" size="sm">+5.2%</Text>
-                </Flex>
-                <Text size="xl" fw={700}>$96,420</Text>
-              </SpotlightCard>
+            {/* Right Content - Social Transparency Visual */}
+            <Box style={{ position: 'relative', height: '400px' }} visibleFrom="md" className="reveal-on-scroll visible">
+              <SocialTradingVisual />
             </Box>
 
           </SimpleGrid>
@@ -163,24 +146,24 @@ export default function Home() {
                   style={{ cursor: 'pointer', height: '100%' }}
                 >
                   <Flex justify="space-between" align="start" mb="sm" style={{ overflow: 'hidden' }}>
-                    <Text fw={700} size="lg" truncate style={{ flex: 1 }}>{asset.symbol.replace('USDT', '')}/USDT</Text>
+                    <Text fw={800} size="lg" truncate style={{ flex: 1 }}>{asset.symbol.replace('USDT', '')}/USDT</Text>
                     <Badge variant="light" color={change >= 0 ? 'green' : 'red'} style={{ flexShrink: 0 }}>
                       {change > 0 ? '+' : ''}{change.toFixed(2)}%
                     </Badge>
                   </Flex>
-                  <Text size="28px" fw={700} mb={4} truncate>
+                  <Text size="28px" fw={950} mb={4} truncate style={{ letterSpacing: '-1px' }}>
                     {parseFloat(asset.lastPrice) < 0.01
                       ? parseFloat(asset.lastPrice).toFixed(8)
                       : parseFloat(asset.lastPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                   </Text>
-                  <Text size="xs" c="dimmed" truncate>Vol: {parseFloat(asset.volume24h).toLocaleString()}</Text>
+                  <Text size="xs" c="dimmed" truncate tt="uppercase" fw={700} style={{ letterSpacing: '0.5px' }}>Vol: {parseFloat(asset.volume24h).toLocaleString()}</Text>
                 </SpotlightCard>
               )
             }) : (
               // Skeletons
               Array(4).fill(0).map((_, i) => (
                 <SpotlightCard key={i} className="glass-card reveal-on-scroll" radius="lg" p="lg">
-                  <Text c="dimmed">Loading market data...</Text>
+                  <Text c="dimmed">Syncing market infrastructure...</Text>
                 </SpotlightCard>
               ))
             )}
@@ -191,6 +174,10 @@ export default function Home() {
       {/* Features Section */}
       <Box style={{ position: 'relative', zIndex: 1 }} py={100}>
         <Container size="lg">
+          <Stack align="center" mb={60} className="reveal-on-scroll">
+            <Badge size="xl" variant="light" color="indigo" radius="md">Security Core</Badge>
+            <Title order={2} size={48} fw={950} style={{ letterSpacing: '-1px' }}>Built for the <Text span inherit c="indigo">Elite.</Text></Title>
+          </Stack>
           <Paper radius="xl" p={0} style={{ background: 'transparent' }}>
             <SimpleGrid cols={{ base: 1, md: 3 }} spacing={40}>
               {FEATURES.map((feature, i) => (
@@ -199,13 +186,13 @@ export default function Home() {
                     variant="gradient"
                     gradient={{ from: feature.color, to: 'cyan' }}
                     size={60}
-                    radius="xl"
+                    radius="md"
                     mb="md"
                     style={{ transition: 'none' }}
                   >
                     <feature.icon size={30} />
                   </ThemeIcon>
-                  <Title order={3} size="h3" mb="xs">{feature.title}</Title>
+                  <Title order={3} size="h3" mb="xs" fw={800}>{feature.title}</Title>
                   <Text c="dimmed" lh={1.6}>
                     {feature.description}
                   </Text>
@@ -221,75 +208,38 @@ export default function Home() {
         <Container size="lg">
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing={80} style={{ alignItems: 'center' }}>
 
-            {/* Visual Showcase */}
-            <Box style={{ position: 'relative', height: '400px' }} className="reveal-on-scroll">
-              <Box style={{
-                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(51, 154, 240, 0.15) 0%, transparent 70%)',
-                filter: 'blur(40px)', zIndex: 0
-              }} />
-
-              <Paper p="xl" radius="lg" withBorder style={{
-                position: 'absolute', top: '20px', left: '0', zIndex: 2,
-                width: '100%', maxWidth: '340px', background: 'rgba(20, 21, 23, 0.8)', backdropFilter: 'blur(12px)'
-              }}>
-                <Group mb="md">
-                  <Avatar size="lg" radius="xl" color="blue">
-                    <IconUserSearch size={24} />
-                  </Avatar>
-                  <div>
-                    <Text fw={700}>Omni-Search</Text>
-                    <Text size="xs" c="dimmed">Institutional Identity System</Text>
-                  </div>
-                </Group>
-                <Paper p="xs" radius="sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <Text size="xs" fw={700} tt="uppercase" c="blue" mb={4}>Search Results</Text>
-                  <Group gap="xs">
-                    <IconSearch size={14} color="dimmed" />
-                    <Text size="sm">whale_trader_01</Text>
-                  </Group>
-                </Paper>
-              </Paper>
-
-              <Paper p="lg" radius="lg" withBorder style={{
-                position: 'absolute', bottom: '20px', right: '0', zIndex: 3,
-                width: '100%', maxWidth: '280px', background: 'rgba(20, 21, 23, 0.8)', backdropFilter: 'blur(12px)',
-                border: '1px solid var(--mantine-color-green-8)'
-              }}>
-                <Group justify="space-between" mb="xs">
-                  <Text size="sm" fw={700}>Trader Insight</Text>
-                  <Badge color="green" variant="light">Verified</Badge>
-                </Group>
-                <Text size="xl" fw={900} c="green">+142.50%</Text>
-                <Text size="xs" c="dimmed">30D Realized PNL</Text>
-              </Paper>
+            {/* Visual Showcase - Live Terminal Preview instead of mocks */}
+            <Box style={{ position: 'relative' }} className="reveal-on-scroll">
+              <SpotlightCard className="glass-card" p={0} radius="xl" style={{ overflow: 'hidden' }}>
+                <TradingTerminalPreview />
+              </SpotlightCard>
             </Box>
 
             {/* Content */}
             <Stack gap="xl" className="reveal-on-scroll">
-              <Badge variant="light" color="blue" size="lg" radius="md">Social Transparency</Badge>
-              <Title order={2} size={48} fw={900} style={{ lineHeight: 1.2 }}>
-                Social Trading 2.0 <br />
-                <Text span inherit c="blue">Verify Every Move.</Text>
+              <Badge variant="light" color="blue" size="lg" radius="md">Social Insight</Badge>
+              <Title order={2} size={48} fw={950} style={{ lineHeight: 1.1, letterSpacing: '-1.5px' }}>
+                No more fake <br />
+                <Text span inherit c="blue">PnL Cards.</Text>
               </Title>
               <Text c="dimmed" size="lg" lh={1.6}>
-                No more hidden portfolios. Search for any trader to see their live positions, historical performance, and proof of funds. Institutional-grade transparency for the modern trader.
+                Trust is earned, not claimed. Every shared PnL link on VirCEX leads to a cryptographically signed trader profile where you can verify their history, open positions, and current ranking.
               </Text>
 
               <SimpleGrid cols={2} spacing="md">
                 <Box>
                   <Flex align="center" gap="xs" mb={4}>
-                    <IconFingerprint size={20} color="var(--mantine-color-blue-6)" />
-                    <Text fw={700} size="sm">Proof of Performance</Text>
+                    <IconShieldCheck size={20} color="var(--mantine-color-blue-6)" />
+                    <Text fw={800} size="sm">Proof of Performance</Text>
                   </Flex>
-                  <Text size="xs" c="dimmed">100% verified historical trade data on-chain.</Text>
+                  <Text size="xs" c="dimmed">100% verified historical trade data directly from the matching engine.</Text>
                 </Box>
                 <Box>
                   <Flex align="center" gap="xs" mb={4}>
                     <IconEye size={20} color="var(--mantine-color-blue-6)" />
-                    <Text fw={700} size="sm">Real-time Insights</Text>
+                    <Text fw={800} size="sm">Real-time Visibility</Text>
                   </Flex>
-                  <Text size="xs" c="dimmed">Monitor whales and top alpha traders live.</Text>
+                  <Text size="xs" c="dimmed">Monitor institutional whales and top alpha traders in real-time.</Text>
                 </Box>
               </SimpleGrid>
 
@@ -306,11 +256,95 @@ export default function Home() {
                 }}
                 leftSection={<IconSearch size={18} />}
               >
-                Search Traders
+                Find Top Traders
               </Button>
             </Stack>
 
           </SimpleGrid>
+        </Container>
+      </Box>
+
+      {/* Extreme Leverage Section */}
+      <Box style={{ position: 'relative', zIndex: 1 }} py={120}>
+        <Container size="lg">
+          <Paper
+            className="glass-card reveal-on-scroll"
+            p={60}
+            radius="32px"
+            style={{
+              overflow: 'hidden',
+              background: 'radial-gradient(circle at 100% 0%, rgba(50, 150, 255, 0.1) 0%, transparent 50%), var(--glass-bg)'
+            }}
+          >
+            <SimpleGrid cols={{ base: 1, md: 2 }} spacing={60} style={{ alignItems: 'center' }}>
+              <Stack gap="xl">
+                <Badge variant="light" color="red" size="lg" radius="md">High-Performance Core</Badge>
+                <Title order={2} size={56} fw={950} style={{ lineHeight: 1, letterSpacing: '-2px' }}>
+                  Maximum Power. <br />
+                  <Text span inherit className="animate-text-shimmer">Zero Compromise.</Text>
+                </Title>
+                <Text c="dimmed" size="xl" fw={500} lh={1.6}>
+                  Experience the raw speed of our matching engine with leverage options built for professional alpha hunters.
+                </Text>
+                <Group gap="xl">
+                  <Stack gap={4}>
+                    <Text fw={950} size="42px" c="var(--mantine-color-red-6)" style={{ letterSpacing: '-2px', lineHeight: 1 }}>1000x</Text>
+                    <Text size="xs" c="dimmed" tt="uppercase" fw={800}>Max Leverage</Text>
+                  </Stack>
+                  <Box w={1} h={50} bg="rgba(255,255,255,0.1)" />
+                  <Stack gap={4}>
+                    <Text fw={950} size="42px" style={{ letterSpacing: '-2px', lineHeight: 1 }}>&lt; 1ms</Text>
+                    <Text size="xs" c="dimmed" tt="uppercase" fw={800}>Engine Latency</Text>
+                  </Stack>
+                </Group>
+                <Button
+                  size="xl"
+                  radius="md"
+                  variant="gradient"
+                  gradient={{ from: 'red', to: 'orange' }}
+                  onClick={() => navigate('/futures')}
+                  maw={240}
+                  rightSection={<IconRocket size={20} />}
+                >
+                  Trade Futures
+                </Button>
+              </Stack>
+
+              <Box style={{ position: 'relative' }} visibleFrom="md">
+                <Box style={{
+                  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                  width: '300px', height: '300px', borderRadius: '50%',
+                  background: 'conic-gradient(from 180deg at 50% 50%, var(--mantine-color-red-6) 0deg, transparent 270deg)',
+                  opacity: 0.1, filter: 'blur(40px)', animation: 'rotate 10s linear infinite'
+                }} />
+                <Stack align="center" gap={0}>
+                  <Text
+                    fw={950}
+                    style={{
+                      fontSize: '180px',
+                      lineHeight: 1,
+                      letterSpacing: '-10px',
+                      background: 'linear-gradient(to bottom, #fff, rgba(255,255,255,0.2))',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      opacity: 0.8
+                    }}
+                  >
+                    1000x
+                  </Text>
+                  <Badge
+                    variant="filled"
+                    color="red"
+                    size="xl"
+                    radius="sm"
+                    style={{ marginTop: '-40px', transform: 'rotate(-2deg)', boxShadow: '0 10px 30px rgba(255,0,0,0.3)' }}
+                  >
+                    INSTITUTIONAL GRADE
+                  </Badge>
+                </Stack>
+              </Box>
+            </SimpleGrid>
+          </Paper>
         </Container>
       </Box>
 
@@ -330,20 +364,21 @@ export default function Home() {
             }} />
 
             <Stack align="center" gap="xl" style={{ position: 'relative', zIndex: 1 }}>
-              <Title order={2} size={50} fw={800}>Ready to start trading?</Title>
-              <Text c="dimmed" size="xl" maw={600}>
-                Join the fastest growing exchange today.
+              <Title order={2} size={50} fw={950} style={{ letterSpacing: '-2px' }}>Join the Transparency Era</Title>
+              <Text c="dimmed" size="xl" maw={600} fw={500}>
+                The world's first verifiably transparent exchange is here.
               </Text>
               <Button
                 size="xl"
-                radius="full"
+                radius="md"
                 rightSection={<IconArrowRight />}
                 variant="white"
                 color="dark"
                 px={40}
+                fw={800}
                 onClick={() => navigate('/register')}
               >
-                Create Free Account
+                Create Diamond Account
               </Button>
             </Stack>
           </SpotlightCard>

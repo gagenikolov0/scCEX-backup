@@ -4,8 +4,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { formatBalance } from '../lib/utils'
 import { ParticlesBackground } from '../components/ParticlesBackground'
 import { SpotlightCard } from '../components/SpotlightCard'
-import { CountUp } from '../components/CountUp'
 import { IconWallet, IconChartPie, IconActivity, IconCpu, IconBrandTether, IconCurrencyBitcoin, IconCurrencyEthereum, IconCurrencySolana, IconCircle, IconArrowUpRight, IconArrowUp } from '@tabler/icons-react'
+import { useEffect, useMemo } from 'react'
+import { useMarket } from '../contexts/MarketContext'
 
 // Helper to map assets to icons
 const getAssetIcon = (asset: string) => {
@@ -26,9 +27,11 @@ const getAssetColor = (asset: string) => {
 }
 
 export default function Wallet() {
-  const { spotAvailable, futuresAvailable, positions, totalPortfolioUSD } = useAccount()
+  const { spotAvailable, futuresAvailable, positions } = useAccount()
+  const { spotStats, listen, unlisten } = useMarket()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+
   // Default to overview, but respect URL param
   const activeTab = searchParams.get('tab') || 'overview'
 
@@ -36,8 +39,45 @@ export default function Wallet() {
     setSearchParams({ tab })
   }
 
-  const totalFuturesValue = parseFloat(futuresAvailable.USDT) + parseFloat(futuresAvailable.USDC)
-  const totalSpotValue = totalPortfolioUSD - totalFuturesValue
+
+  // Listen for spot price updates to keep balance fresh
+  useEffect(() => {
+    listen('spot')
+    return () => unlisten('spot')
+  }, [listen, unlisten])
+
+  // Efficient Map for O(1) lookups
+  const priceMap = useMemo(() => {
+    const map = new Map<string, number>()
+    spotStats.forEach(s => {
+      map.set(s.symbol, parseFloat(s.lastPrice || '0'))
+      // handle potential format diffs if needed, usually symbols are like BTCUSDT
+      if (s.symbol.endsWith('USDT')) map.set(s.symbol.replace('USDT', ''), parseFloat(s.lastPrice || '0'))
+    })
+    return map
+  }, [spotStats])
+
+  const totalFuturesValue = useMemo(() => {
+    return parseFloat(futuresAvailable.USDT || '0') + parseFloat(futuresAvailable.USDC || '0')
+  }, [futuresAvailable])
+
+  const totalSpotValue = useMemo(() => {
+    let total = parseFloat(spotAvailable.USDT || '0') + parseFloat(spotAvailable.USDC || '0')
+
+    positions.forEach(pos => {
+      // If allow other quotes later, might need adjustment. Assume USDT based for now or derived from priceMap keys
+      // symbol usually e.g. BTCUSDT. Asset is BTC.
+      const price = priceMap.get(pos.asset + 'USDT') || priceMap.get(pos.asset + 'USDC') || 0
+      total += parseFloat(pos.available) * price
+      // We can add reserved too if we want 'Total Equity' not just 'Available'
+      // usually wallet balance includes reserved (in orders)
+      total += parseFloat(pos.reserved) * price
+    })
+
+    return total
+  }, [spotAvailable, positions, priceMap])
+
+  const totalPortfolioUSD = totalSpotValue + totalFuturesValue
 
   // Calculate percentages for the ring chart
   const spotPercent = totalPortfolioUSD > 0 ? (totalSpotValue / totalPortfolioUSD) * 100 : 0
@@ -65,19 +105,18 @@ export default function Wallet() {
               <Group justify="space-between" align="flex-start" style={{ position: 'relative', zIndex: 1 }}>
                 <Stack gap="xs">
                   <Text c="dimmed" size="lg" fw={500}>Estimated Total Value</Text>
-                  <Flex align="flex-start" gap={4}>
-                    <CountUp
-                      end={totalPortfolioUSD}
-                      prefix="$"
-                      decimals={2}
+                  <Flex align="center" gap="sm">
+                    <Text
                       fz={56}
                       fw={950}
                       lh={1}
                       className="text-glow"
                       style={{ letterSpacing: '-0.02em' }}
-                    />
+                    >
+                      ${totalPortfolioUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
                   </Flex>
-                  <Text c="dimmed" size="sm">Last updated: just now</Text>
+                  <Text c="dimmed" size="sm">Real-time estimate</Text>
                 </Stack>
 
                 <RingProgress
@@ -205,7 +244,7 @@ export default function Wallet() {
                     <Stack gap={4}>
                       <Text size="sm" c="dimmed">Available Balance</Text>
                       <Text size="2xl" fw={700} className="text-glow">
-                        <CountUp end={parseFloat(available || '0')} decimals={4} />
+                        {parseFloat(available || '0').toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </Text>
                       {parseFloat(reserved || '0') > 0 && (
                         <Text size="xs" c="orange">Locked: {formatBalance(reserved || '0')}</Text>

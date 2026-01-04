@@ -108,14 +108,14 @@ export const FuturesTradeForm = memo(({
                                     label="Leverage"
                                     value={Number(tempLeverage)}
                                     onChange={(val) => setTempLeverage(String(val))}
-                                    max={500}
+                                    max={1000}
                                     min={1}
                                     size="md"
                                     suffix="x"
                                 />
 
                                 <Group gap="xs">
-                                    {['10', '20', '50', '100', '500'].map(lv => (
+                                    {['10', '20', '50', '100', '1000'].map(lv => (
                                         <Button
                                             key={lv}
                                             size="compact-sm"
@@ -131,14 +131,14 @@ export const FuturesTradeForm = memo(({
                                 <Slider
                                     value={Number(tempLeverage)}
                                     onChange={(val) => setTempLeverage(String(val))}
-                                    max={500}
+                                    max={1000}
                                     min={1}
                                     step={1}
                                     label={(val) => `${val}x`}
                                     marks={[
                                         { value: 1, label: '1x' },
-                                        { value: 250, label: '250x' },
                                         { value: 500, label: '500x' },
+                                        { value: 1000, label: '1000x' },
                                     ]}
                                 />
 

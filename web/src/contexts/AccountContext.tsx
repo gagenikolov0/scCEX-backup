@@ -33,8 +33,8 @@ interface AccountContextType {
   username: string | null
   referralCode: string | null
   profilePicture: string | null
-  refreshBalances: () => Promise<void>
-  refreshOrders: () => Promise<void>
+  refreshBalances: () => Promise<boolean>
+  refreshOrders: () => Promise<boolean>
 }
 
 const AccountContext = createContext<AccountContextType | undefined>(undefined)
@@ -77,7 +77,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
 
   const refreshBalances = async () => {
-    if (!accessToken) return
+    if (!accessToken) return false
 
     try {
       const response = await fetch(`${API_BASE}/api/user/profile`, {
@@ -127,14 +127,17 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
         if (data.user?.profilePicture) {
           setProfilePicture(data.user.profilePicture)
         }
+        return true
       }
+      return false
     } catch (error) {
-      // Silent fail for balance refresh
+      console.error('Balance refresh failed:', error)
+      return false
     }
   }
 
   const refreshOrders = async () => {
-    if (!accessToken) return
+    if (!accessToken) return false
 
     try {
       const [spotRes, futuresRes] = await Promise.all([
@@ -166,8 +169,10 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
       setOrders(allOrders)
+      return true
     } catch (error) {
-      // Silent fail for orders refresh
+      console.error('Order refresh failed:', error)
+      return false
     }
   }
 

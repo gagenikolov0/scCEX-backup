@@ -16,9 +16,9 @@ interface DataTableProps {
     minWidth?: string | number
 }
 
-const DataTable = memo(({ data, columns, emptyMessage, maxHeight = '430px', minWidth = '600px' }: DataTableProps) => {
+const DataTable = memo(({ data, columns, emptyMessage, maxHeight = '430px', minWidth = '800px' }: DataTableProps) => {
     return (
-        <Box style={{ height: maxHeight, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <Box style={{ height: maxHeight, display: 'flex', flexDirection: 'column', overflowX: 'auto' }}>
             <TableVirtuoso
                 style={{ height: '100%' }}
                 data={data}

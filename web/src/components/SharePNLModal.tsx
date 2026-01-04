@@ -76,7 +76,7 @@ export default function SharePNLModal({ opened, onClose, data }: SharePNLModalPr
             onClose={onClose}
             title="Share your Performance"
             centered
-            size="lg"
+            size={480} // Compact size, slightly wider than the 400px card
             radius="lg"
             overlayProps={{ blur: 3, opacity: 0.55 }}
             styles={{ title: { fontWeight: 700 } }}
@@ -85,7 +85,7 @@ export default function SharePNLModal({ opened, onClose, data }: SharePNLModalPr
             <Stack gap="xl">
                 {/* Source Card (Hidden from user, used for generation) */}
                 {/* This prevents user from editing text via DevTools because what they see is a flat image */}
-                <Box style={{ position: 'absolute', left: '-9999px', top: 0, width: 520 }}>
+                <Box style={{ position: 'absolute', left: '-9999px', top: 0, width: 400 }}>
                     <Paper
                         ref={cardRef}
                         p={32}
@@ -209,15 +209,18 @@ export default function SharePNLModal({ opened, onClose, data }: SharePNLModalPr
                                     </Stack>
                                 </Stack>
 
-                                <Group gap="xs" align="center" style={{
+                                <Box style={{
                                     background: 'rgba(255,255,255,0.03)',
-                                    padding: '6px 6px 6px 12px',
+                                    padding: '6px 6px 6px 12px', // Small right padding for breathing room
                                     borderRadius: 12,
                                     border: '1px solid rgba(255,255,255,0.05)',
-                                    marginBottom: -4 // Slight adjustment for optical alignment
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                    marginBottom: -4
                                 }}>
                                     {referralCode && (
-                                        <Stack gap={0} align="flex-end" mr={4}>
+                                        <Stack gap={0} align="flex-end">
                                             <Text size="10px" color="#a6a7ab" fw={800} tt="uppercase" style={{ letterSpacing: 0.5, opacity: 0.8 }}>Referral</Text>
                                             <Text size="sm" fw={800} color="#339af0" style={{ letterSpacing: -0.2 }}>{referralCode}</Text>
                                         </Stack>
@@ -230,23 +233,24 @@ export default function SharePNLModal({ opened, onClose, data }: SharePNLModalPr
                                         boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        flexShrink: 0
                                     }}>
                                         <QRCodeSVG
                                             value={`https://www.vircex.com/trader/${username || ''}?ref=${referralCode || ''}`}
-                                            size={44}
+                                            size={90}
                                             level="H"
                                             imageSettings={{
                                                 src: "/icon.png",
                                                 x: undefined,
                                                 y: undefined,
-                                                height: 10,
-                                                width: 10,
+                                                height: 20,
+                                                width: 20,
                                                 excavate: true,
                                             }}
                                         />
                                     </Box>
-                                </Group>
+                                </Box>
                             </Group>
                         </Box>
                     </Paper>

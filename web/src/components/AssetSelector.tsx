@@ -44,10 +44,10 @@ const AssetRow = React.memo(({
     return (
         <UnstyledButton
             onClick={() => onSelect(base)}
+            p={{ base: 'xs', md: '12px 16px' }}
             style={{
                 display: 'block',
                 width: '100%',
-                padding: '12px 16px',
                 transition: 'background 0.1s ease',
                 borderBottom: '1px solid var(--glass-border)'
             }}
@@ -55,7 +55,7 @@ const AssetRow = React.memo(({
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
         >
             <Group justify="space-between" wrap="nowrap">
-                <Group gap="sm" wrap="nowrap">
+                <Group gap="xs" wrap="nowrap">
                     <ThemeIcon color="gray" variant="light" size="sm" radius="xl">
                         <IconActivity size={12} />
                     </ThemeIcon>
@@ -67,11 +67,11 @@ const AssetRow = React.memo(({
                     </Box>
                 </Group>
 
-                <Group gap={24} wrap="nowrap">
+                <Group gap="md" wrap="nowrap" align="center">
                     <Text size="sm" fw={600} ff="monospace" c="var(--mantine-color-text)">
                         {parseFloat(asset.lastPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
                     </Text>
-                    <Text size="xs" fw={700} c={isPositive ? 'green' : 'red'} w={60} ta="right">
+                    <Text size="xs" fw={700} c={isPositive ? 'green' : 'red'} w={50} ta="right">
                         {isPositive ? '+' : ''}{change.toFixed(2)}%
                     </Text>
                 </Group>
@@ -175,11 +175,11 @@ export const AssetSelector = React.memo(({ currentSymbol, currentQuote, market, 
             {isOpen && (
                 <Box
                     className="glass-card"
+                    w={{ base: '90vw', xs: 320 }}
                     style={{
                         position: 'absolute',
                         top: '64px',
                         left: '0',
-                        width: '320px',
                         background: 'var(--glass-bg)',
                         backdropFilter: 'blur(var(--glass-blur))',
                         border: '1px solid var(--glass-border)',

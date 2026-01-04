@@ -65,7 +65,7 @@ const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' |
   return (
     <Anchor component={Link} to={`/${type}?base=${base}&quote=${quote}`} underline="never" c="inherit">
       <Flex
-        px={{ base: 'md', md: 'xl' }}
+        px={{ base: 'xs', md: 'xl' }}
         py="md"
         align="center"
         justify="space-between"
@@ -76,13 +76,13 @@ const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' |
           cursor: 'pointer'
         }}
       >
-        <Group gap="xl" grow flex={1}>
-          <Group gap="sm" wrap="nowrap" style={{ overflow: 'hidden', flex: 1 }}>
-            <Text fw={700} truncate>{base}</Text>
+        <Group gap="xs" grow flex={1}>
+          <Group gap={4} wrap="nowrap" style={{ overflow: 'hidden', flex: 1, minWidth: '80px' }}>
+            <Text fw={700} size="sm" truncate>{base}</Text>
             <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>{quote}</Text>
           </Group>
 
-          <Text ff="monospace" fw={600} ta="right" size="md">
+          <Text ff="monospace" fw={600} ta="right" size="sm">
             {price}
           </Text>
 
@@ -91,8 +91,8 @@ const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' |
               variant="light"
               color={changeColor}
               radius="sm"
-              size="md"
-              style={{ minWidth: '70px', fontVariantNumeric: 'tabular-nums' }}
+              size="sm"
+              style={{ minWidth: '60px', fontVariantNumeric: 'tabular-nums' }}
             >
               {isUp ? '+' : ''}{changeNum.toFixed(2)}%
             </Badge>
@@ -128,8 +128,8 @@ const MarketTable = memo(({ data, type }: { data: any[], type: 'spot' | 'futures
     <Box>
       <Paper radius="lg" className="glass-card no-move" style={{ overflow: 'hidden' }}>
         {/* Table Header */}
-        <Flex px={{ base: 'md', md: 'xl' }} py="md" bg="var(--mantine-color-default-hover)" style={{ borderBottom: '1px solid var(--glass-border)' }}>
-          <Group gap="xl" grow flex={1}>
+        <Flex px={{ base: 'xs', md: 'xl' }} py="md" bg="var(--mantine-color-default-hover)" style={{ borderBottom: '1px solid var(--glass-border)' }}>
+          <Group gap="xs" grow flex={1}>
             <Text size="xs" fw={700} c="dimmed" tt="uppercase">Market</Text>
             <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right">Price</Text>
             <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right">24h Change</Text>

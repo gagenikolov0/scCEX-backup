@@ -1,0 +1,131 @@
+.root {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.glow {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(50, 150, 255, 0.1) 0%, transparent 70%);
+    filter: blur(50px);
+    z-index: 0;
+}
+
+.path {
+    position: absolute;
+    width: 80%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05) 20%, rgba(255, 255, 255, 0.05) 80%, transparent);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 0;
+}
+
+.card {
+    position: absolute;
+    width: 280px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 10px 30px var(--glass-shadow);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 2;
+}
+
+.pnlCard {
+    left: 0;
+    transform: translateY(-50%) scale(0.9);
+    filter: grayscale(1) opacity(0.5);
+}
+
+.pnlCard.active {
+    scale: 1;
+    filter: none;
+    box-shadow: 0 20px 50px rgba(0, 255, 127, 0.15);
+}
+
+.verifiedCard {
+    right: 0;
+    transform: translateY(-50%) scale(0.9);
+    filter: grayscale(1) opacity(0.5);
+}
+
+.verifiedCard.active {
+    scale: 1;
+    filter: none;
+    box-shadow: 0 20px 50px rgba(50, 150, 255, 0.15);
+}
+
+.verifier {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+}
+
+.verifier.active {
+    scale: 1.1;
+}
+
+.pulseRing {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border: 2px solid var(--mantine-color-blue-6);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+.labels {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.label {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--mantine-color-blue-6);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.label.visible {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .card {
+        width: 200px;
+    }
+
+    .pnlCard {
+        left: 10px;
+    }
+
+    .verifiedCard {
+        right: 10px;
+    }
+}
