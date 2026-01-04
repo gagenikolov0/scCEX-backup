@@ -66,7 +66,7 @@ export default function AuthHub() {
   }
 
   return (
-    <Box style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', background: '#020202' }}>
+    <Box style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', background: 'var(--mantine-color-body)' }}>
       <ParticlesBackground />
 
       <Center mih="100vh" style={{ position: 'relative', zIndex: 1 }}>
@@ -75,10 +75,10 @@ export default function AuthHub() {
 
             {/* Left Panel: Security Core (Visual) */}
             <Box style={{
-              background: 'rgba(255, 255, 255, 0.02)',
+              background: 'var(--mantine-color-default-hover)',
               backdropFilter: 'blur(20px)',
               padding: '60px',
-              borderRight: '1px solid rgba(255,255,255,0.05)',
+              borderRight: '1px solid var(--glass-border)',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
@@ -130,7 +130,7 @@ export default function AuthHub() {
 
             {/* Right Panel: Auth Action Center */}
             <Box style={{
-              background: 'rgba(10, 10, 10, 0.8)',
+              background: 'var(--glass-bg)',
               backdropFilter: 'blur(40px)',
               padding: '60px',
               position: 'relative'
@@ -144,14 +144,15 @@ export default function AuthHub() {
                   </Anchor>
 
                   <Box style={{
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'var(--mantine-color-default-hover)',
                     padding: '4px',
                     borderRadius: '12px',
-                    display: 'flex'
+                    display: 'flex',
+                    border: '1px solid var(--glass-border)'
                   }}>
                     <Button
-                      variant={mode === 'login' ? 'white' : 'transparent'}
-                      color={mode === 'login' ? 'dark' : 'gray'}
+                      variant={mode === 'login' ? 'filled' : 'transparent'}
+                      color={mode === 'login' ? 'blue' : 'gray'}
                       size="xs"
                       radius="md"
                       onClick={() => { setMode('login'); setServerError(null); }}
@@ -160,8 +161,8 @@ export default function AuthHub() {
                       Login
                     </Button>
                     <Button
-                      variant={mode === 'register' ? 'white' : 'transparent'}
-                      color={mode === 'register' ? 'dark' : 'gray'}
+                      variant={mode === 'register' ? 'filled' : 'transparent'}
+                      color={mode === 'register' ? 'blue' : 'gray'}
                       size="xs"
                       radius="md"
                       onClick={() => { setMode('register'); setServerError(null); }}
@@ -221,7 +222,7 @@ export default function AuthHub() {
                                 size="xs"
                                 color={passwordStrength > 75 ? 'green' : passwordStrength > 50 ? 'yellow' : 'red'}
                                 radius="xl"
-                                style={{ background: 'rgba(255,255,255,0.05)' }}
+                                style={{ background: 'var(--mantine-color-default-hover)', border: '1px solid var(--glass-border)' }}
                               />
                             </Box>
                           )}

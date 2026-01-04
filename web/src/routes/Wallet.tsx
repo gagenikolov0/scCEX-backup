@@ -206,7 +206,7 @@ export default function Wallet() {
         <Flex style={{ height: 'calc(100vh - 60px)' }}>
           {/* Floating Sidebar */}
           <Box w={240} p="md" visibleFrom="sm">
-            <Paper h="100%" className="glass-card no-move" radius="lg" p="md" style={{ background: 'rgba(0,0,0,0.3)' }}>
+            <Paper h="100%" className="glass-card no-move" radius="lg" p="md" style={{ background: 'var(--mantine-color-default-hover)' }}>
               <Stack gap="sm">
                 <Text size="xs" c="dimmed" fw={700} tt="uppercase" mb="xs">Menu</Text>
                 {tabs.map(tab => (
@@ -217,8 +217,8 @@ export default function Wallet() {
                       cursor: 'pointer',
                       padding: '12px 16px',
                       borderRadius: '12px',
-                      background: activeTab === tab.id ? 'rgba(255,255,255,0.1)' : 'transparent',
-                      border: activeTab === tab.id ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+                      background: activeTab === tab.id ? 'var(--mantine-color-default-hover)' : 'transparent',
+                      border: activeTab === tab.id ? '1px solid var(--glass-border)' : '1px solid transparent',
                       transition: 'all 0.2s',
                       position: 'relative',
                       overflow: 'hidden'
@@ -230,8 +230,8 @@ export default function Wallet() {
                     )}
 
                     <Group>
-                      <tab.icon size={20} color={activeTab === tab.id ? 'var(--mantine-primary-color-4)' : 'gray'} />
-                      <Text fw={500} c={activeTab === tab.id ? 'white' : 'dimmed'}>{tab.label}</Text>
+                      <tab.icon size={20} color={activeTab === tab.id ? 'var(--mantine-color-blue-6)' : 'gray'} />
+                      <Text fw={500} c={activeTab === tab.id ? 'var(--mantine-color-text)' : 'dimmed'}>{tab.label}</Text>
                     </Group>
                   </Box>
                 ))}

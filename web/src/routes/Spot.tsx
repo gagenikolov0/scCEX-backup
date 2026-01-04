@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Text, Loader, Tabs, Flex, Box, Group } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Text, Loader, Tabs, Flex, Box, Group } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
@@ -15,6 +15,7 @@ import TradeSlider from '../components/TradeSlider'
 import DataTable from '../components/DataTable'
 import { useSymbolStats } from '../lib/useSymbolStats'
 import { formatDate, getVal, cleanSymbol } from '../lib/utils'
+import { AssetSelector } from '../components/AssetSelector'
 
 export default function Spot() {
   const { isAuthed } = useAuth()
@@ -22,7 +23,6 @@ export default function Spot() {
   const quote = (search.get('quote') || 'USDT').toUpperCase()
   const initialBase = (search.get('base') || 'BTC').toUpperCase().trim().replace(/\s+/g, '')
   const [token, setToken] = useState(initialBase)
-  const [pairQuery, setPairQuery] = useState('')
   const [qty, setQty] = useState('')
   const [price, setPrice] = useState('')
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
@@ -53,16 +53,6 @@ export default function Spot() {
     });
     return map;
   }, [spotStats])
-
-  const tokenOptions = useMemo(() => {
-    const list = spotStats.filter(t => t.symbol.endsWith(quote)).map(t => t.symbol.replace('_', '').replace(quote, ''))
-    return Array.from(new Set(list))
-  }, [spotStats, quote])
-
-  const filteredOptions = useMemo(() => {
-    const q = pairQuery.trim().toLowerCase()
-    return (q ? tokenOptions.filter(t => t.toLowerCase().includes(q)) : tokenOptions).slice(0, 500)
-  }, [tokenOptions, pairQuery])
 
   const { availableIntervals, interval, setInterval } = useIntervals({
     symbol: `${token}${quote}`,
@@ -137,35 +127,13 @@ export default function Spot() {
   return (
     <Box>
       <Flex align="center" gap="lg" py={4}>
-        <Menu
-          shadow="md"
-          width={260}
-          position="bottom-start"
-          withinPortal
-          trigger="hover"
-          openDelay={0}
-          closeDelay={50}
-          transitionProps={{ transition: 'pop-top-left', duration: 0, timingFunction: 'ease' }}
-        >
-          <Menu.Target>
-            <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
-              <Flex direction="column" align="flex-start" lh={1.2}>
-                <Text size="xl" fw={700}>{token}{quote}</Text>
-                <Text size="xxs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: '0.05em' }}>Spot</Text>
-              </Flex>
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Box p="xs">
-              <TextInput placeholder="Search pair" value={pairQuery} onChange={(e) => setPairQuery(e.currentTarget.value)} size="xs" />
-            </Box>
-            <ScrollArea.Autosize mah={320} mx={0} type="auto">
-              {filteredOptions.map((t) => (
-                <Menu.Item key={t} onClick={() => setToken(t)}>{t}/{quote}</Menu.Item>
-              ))}
-            </ScrollArea.Autosize>
-          </Menu.Dropdown>
-        </Menu>
+        <AssetSelector
+          currentSymbol={token}
+          currentQuote={quote}
+          market="spot"
+          stats={spotStats}
+          onSelect={setToken}
+        />
 
         <Flex align="center" pl={24} style={{ borderLeft: '1px solid var(--mantine-color-default-border)' }}>
           {loadingStats ? <Loader size="xs" /> : (

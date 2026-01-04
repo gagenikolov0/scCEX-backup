@@ -106,10 +106,10 @@ export default function Deposit() {
                       style={{
                         cursor: 'pointer',
                         border: isSelected ? `1px solid var(--mantine-primary-color-5)` : undefined,
-                        background: isSelected ? `rgba(255, 255, 255, 0.05)` : undefined
+                        background: isSelected ? `var(--mantine-color-default-hover)` : undefined
                       }}
                       onClick={() => setSelectedChain(chain.id)}
-                      spotlightColor="rgba(255, 255, 255, 0.05)"
+                      spotlightColor="var(--glass-bg-hover)"
                     >
                       <Group>
                         <ThemeIcon color={chain.color} variant={isSelected ? 'filled' : 'light'} size="lg" radius="xl">
@@ -156,7 +156,7 @@ export default function Deposit() {
                             className="glass-card no-move"
                             onClick={copy}
                             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                            spotlightColor="rgba(255, 255, 255, 0.05)"
+                            spotlightColor="var(--glass-bg-hover)"
                           >
                             <Text ff="monospace" size="sm" style={{ wordBreak: 'break-all' }}>{currentAddress}</Text>
                             <ThemeIcon color={copied ? 'green' : 'gray'} variant="light">

@@ -1,1 +1,0 @@
-const r=t=>t?new Date(t).toLocaleString():"-",n=t=>t&&typeof t=="object"&&t.$numberDecimal?t.$numberDecimal:t,a=t=>t?.replace("_","")||t,c=t=>(typeof t=="string"?parseFloat(t):t).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:8});export{c as a,a as c,r as f,n as g};

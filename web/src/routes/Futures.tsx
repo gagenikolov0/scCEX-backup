@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Menu, ScrollArea, Group, Text, Loader, Tabs, Modal, Badge, Flex, Box, Stack, Tooltip } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Group, Text, Loader, Tabs, Modal, Badge, Flex, Box, Stack, Tooltip } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState, useCallback } from 'react'
@@ -16,13 +16,13 @@ import DataTable from '../components/DataTable'
 import { FuturesTradeForm } from '../components/FuturesTradeForm'
 import { useSymbolStats } from '../lib/useSymbolStats'
 import { formatDate, cleanSymbol } from '../lib/utils'
+import { AssetSelector } from '../components/AssetSelector'
 
 export default function Futures() {
   const [search] = useSearchParams()
   const quote = (search.get('quote') || 'USDT').toUpperCase()
   const initialBase = (search.get('base') || 'BTC').toUpperCase().trim().replace(/\s+/g, '')
   const [token, setToken] = useState(initialBase)
-  const [pairQuery, setPairQuery] = useState('')
 
   const { futuresStats, listen, unlisten } = useMarket()
   const { isAuthed } = useAuth()
@@ -46,18 +46,6 @@ export default function Futures() {
   const [tpslData, setTpslData] = useState<any | null>(null)
   const [tpslPrices, setTpslPrices] = useState({ tp: '', sl: '', tpQty: '', slQty: '' })
   const [tpslPercents, setTpslPercents] = useState({ tp: 0, sl: 0 })
-
-  const tokenOptions = useMemo(() => {
-    const list = futuresStats
-      .filter(r => typeof r.symbol === 'string' && r.symbol.endsWith(quote))
-      .map(r => r.symbol.replace('_', '').replace(quote, ''))
-    return Array.from(new Set(list))
-  }, [futuresStats, quote])
-
-  const filteredOptions = useMemo(() => {
-    const q = pairQuery.trim().toLowerCase()
-    return (q ? tokenOptions.filter(t => t.toLowerCase().includes(q)) : tokenOptions).slice(0, 500)
-  }, [tokenOptions, pairQuery])
 
   const { availableIntervals, interval, setInterval } = useIntervals({
     symbol: `${token}_${quote}`,
@@ -202,35 +190,13 @@ export default function Futures() {
   return (
     <Box>
       <Flex align="center" gap="lg" py={4}>
-        <Menu
-          shadow="md"
-          width={260}
-          position="bottom-start"
-          withinPortal
-          trigger="hover"
-          openDelay={0}
-          closeDelay={50}
-          transitionProps={{ transition: 'pop-top-left', duration: 0, timingFunction: 'ease' }}
-        >
-          <Menu.Target>
-            <Button variant="transparent" size="lg" h={56} px="xs" bg="transparent">
-              <Flex direction="column" align="flex-start" lh={1.2}>
-                <Text size="xl" fw={700}>{token}{quote}</Text>
-                <Text size="xxs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: '0.05em' }}>Perpetual</Text>
-              </Flex>
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Box p="xs">
-              <TextInput placeholder="Search pair" value={pairQuery} onChange={(e) => setPairQuery(e.currentTarget.value)} size="xs" />
-            </Box>
-            <ScrollArea.Autosize mah={320} mx={0} type="auto">
-              {filteredOptions.map((t) => (
-                <Menu.Item key={t} onClick={() => setToken(t)}>{t}/{quote}</Menu.Item>
-              ))}
-            </ScrollArea.Autosize>
-          </Menu.Dropdown>
-        </Menu>
+        <AssetSelector
+          currentSymbol={token}
+          currentQuote={quote}
+          market="futures"
+          stats={futuresStats}
+          onSelect={setToken}
+        />
 
         <Flex align="center" style={{ borderLeft: '1px solid var(--mantine-color-default-border)', paddingLeft: '24px' }}>
           {loadingStats ? <Loader size="xs" /> : (

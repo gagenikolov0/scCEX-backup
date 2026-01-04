@@ -71,7 +71,7 @@ const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' |
         justify="space-between"
         className="market-row-hover no-move"
         style={{
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid var(--glass-border)',
           transition: 'all 0.2s ease',
           cursor: 'pointer'
         }}
@@ -128,7 +128,7 @@ const MarketTable = memo(({ data, type }: { data: any[], type: 'spot' | 'futures
     <Box>
       <Paper radius="lg" className="glass-card no-move" style={{ overflow: 'hidden' }}>
         {/* Table Header */}
-        <Flex px="xl" py="md" bg="rgba(255,255,255,0.02)" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <Flex px="xl" py="md" bg="var(--mantine-color-default-hover)" style={{ borderBottom: '1px solid var(--glass-border)' }}>
           <Group gap="xl" grow flex={1}>
             <Text size="xs" fw={700} c="dimmed" tt="uppercase">Market</Text>
             <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right">Price</Text>
@@ -152,7 +152,7 @@ const MarketTable = memo(({ data, type }: { data: any[], type: 'spot' | 'futures
         </Box>
 
         {totalPages > 1 && (
-          <Flex justify="center" p="xl" bg="rgba(255,255,255,0.01)" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Flex justify="center" p="xl" bg="var(--mantine-color-default-hover)" style={{ borderTop: '1px solid var(--glass-border)' }}>
             <Pagination total={totalPages} value={page} onChange={setPage} color="cyan" radius="xl" />
           </Flex>
         )}
@@ -242,8 +242,8 @@ export default function Markets() {
                   <Box
                     visibleFrom="sm"
                     style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'var(--mantine-color-default-hover)',
+                      border: '1px solid var(--glass-border)',
                       borderRadius: '6px',
                       padding: '2px 6px'
                     }}
@@ -266,8 +266,10 @@ export default function Markets() {
                 input: {
                   height: '54px',
                   fontSize: '18px',
-                  background: 'rgba(255,255,255,0.02) !important',
-                  backdropFilter: 'blur(20px)',
+                  background: 'var(--mantine-color-default-hover)',
+                  backdropFilter: 'blur(var(--glass-blur))',
+                  border: '1px solid var(--glass-border)',
+                  color: 'var(--mantine-color-text)',
                   letterSpacing: '0.5px'
                 }
               }}
@@ -293,11 +295,11 @@ export default function Markets() {
               <Box
                 className="glass-card"
                 p={4}
-                mb="xl"
+                mb="lg"
                 style={{
                   borderRadius: '16px',
                   display: 'inline-block',
-                  border: '1px solid rgba(255,255,255,0.05)'
+                  border: '1px solid var(--glass-border)'
                 }}
               >
                 <Tabs.List style={{ gap: '4px', border: 'none' }}>
@@ -320,7 +322,6 @@ export default function Markets() {
                           borderRadius: '12px',
                           padding: '8px 16px',
                         }}
-                        className={isActive ? '' : ''}
                       >
                         <Group gap={10} wrap="nowrap">
                           <ThemeIcon
@@ -333,7 +334,7 @@ export default function Markets() {
                           </ThemeIcon>
                           <Box>
                             <Group gap={6} wrap="nowrap">
-                              <Text size="sm" fw={700} c={isActive ? 'white' : 'dimmed'}>{t.label}</Text>
+                              <Text size="sm" fw={700} c={isActive ? 'var(--mantine-color-text)' : 'dimmed'}>{t.label}</Text>
                               <Badge
                                 size="xs"
                                 variant={isActive ? 'filled' : 'light'}

@@ -243,7 +243,7 @@ export default function Home() {
                 variant="white"
                 color="dark"
                 px={40}
-                onClick={() => navigate('/auth')}
+                onClick={() => navigate('/register')}
               >
                 Create Free Account
               </Button>

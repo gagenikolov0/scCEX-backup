@@ -182,9 +182,6 @@ export default function Header() {
               <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
                 <IconUser size={18} />
               </ActionIcon>
-              <ActionIcon onClick={toggleTheme} variant="subtle" radius="xl" size="lg" aria-label="Toggle theme">
-                {colorScheme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
-              </ActionIcon>
             </>
           ) : (
             <>
@@ -192,19 +189,21 @@ export default function Header() {
               <Button component={Link} to="/register">Sign up</Button>
             </>
           )}
+
+          <ActionIcon onClick={toggleTheme} variant="subtle" radius="xl" size="lg" aria-label="Toggle theme">
+            {colorScheme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
+          </ActionIcon>
         </Group>
 
         {/* Mobile Right Section: [Theme] [User] [Burger] */}
         <Group gap={5} hiddenFrom="sm">
+          <ActionIcon onClick={toggleTheme} variant="subtle" radius="xl" size="lg" aria-label="Toggle theme">
+            {colorScheme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
+          </ActionIcon>
           {isAuthed && (
-            <>
-              <ActionIcon onClick={toggleTheme} variant="subtle" radius="xl" size="lg" aria-label="Toggle theme">
-                {colorScheme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
-              </ActionIcon>
-              <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
-                <IconUser size={18} />
-              </ActionIcon>
-            </>
+            <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
+              <IconUser size={18} />
+            </ActionIcon>
           )}
           <Burger opened={drawerOpened} onClick={toggleDrawer} size="sm" />
         </Group>
