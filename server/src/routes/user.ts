@@ -8,6 +8,7 @@ import { AddressGroup } from '../models/AddressGroup'
 import { moveMoney } from '../utils/moneyMovement'
 import { syncStableBalances, syncFuturesBalances } from '../utils/emitters'
 import { calculateTotalPortfolioUSD } from '../utils/portfolio'
+import { FuturesPositionHistory } from '../models/FuturesPositionHistory'
 import mongoose from "mongoose";
 
 const router = Router();
@@ -119,6 +120,78 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
     })
   } catch (error) {
     return res.status(500).json({ error: "Failed to get user profile" })
+  }
+})
+
+router.get("/search", requireAuth, async (req: AuthRequest, res: Response) => {
+  const { q } = req.query
+  if (!q || typeof q !== 'string') return res.json({ users: [] })
+
+  try {
+    const users = await User.find({
+      $or: [
+        { username: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } }
+      ]
+    })
+      .select('username profilePicture')
+      .limit(10)
+      .lean()
+
+    return res.json({ users })
+  } catch (error) {
+    return res.status(500).json({ error: "Search failed" })
+  }
+})
+
+router.get("/insight/:username", requireAuth, async (req: AuthRequest, res: Response) => {
+  const { username } = req.params
+
+  try {
+    const user = await User.findOne({ username }).lean()
+    if (!user) return res.status(404).json({ error: "User not found" })
+
+    const userId = String(user._id)
+
+    // Parallel fetch of all public-facing data
+    const [
+      spotPositions,
+      futuresAccs,
+      futuresPositions,
+      totalPortfolioUSD
+    ] = await Promise.all([
+      SpotPosition.find({ userId }).lean(),
+      FuturesAccount.find({ userId }).lean(),
+      FuturesPosition.find({ userId }).lean(),
+      calculateTotalPortfolioUSD(userId)
+    ])
+
+    // Get Trade History (Futures)
+    const history = await FuturesPositionHistory.find({ userId }).sort({ closedAt: -1 }).limit(50).lean()
+
+    return res.json({
+      user: {
+        username: user.username,
+        profilePicture: user.profilePicture,
+        createdAt: user.createdAt
+      },
+      balances: {
+        totalPortfolioUSD: Math.round(totalPortfolioUSD * 100) / 100,
+        spot: spotPositions.map(p => ({
+          asset: p.asset,
+          available: p.available?.toString() ?? '0'
+        })),
+        futures: futuresAccs.map(a => ({
+          asset: a.asset,
+          available: a.available?.toString() ?? '0'
+        }))
+      },
+      activePositions: futuresPositions,
+      history
+    })
+  } catch (error) {
+    console.error('Insight error:', error)
+    return res.status(500).json({ error: "Failed to load user insights" })
   }
 })
 

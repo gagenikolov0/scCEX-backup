@@ -17,6 +17,7 @@ const Deposit = lazy(() => import('./routes/Deposit'))
 const Withdraw = lazy(() => import('./routes/Withdraw'))
 const Wallet = lazy(() => import('./routes/Wallet'))
 const Settings = lazy(() => import('./routes/Settings'))
+const UserInsight = lazy(() => import('@/routes/UserInsight'))
 
 const PageLoader = () => (
   <Center style={{ height: '100vh' }}>
@@ -48,6 +49,7 @@ function App() {
                       <Route path="/deposit" element={<Protected><Deposit /></Protected>} />
                       <Route path="/withdraw" element={<Protected><Withdraw /></Protected>} />
                       <Route path="/settings" element={<Protected><Settings /></Protected>} />
+                      <Route path="/trader/:username" element={<UserInsight />} />
 
                       {/* Catch-all route for SPA */}
                       <Route path="*" element={<Navigate to="/" replace />} />

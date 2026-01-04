@@ -1,6 +1,6 @@
 
-import { Box, Title, Text, Stack, Button, Container, SimpleGrid, ThemeIcon, Flex, Badge, Group, Paper } from '@mantine/core'
-import { IconRocket, IconShieldLock, IconHeadset, IconArrowRight, IconCurrencyBitcoin, IconTrendingUp, IconUsers, IconCloudComputing } from '@tabler/icons-react'
+import { Box, Title, Text, Stack, Button, Container, SimpleGrid, ThemeIcon, Flex, Badge, Group, Paper, Avatar } from '@mantine/core'
+import { IconRocket, IconShieldLock, IconHeadset, IconArrowRight, IconCurrencyBitcoin, IconTrendingUp, IconUsers, IconCloudComputing, IconUserSearch, IconFingerprint, IconEye, IconSearch } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { useMarket } from '../contexts/MarketContext'
 import { useMemo, useEffect } from 'react'
@@ -213,6 +213,104 @@ export default function Home() {
               ))}
             </SimpleGrid>
           </Paper>
+        </Container>
+      </Box>
+
+      {/* Social Transparency & Trader Insights Section */}
+      <Box style={{ position: 'relative', zIndex: 1 }} py={100} bg="rgba(0,0,0,0.2)">
+        <Container size="lg">
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={80} style={{ alignItems: 'center' }}>
+
+            {/* Visual Showcase */}
+            <Box style={{ position: 'relative', height: '400px' }} className="reveal-on-scroll">
+              <Box style={{
+                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(51, 154, 240, 0.15) 0%, transparent 70%)',
+                filter: 'blur(40px)', zIndex: 0
+              }} />
+
+              <Paper p="xl" radius="lg" withBorder style={{
+                position: 'absolute', top: '20px', left: '0', zIndex: 2,
+                width: '100%', maxWidth: '340px', background: 'rgba(20, 21, 23, 0.8)', backdropFilter: 'blur(12px)'
+              }}>
+                <Group mb="md">
+                  <Avatar size="lg" radius="xl" color="blue">
+                    <IconUserSearch size={24} />
+                  </Avatar>
+                  <div>
+                    <Text fw={700}>Omni-Search</Text>
+                    <Text size="xs" c="dimmed">Institutional Identity System</Text>
+                  </div>
+                </Group>
+                <Paper p="xs" radius="sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <Text size="xs" fw={700} tt="uppercase" c="blue" mb={4}>Search Results</Text>
+                  <Group gap="xs">
+                    <IconSearch size={14} color="dimmed" />
+                    <Text size="sm">whale_trader_01</Text>
+                  </Group>
+                </Paper>
+              </Paper>
+
+              <Paper p="lg" radius="lg" withBorder style={{
+                position: 'absolute', bottom: '20px', right: '0', zIndex: 3,
+                width: '100%', maxWidth: '280px', background: 'rgba(20, 21, 23, 0.8)', backdropFilter: 'blur(12px)',
+                border: '1px solid var(--mantine-color-green-8)'
+              }}>
+                <Group justify="space-between" mb="xs">
+                  <Text size="sm" fw={700}>Trader Insight</Text>
+                  <Badge color="green" variant="light">Verified</Badge>
+                </Group>
+                <Text size="xl" fw={900} c="green">+142.50%</Text>
+                <Text size="xs" c="dimmed">30D Realized PNL</Text>
+              </Paper>
+            </Box>
+
+            {/* Content */}
+            <Stack gap="xl" className="reveal-on-scroll">
+              <Badge variant="light" color="blue" size="lg" radius="md">Social Transparency</Badge>
+              <Title order={2} size={48} fw={900} style={{ lineHeight: 1.2 }}>
+                Social Trading 2.0 <br />
+                <Text span inherit c="blue">Verify Every Move.</Text>
+              </Title>
+              <Text c="dimmed" size="lg" lh={1.6}>
+                No more hidden portfolios. Search for any trader to see their live positions, historical performance, and proof of funds. Institutional-grade transparency for the modern trader.
+              </Text>
+
+              <SimpleGrid cols={2} spacing="md">
+                <Box>
+                  <Flex align="center" gap="xs" mb={4}>
+                    <IconFingerprint size={20} color="var(--mantine-color-blue-6)" />
+                    <Text fw={700} size="sm">Proof of Performance</Text>
+                  </Flex>
+                  <Text size="xs" c="dimmed">100% verified historical trade data on-chain.</Text>
+                </Box>
+                <Box>
+                  <Flex align="center" gap="xs" mb={4}>
+                    <IconEye size={20} color="var(--mantine-color-blue-6)" />
+                    <Text fw={700} size="sm">Real-time Insights</Text>
+                  </Flex>
+                  <Text size="xs" c="dimmed">Monitor whales and top alpha traders live.</Text>
+                </Box>
+              </SimpleGrid>
+
+              <Button
+                variant="filled"
+                size="lg"
+                radius="md"
+                color="blue"
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setTimeout(() => {
+                    (document.querySelector('input[placeholder*="Search"]') as any)?.focus();
+                  }, 500);
+                }}
+                leftSection={<IconSearch size={18} />}
+              >
+                Search Traders
+              </Button>
+            </Stack>
+
+          </SimpleGrid>
         </Container>
       </Box>
 

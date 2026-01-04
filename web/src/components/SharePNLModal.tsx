@@ -233,7 +233,7 @@ export default function SharePNLModal({ opened, onClose, data }: SharePNLModalPr
                                         justifyContent: 'center'
                                     }}>
                                         <QRCodeSVG
-                                            value={`https://www.vircex.com/register?ref=${referralCode || ''}`}
+                                            value={`https://www.vircex.com/trader/${username || ''}?ref=${referralCode || ''}`}
                                             size={44}
                                             level="H"
                                             imageSettings={{
