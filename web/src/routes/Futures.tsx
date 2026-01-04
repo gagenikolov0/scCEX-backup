@@ -1,4 +1,4 @@
-import { Card, TextInput, Button, Grid, Group, Text, Loader, Tabs, Modal, Badge, Flex, Box, Stack, Tooltip } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Group, Text, Loader, Tabs, Modal, Badge, Flex, Box, Stack, Tooltip, ActionIcon } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState, useCallback } from 'react'
@@ -18,6 +18,8 @@ import { useSymbolStats } from '../lib/useSymbolStats'
 import { formatDate, cleanSymbol } from '../lib/utils'
 import { AssetSelector } from '../components/AssetSelector'
 import { TerminalTabs } from '../components/TerminalTabs'
+import SharePNLModal from '../components/SharePNLModal'
+import { IconShare } from '@tabler/icons-react'
 
 export default function Futures() {
   const [search] = useSearchParams()
@@ -47,6 +49,7 @@ export default function Futures() {
   const [tpslData, setTpslData] = useState<any | null>(null)
   const [tpslPrices, setTpslPrices] = useState({ tp: '', sl: '', tpQty: '', slQty: '' })
   const [tpslPercents, setTpslPercents] = useState({ tp: 0, sl: 0 })
+  const [shareData, setShareData] = useState<any>(null)
 
   const { availableIntervals, interval, setInterval } = useIntervals({
     symbol: `${token}_${quote}`,
@@ -327,14 +330,33 @@ export default function Futures() {
 
                         const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
                         return (
-                          <Flex direction="column" lh={1.2}>
-                            <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
-                              {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
-                            </Text>
-                            <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}>
-                              ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                            </Text>
-                          </Flex>
+                          <Group gap={8} wrap="nowrap">
+                            <Flex direction="column" lh={1.2} style={{ flex: 1 }}>
+                              <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                                {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
+                              </Text>
+                              <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}>
+                                ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                              </Text>
+                            </Flex>
+                            <ActionIcon
+                              variant="subtle"
+                              size="sm"
+                              color="gray"
+                              onClick={() => setShareData({
+                                symbol: item.symbol,
+                                side: item.side,
+                                leverage: item.leverage,
+                                pnl: pnlValue,
+                                roi: roi,
+                                entryPrice: entryPrice,
+                                markPrice: lastPrice,
+                                liquidationPrice: item.liquidationPrice
+                              })}
+                            >
+                              <IconShare size={14} />
+                            </ActionIcon>
+                          </Group>
                         )
                       }
                     },
@@ -453,21 +475,40 @@ export default function Futures() {
                         const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
 
                         return (
-                          <Flex direction="column" lh={1.2}>
-                            <Group gap={4}>
-                              <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
-                                {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
+                          <Group gap={8} wrap="nowrap">
+                            <Flex direction="column" lh={1.2} style={{ flex: 1 }}>
+                              <Group gap={4}>
+                                <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                                  {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
+                                </Text>
+                                {item.note === 'Liquidated' && (
+                                  <Tooltip label={`Liquidated at ${item.exitPrice}`}>
+                                    <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
+                                  </Tooltip>
+                                )}
+                              </Group>
+                              <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
+                                ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                               </Text>
-                              {item.note === 'Liquidated' && (
-                                <Tooltip label={`Liquidated at ${item.exitPrice}`}>
-                                  <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
-                                </Tooltip>
-                              )}
-                            </Group>
-                            <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
-                              ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                            </Text>
-                          </Flex>
+                            </Flex>
+                            <ActionIcon
+                              variant="subtle"
+                              size="sm"
+                              color="gray"
+                              onClick={() => setShareData({
+                                symbol: item.symbol,
+                                side: item.side,
+                                leverage: item.leverage,
+                                pnl: realizedPnl,
+                                roi: roi,
+                                entryPrice: item.entryPrice,
+                                exitPrice: item.exitPrice,
+                                isHistory: true
+                              })}
+                            >
+                              <IconShare size={14} />
+                            </ActionIcon>
+                          </Group>
                         )
                       }
                     },
@@ -664,6 +705,12 @@ export default function Futures() {
           </Group>
         </Stack>
       </Modal>
+
+      <SharePNLModal
+        opened={!!shareData}
+        onClose={() => setShareData(null)}
+        data={shareData}
+      />
     </Box >
   )
 }

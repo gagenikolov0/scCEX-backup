@@ -23,8 +23,18 @@ router.post("/register", async (req: Request, res: Response) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
+  // Generate random username and referral code
+  const randomId = Math.random().toString(36).substring(2, 7).toUpperCase();
+  const username = `Trader_${randomId}`;
+  const referralCode = `VIRCEX-${randomId}`;
+
   // Create user first
-  const user = await User.create({ email, passwordHash });
+  const user = await User.create({
+    email,
+    passwordHash,
+    username,
+    referralCode
+  });
 
   // Assign a free deposit address if available, link to user
   const freeGroup = await AddressGroup.findOneAndUpdate(

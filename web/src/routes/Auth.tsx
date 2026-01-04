@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Button, TextInput, Box, Stack, Title, Text, Center, Anchor, Group, ThemeIcon, Container, SimpleGrid, RingProgress, Progress } from '@mantine/core'
+import { Button, TextInput, Box, Stack, Title, Text, Center, Anchor, Group, ThemeIcon, Container, SimpleGrid, Progress } from '@mantine/core'
 import { IconMail, IconLock, IconShieldLock, IconArrowBackUp, IconFingerprint, IconUserPlus, IconLogin, IconActivity, IconLockAccess } from '@tabler/icons-react'
 import { ParticlesBackground } from '../components/ParticlesBackground'
 import { SpotlightCard } from '../components/SpotlightCard'
@@ -112,20 +112,7 @@ export default function AuthHub() {
                   <SecurityStat icon={IconLockAccess} label="Session Audit" value="ISO/IEC 27001 Certified" />
                 </Stack>
               </Stack>
-
-              <Group justify="space-between" align="flex-end">
-                <Box>
-                  <Text size="xs" c="cyan" fw={700} tt="uppercase">Network Load</Text>
-                  <RingProgress
-                    size={80}
-                    thickness={8}
-                    roundCaps
-                    sections={[{ value: 35, color: 'cyan' }]}
-                    label={<Text size="xs" ta="center" fw={700}>35%</Text>}
-                  />
-                </Box>
-                <Text size="xs" c="dimmed">v3.4.0 High-Sec Build</Text>
-              </Group>
+              <Text size="xs" c="dimmed">v3.4.0 High-Sec Build</Text>
             </Box>
 
             {/* Right Panel: Auth Action Center */}

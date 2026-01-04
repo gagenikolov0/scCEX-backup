@@ -29,6 +29,10 @@ interface AccountContextType {
   futuresPositions: any[]
   orders: Order[]
   totalPortfolioUSD: number
+  email: string | null
+  username: string | null
+  referralCode: string | null
+  profilePicture: string | null
   refreshBalances: () => Promise<void>
   refreshOrders: () => Promise<void>
 }
@@ -56,6 +60,10 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   const [futuresPositions, setFuturesPositions] = useState<any[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [totalPortfolioUSD, setTotalPortfolioUSD] = useState<number>(0)
+  const [email, setEmail] = useState<string | null>(null)
+  const [username, setUsername] = useState<string | null>(null)
+  const [referralCode, setReferralCode] = useState<string | null>(null)
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
 
   const location = useLocation()
   const shouldFetch = useMemo(() => {
@@ -105,6 +113,19 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
         if (typeof data.balances?.totalPortfolioUSD === 'number') {
           setTotalPortfolioUSD(data.balances.totalPortfolioUSD)
+        }
+
+        if (data.user?.email) {
+          setEmail(data.user.email)
+        }
+        if (data.user?.username) {
+          setUsername(data.user.username)
+        }
+        if (data.user?.referralCode) {
+          setReferralCode(data.user.referralCode)
+        }
+        if (data.user?.profilePicture) {
+          setProfilePicture(data.user.profilePicture)
         }
       }
     } catch (error) {
@@ -305,6 +326,10 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       futuresPositions,
       orders,
       totalPortfolioUSD,
+      email,
+      username,
+      referralCode,
+      profilePicture,
       refreshBalances,
       refreshOrders
     }}>

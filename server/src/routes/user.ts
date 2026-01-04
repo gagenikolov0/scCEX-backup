@@ -12,11 +12,62 @@ import mongoose from "mongoose";
 
 const router = Router();
 
+router.patch("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
+  const { username, profilePicture } = req.body || {}
+  const updates: any = {}
+
+  if (username !== undefined) {
+    if (typeof username !== 'string' || username.length < 3 || username.length > 20) {
+      return res.status(400).json({ error: "Username must be between 3 and 20 characters" })
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ error: "Username can only contain letters, numbers, and underscores" })
+    }
+    updates.username = username
+  }
+
+  if (profilePicture !== undefined) {
+    // Tighten limit for optimized 512px JPEG (~200KB max, but allowing head room for base64)
+    if (profilePicture && profilePicture.length > 250 * 1024) {
+      return res.status(400).json({ error: "Profile picture too large (max 250KB after optimization)" })
+    }
+    updates.profilePicture = profilePicture
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: "No fields to update" })
+  }
+
+  try {
+    const userId = req.user!.id
+    if (updates.username) {
+      const existing = await User.findOne({ username: updates.username, _id: { $ne: userId } }).lean()
+      if (existing) {
+        return res.status(409).json({ error: "Username already taken" })
+      }
+    }
+
+    await User.updateOne({ _id: userId }, { $set: updates })
+    return res.json({ ok: true, ...updates })
+  } catch (error) {
+    console.error('Profile update error:', error)
+    return res.status(500).json({ error: "Failed to update profile" })
+  }
+})
+
 
 router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.user!.id).lean()
+    let user = await User.findById(req.user!.id)
     if (!user) return res.status(404).json({ error: "User not found" })
+
+    // Lazy generation for existing users missing these fields
+    if (!user.username || !user.referralCode) {
+      const randomId = Math.random().toString(36).substring(2, 7).toUpperCase();
+      if (!user.username) user.username = `Trader_${randomId}`;
+      if (!user.referralCode) user.referralCode = `VIRCEX-${randomId}`;
+      await user.save();
+    }
 
     // Get all spot positions (including USDT/USDC)
     const [positions, futuresAccs, futuresPositions] = await Promise.all([
@@ -45,6 +96,9 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
       user: {
         id: user._id,
         email: user.email,
+        username: user.username,
+        referralCode: user.referralCode,
+        profilePicture: user.profilePicture,
         addressGroupId: user.addressGroupId,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt

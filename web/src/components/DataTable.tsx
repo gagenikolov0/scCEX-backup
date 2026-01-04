@@ -50,9 +50,15 @@ const DataTable = memo(({ data, columns, emptyMessage, maxHeight = '430px', minW
                 components={{
                     Table: (props) => <Table {...props} style={{ minWidth, tableLayout: 'fixed' }} verticalSpacing="xs" horizontalSpacing={8} highlightOnHover fs="sm" withRowBorders={false} />,
                     EmptyPlaceholder: () => (
-                        <Box py={40} ta="center">
-                            <Text c="dimmed" size="sm">{emptyMessage}</Text>
-                        </Box>
+                        <Table.Tbody>
+                            <Table.Tr>
+                                <Table.Td colSpan={columns.length} style={{ border: 'none' }}>
+                                    <Box py={40} ta="center">
+                                        <Text c="dimmed" size="sm">{emptyMessage}</Text>
+                                    </Box>
+                                </Table.Td>
+                            </Table.Tr>
+                        </Table.Tbody>
                     ),
                 }}
             />
