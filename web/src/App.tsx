@@ -9,8 +9,7 @@ import AppShell from './components/AppShell'
 
 // Lazy load routes
 const Home = lazy(() => import('./routes/Home'))
-const Login = lazy(() => import('./routes/Auth').then(m => ({ default: m.Login })))
-const Register = lazy(() => import('./routes/Auth').then(m => ({ default: m.Register })))
+const AuthHub = lazy(() => import('./routes/Auth'))
 const Futures = lazy(() => import('./routes/Futures'))
 const Spot = lazy(() => import('./routes/Spot'))
 const Markets = lazy(() => import('./routes/Markets'))
@@ -36,8 +35,8 @@ function App() {
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
                       {/* Public routes */}
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
+                      <Route path="/login" element={<AuthHub />} />
+                      <Route path="/register" element={<AuthHub />} />
                       <Route path="/" element={<Home />} />
                       <Route path="/markets" element={<Markets />} />
                       <Route path="/spot" element={<Spot />} />

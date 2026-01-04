@@ -39,6 +39,7 @@ export default function Spot() {
   useEffect(() => setToken(initialBase), [initialBase])
 
   useEffect(() => {
+    window.scrollTo(0, 0)
     listen('spot')
     return () => unlisten('spot')
   }, [listen, unlisten])
