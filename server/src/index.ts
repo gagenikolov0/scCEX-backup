@@ -25,18 +25,20 @@ app.use(helmet())
 app.use(cookieParser())
 app.use(rateLimit({ windowMs: 60 * 1000, limit: 100, standardHeaders: "draft-7", legacyHeaders: false, }))
 // CORS configuration
-const allowedOrigins = config.corsOrigin.split(',').map(origin => origin.trim());
+const allowedOrigins = config.corsOrigin.split(',').map(origin => origin.trim().replace(/\/$/, ''));
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
     // Check if the origin is in the allowed list or if wildcard is enabled
+    // Note: Browser sends origin WITHOUT trailing slash
     if (allowedOrigins.includes(origin) || allowedOrigins.includes('*') ||
       process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
 
+    console.error('CORS BLOCKED:', origin, 'Allowed:', allowedOrigins);
     // Reject requests from other origins
     return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
