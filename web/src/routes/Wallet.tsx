@@ -124,7 +124,7 @@ export default function Wallet() {
 
   return (
     <Flex mih="calc(100vh - 100px)">
-      <Box w={200} style={{ borderRight: '1px solid var(--mantine-color-default-border)', background: 'var(--mantine-color-default-border)' }}>
+      <Box w={200} style={{ borderRight: '1px solid var(--mantine-color-default-border)' }}>
         <Stack gap={4} p="md">
           {tabs.map(tab => (
             <NavLink
