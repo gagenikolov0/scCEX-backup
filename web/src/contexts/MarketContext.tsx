@@ -92,7 +92,13 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
         let pendingData: SpotStats[] | null = null
         const throttleInterval = setInterval(() => {
           if (pendingData) {
-            setSpotStats(pendingData)
+            // Only update if data actually changed
+            setSpotStats(prev => {
+              if (JSON.stringify(prev) === JSON.stringify(pendingData)) {
+                return prev // Same reference = no re-render
+              }
+              return pendingData!
+            })
             pendingData = null
           }
         }, 1000)
@@ -151,7 +157,13 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
               ...item,
               symbol: item.symbol.includes('_') ? item.symbol : item.symbol.replace(/(USDT|USDC)$/i, '_$1')
             }))
-            setFuturesStats(normalized)
+            // Only update if data actually changed
+            setFuturesStats(prev => {
+              if (JSON.stringify(prev) === JSON.stringify(normalized)) {
+                return prev // Same reference = no re-render
+              }
+              return normalized
+            })
             pendingData = null
           }
         }, 1000)

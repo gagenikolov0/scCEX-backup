@@ -16,6 +16,7 @@ import DataTable from '../components/DataTable'
 import { useSymbolStats } from '../lib/useSymbolStats'
 import { formatDate, getVal, cleanSymbol } from '../lib/utils'
 import { AssetSelector } from '../components/AssetSelector'
+import { TerminalTabs } from '../components/TerminalTabs'
 
 export default function Spot() {
   const { isAuthed } = useAuth()
@@ -205,112 +206,112 @@ export default function Spot() {
             </Grid>
 
             {/* Tables aligned to complete the sidebar pillar height */}
-            <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }} shadow="xs">
-              <Tabs defaultValue="history" variant="pills" radius="md">
-                <Tabs.List pt={4} px={4}>
-                  <Tabs.Tab value="history">Trade History</Tabs.Tab>
-                  <Tabs.Tab value="pending">Open Orders</Tabs.Tab>
-                  <Tabs.Tab value="positions">Assets</Tabs.Tab>
-                </Tabs.List>
+            <TerminalTabs
+              defaultValue="history"
+              tabs={[
+                { value: 'history', label: 'Trade History' },
+                { value: 'pending', label: 'Open Orders' },
+                { value: 'positions', label: 'Assets' }
+              ]}
+            >
 
-                <Tabs.Panel value="history" p={0}>
-                  <DataTable
-                    data={history}
-                    emptyMessage="No trade history"
-                    columns={[
-                      {
-                        label: 'Symbol',
-                        key: 'symbol',
-                        render: (item) => (
-                          <Flex direction="column" lh={1.2} gap={0}>
-                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
-                            {item.side && (
-                              <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                                {item.side}
-                              </Text>
-                            )}
-                          </Flex>
-                        )
-                      },
-                      { label: 'Quantity', key: 'quantity', render: (item) => Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4) },
-                      { label: 'Price', key: 'price', render: (item) => getVal(item.price || item.priceQuote) },
-                      {
-                        label: 'Quote Amount', key: 'total', render: (item) => {
-                          const t = getVal(item.total || item.quoteAmount)
-                          return t ? `${Number(t).toFixed(2)} ${quote}` : '-'
-                        }
-                      },
-                      { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt || item.closedAt) }
-                    ]}
-                  />
-                </Tabs.Panel>
-
-                <Tabs.Panel value="pending" p={0}>
-                  <DataTable
-                    data={pendingOrders}
-                    emptyMessage="No open orders"
-                    columns={[
-                      {
-                        label: 'Symbol',
-                        key: 'symbol',
-                        render: (item) => (
-                          <Flex direction="column" lh={1.2} gap={0}>
-                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
-                            {item.side && (
-                              <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                                {item.side}
-                              </Text>
-                            )}
-                          </Flex>
-                        )
-                      },
-                      { label: 'Quantity', key: 'quantity', render: (item) => Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4) },
-                      { label: 'Price', key: 'price', render: (item) => getVal(item.price || item.priceQuote) },
-                      { label: 'Status', key: 'status' },
-                      { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt) },
-                      {
-                        label: 'Action',
-                        key: 'action',
-                        render: (item) => (
-                          <Button size="compact-xs" variant="light" color="var(--red)" onClick={() => cancelOrder(item.id)}>
-                            Cancel
-                          </Button>
-                        )
+              <Tabs.Panel value="history" p={0}>
+                <DataTable
+                  data={history}
+                  emptyMessage="No trade history"
+                  columns={[
+                    {
+                      label: 'Symbol',
+                      key: 'symbol',
+                      render: (item) => (
+                        <Flex direction="column" lh={1.2} gap={0}>
+                          <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                          {item.side && (
+                            <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                              {item.side}
+                            </Text>
+                          )}
+                        </Flex>
+                      )
+                    },
+                    { label: 'Quantity', key: 'quantity', render: (item) => Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4) },
+                    { label: 'Price', key: 'price', render: (item) => getVal(item.price || item.priceQuote) },
+                    {
+                      label: 'Quote Amount', key: 'total', render: (item) => {
+                        const t = getVal(item.total || item.quoteAmount)
+                        return t ? `${Number(t).toFixed(2)} ${quote}` : '-'
                       }
-                    ]}
-                  />
-                </Tabs.Panel>
+                    },
+                    { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt || item.closedAt) }
+                  ]}
+                />
+              </Tabs.Panel>
 
-                <Tabs.Panel value="positions" p={0}>
-                  <DataTable
-                    data={positions}
-                    emptyMessage="No assets"
-                    columns={[
-                      { label: 'Asset', key: 'asset' },
-                      { label: 'Available', key: 'available', render: (item) => getVal(item.available) },
-                      { label: 'Reserved', key: 'reserved', render: (item) => getVal(item.reserved) },
-                      {
-                        label: 'Value',
-                        key: 'value',
-                        render: (item) => {
-                          const asset = item.asset
-                          const available = parseFloat(getVal(item.available) || '0')
-                          if (asset === 'USDT' || asset === 'USDC') {
-                            return `${available.toFixed(2)} ${quote}`
-                          } else {
-                            const sym = `${asset}${quote}`;
-                            const pairStats = statsMap.get(sym) || statsMap.get(sym.replace('_', ''));
-                            const price = parseFloat(pairStats?.lastPrice || '0')
-                            return price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
-                          }
+              <Tabs.Panel value="pending" p={0}>
+                <DataTable
+                  data={pendingOrders}
+                  emptyMessage="No open orders"
+                  columns={[
+                    {
+                      label: 'Symbol',
+                      key: 'symbol',
+                      render: (item) => (
+                        <Flex direction="column" lh={1.2} gap={0}>
+                          <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                          {item.side && (
+                            <Text size="xxs" color={item.side === 'buy' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                              {item.side}
+                            </Text>
+                          )}
+                        </Flex>
+                      )
+                    },
+                    { label: 'Quantity', key: 'quantity', render: (item) => Number(getVal(item.quantity || item.quantityBase || 0)).toFixed(4) },
+                    { label: 'Price', key: 'price', render: (item) => getVal(item.price || item.priceQuote) },
+                    { label: 'Status', key: 'status' },
+                    { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt) },
+                    {
+                      label: 'Action',
+                      key: 'action',
+                      render: (item) => (
+                        <Button size="compact-xs" variant="light" color="var(--red)" onClick={() => cancelOrder(item.id)}>
+                          Cancel
+                        </Button>
+                      )
+                    }
+                  ]}
+                />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="positions" p={0}>
+                <DataTable
+                  data={positions}
+                  emptyMessage="No assets"
+                  columns={[
+                    { label: 'Asset', key: 'asset' },
+                    { label: 'Available', key: 'available', render: (item) => getVal(item.available) },
+                    { label: 'Reserved', key: 'reserved', render: (item) => getVal(item.reserved) },
+                    {
+                      label: 'Value',
+                      key: 'value',
+                      render: (item) => {
+                        const asset = item.asset
+                        const available = parseFloat(getVal(item.available) || '0')
+                        if (asset === 'USDT' || asset === 'USDC') {
+                          return `${available.toFixed(2)} ${quote}`
+                        } else {
+                          const sym = `${asset}${quote}`;
+                          const pairStats = statsMap.get(sym) || statsMap.get(sym.replace('_', ''));
+                          const price = parseFloat(pairStats?.lastPrice || '0')
+                          return price > 0 ? `${(available * price).toFixed(2)} ${quote}` : '-'
                         }
-                      },
-                      { label: 'Updated', key: 'updated', render: (item) => formatDate(item.updatedAt) }
-                    ]}
-                  />
-                </Tabs.Panel>
-              </Tabs>
-            </Card>
+                      }
+                    },
+                    { label: 'Updated', key: 'updated', render: (item) => formatDate(item.updatedAt) }
+                  ]}
+                />
+              </Tabs.Panel>
+            </TerminalTabs>
           </Flex>
         </Grid.Col>
 
@@ -431,6 +432,6 @@ export default function Spot() {
           refreshOrders()
         }}
       />
-    </Box>
+    </Box >
   )
 }

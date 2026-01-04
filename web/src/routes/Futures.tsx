@@ -17,6 +17,7 @@ import { FuturesTradeForm } from '../components/FuturesTradeForm'
 import { useSymbolStats } from '../lib/useSymbolStats'
 import { formatDate, cleanSymbol } from '../lib/utils'
 import { AssetSelector } from '../components/AssetSelector'
+import { TerminalTabs } from '../components/TerminalTabs'
 
 export default function Futures() {
   const [search] = useSearchParams()
@@ -271,210 +272,210 @@ export default function Futures() {
             </Grid>
 
             {/* Tables aligned to complete the sidebar pillar height */}
-            <Card padding={0} withBorder radius="md" h={525} style={{ overflowY: 'auto' }} shadow="xs">
-              <Tabs defaultValue="positions" variant="pills" radius="md">
-                <Tabs.List pt={4} px={4}>
-                  <Tabs.Tab value="positions">Positions</Tabs.Tab>
-                  <Tabs.Tab value="orders">Open Orders</Tabs.Tab>
-                  <Tabs.Tab value="history" onClick={fetchHistory}>Position History</Tabs.Tab>
-                </Tabs.List>
+            <TerminalTabs
+              defaultValue="positions"
+              tabs={[
+                { value: 'positions', label: 'Positions' },
+                { value: 'orders', label: 'Open Orders' },
+                { value: 'history', label: 'Position History', onClick: fetchHistory }
+              ]}
+            >
 
-                <Tabs.Panel value="positions" p={0}>
-                  <DataTable
-                    data={futuresPositions}
-                    emptyMessage="No active positions"
-                    columns={[
-                      {
-                        label: 'Trading Pair',
-                        key: 'symbol',
-                        render: (item) => (
-                          <Flex direction="column" lh={1.2} gap={0}>
-                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
-                            <Group gap={2}>
-                              <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
-                              <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                                {item.side}
-                              </Text>
-                            </Group>
-                          </Flex>
-                        )
-                      },
-                      { label: 'Size (Qty)', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
-                      { label: 'Avg Entry Price', key: 'entryPrice' },
-                      { label: 'Margin', key: 'margin', render: (item) => `${Number(item.margin || 0).toFixed(2)} ${quote}` },
-                      { label: 'Liq. Price', key: 'liquidationPrice', render: (item) => <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text> },
-                      {
-                        label: 'Unrealized PNL',
-                        key: 'pnl',
-                        render: (item) => {
-                          // Try exact match, then de-underscored, then manual
-                          const itemStats = statsMap.get(item.symbol) ||
-                            statsMap.get(item.symbol.replace('_', '')) ||
-                            statsMap.get(item.symbol + quote);
-
-
-                          const lastPrice = Number(itemStats?.lastPrice || 0)
-                          const entryPrice = Number(item.entryPrice || 0)
-                          const qty = Number(item.quantity || 0)
-                          const margin = Number(item.margin || 0)
-
-                          let pnlValue = 0
-                          if (lastPrice > 0) {
-                            pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
-                          }
-
-                          const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
-                          return (
-                            <Flex direction="column" lh={1.2}>
-                              <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
-                                {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
-                              </Text>
-                              <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}>
-                                ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                              </Text>
-                            </Flex>
-                          )
-                        }
-                      },
-                      {
-                        label: 'Realized PNL',
-                        key: 'realizedPnL',
-                        render: (item) => {
-                          const realizedPnl = Number(item.realizedPnL || 0)
-                          const margin = Number(item.margin || item.marginToRelease || 0)
-                          const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
-
-                          return (
-                            <Flex direction="column" lh={1.2}>
-                              <Group gap={4}>
-                                <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
-                                  {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
-                                </Text>
-                                {item.note === 'Liquidated' && (
-                                  <Tooltip label={`Liquidated at ${item.exitPrice}`}>
-                                    <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
-                                  </Tooltip>
-                                )}
-                              </Group>
-                              <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
-                                ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                              </Text>
-                            </Flex>
-                          )
-                        }
-                      },
-                      {
-                        label: 'TP/SL',
-                        key: 'tpsl',
-                        render: (item) => (
-                          <Flex direction="column" gap={2} lh={1}>
-                            <Text size="xxs" color="var(--green)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleTpslClick(item)}>
-                              TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
+              <Tabs.Panel value="positions" p={0}>
+                <DataTable
+                  data={futuresPositions}
+                  emptyMessage="No active positions"
+                  columns={[
+                    {
+                      label: 'Trading Pair',
+                      key: 'symbol',
+                      render: (item) => (
+                        <Flex direction="column" lh={1.2} gap={0}>
+                          <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                          <Group gap={2}>
+                            <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
+                            <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                              {item.side}
                             </Text>
-                            <Text size="xxs" color="var(--red)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleTpslClick(item)}>
-                              SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
+                          </Group>
+                        </Flex>
+                      )
+                    },
+                    { label: 'Size (Qty)', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
+                    { label: 'Avg Entry Price', key: 'entryPrice' },
+                    { label: 'Margin', key: 'margin', render: (item) => `${Number(item.margin || 0).toFixed(2)} ${quote}` },
+                    { label: 'Liq. Price', key: 'liquidationPrice', render: (item) => <Text size="sm" c="var(--liq)" fw={600}>{item.liquidationPrice ? Number(item.liquidationPrice).toFixed(2) : '-'}</Text> },
+                    {
+                      label: 'Unrealized PNL',
+                      key: 'pnl',
+                      render: (item) => {
+                        // Try exact match, then de-underscored, then manual
+                        const itemStats = statsMap.get(item.symbol) ||
+                          statsMap.get(item.symbol.replace('_', '')) ||
+                          statsMap.get(item.symbol + quote);
+
+
+                        const lastPrice = Number(itemStats?.lastPrice || 0)
+                        const entryPrice = Number(item.entryPrice || 0)
+                        const qty = Number(item.quantity || 0)
+                        const margin = Number(item.margin || 0)
+
+                        let pnlValue = 0
+                        if (lastPrice > 0) {
+                          pnlValue = item.side === 'long' ? (lastPrice - entryPrice) * qty : (entryPrice - lastPrice) * qty
+                        }
+
+                        const roi = margin > 0 ? (pnlValue / margin) * 100 : 0
+                        return (
+                          <Flex direction="column" lh={1.2}>
+                            <Text size="xs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                              {pnlValue >= 0 ? '+' : ''}{pnlValue.toFixed(2)} {quote}
+                            </Text>
+                            <Text size="xxs" color={pnlValue >= 0 ? 'var(--green)' : 'var(--red)'}>
+                              ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
                             </Text>
                           </Flex>
                         )
-                      },
-                      {
-                        label: 'Close',
-                        key: 'action',
-                        render: (item) => <Button size="compact-xs" color="#fe445c" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
                       }
-                    ]}
-                  />
-                </Tabs.Panel>
+                    },
+                    {
+                      label: 'Realized PNL',
+                      key: 'realizedPnL',
+                      render: (item) => {
+                        const realizedPnl = Number(item.realizedPnL || 0)
+                        const margin = Number(item.margin || item.marginToRelease || 0)
+                        const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
 
-                <Tabs.Panel value="orders" p={0}>
-                  <DataTable
-                    data={recentOrders.filter(o => o.symbol?.includes('_'))}
-                    emptyMessage="No recent orders"
-                    columns={[
-                      {
-                        label: 'Symbol',
-                        key: 'symbol',
-                        render: (item) => (
-                          <Flex direction="column" lh={1.2} gap={0}>
-                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
-                            <Group gap={2}>
-                              <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
-                              <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                                {item.side}
+                        return (
+                          <Flex direction="column" lh={1.2}>
+                            <Group gap={4}>
+                              <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                                {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                               </Text>
+                              {item.note === 'Liquidated' && (
+                                <Tooltip label={`Liquidated at ${item.exitPrice}`}>
+                                  <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
+                                </Tooltip>
+                              )}
                             </Group>
+                            <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
+                              ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                            </Text>
                           </Flex>
                         )
-                      },
-                      { label: 'Size', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
-                      { label: 'Price', key: 'price' },
-                      { label: 'Status', key: 'status' },
-                      { label: 'Time', key: 'createdAt', render: (item) => formatDate(item.createdAt) },
-                      {
-                        label: 'Action',
-                        key: 'action',
-                        render: (item) => item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
                       }
-                    ]}
-                  />
-                </Tabs.Panel>
+                    },
+                    {
+                      label: 'TP/SL',
+                      key: 'tpsl',
+                      render: (item) => (
+                        <Flex direction="column" gap={2} lh={1}>
+                          <Text size="xxs" color="var(--green)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleTpslClick(item)}>
+                            TP: {item.tpPrice > 0 ? item.tpPrice : '--'} {item.tpQuantity > 0 ? `(${Math.round((item.tpQuantity / item.quantity) * 100)}%)` : ''}
+                          </Text>
+                          <Text size="xxs" color="var(--red)" style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleTpslClick(item)}>
+                            SL: {item.slPrice > 0 ? item.slPrice : '--'} {item.slQuantity > 0 ? `(${Math.round((item.slQuantity / item.quantity) * 100)}%)` : ''}
+                          </Text>
+                        </Flex>
+                      )
+                    },
+                    {
+                      label: 'Close',
+                      key: 'action',
+                      render: (item) => <Button size="compact-xs" color="#fe445c" variant="light" onClick={() => setPartialCloseData({ symbol: item.symbol, totalQty: Number(item.quantity) })}>Close</Button>
+                    }
+                  ]}
+                />
+              </Tabs.Panel>
 
-                <Tabs.Panel value="history" p={0}>
-                  <DataTable
-                    data={history}
-                    emptyMessage="No trade history"
-                    columns={[
-                      {
-                        label: 'Symbol',
-                        key: 'symbol',
-                        render: (item) => (
-                          <Flex direction="column" lh={1.2} gap={0}>
-                            <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
-                            <Group gap={2}>
-                              <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
-                              <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                                {item.side}
+              <Tabs.Panel value="orders" p={0}>
+                <DataTable
+                  data={recentOrders.filter(o => o.symbol?.includes('_'))}
+                  emptyMessage="No recent orders"
+                  columns={[
+                    {
+                      label: 'Symbol',
+                      key: 'symbol',
+                      render: (item) => (
+                        <Flex direction="column" lh={1.2} gap={0}>
+                          <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                          <Group gap={2}>
+                            <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
+                            <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                              {item.side}
+                            </Text>
+                          </Group>
+                        </Flex>
+                      )
+                    },
+                    { label: 'Size', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
+                    { label: 'Price', key: 'price' },
+                    { label: 'Status', key: 'status' },
+                    { label: 'Time', key: 'createdAt', render: (item) => formatDate(item.createdAt) },
+                    {
+                      label: 'Action',
+                      key: 'action',
+                      render: (item) => item.status === 'pending' ? <Button size="compact-xs" color="gray" variant="light" onClick={() => cancelOrder(item._id)}>Cancel</Button> : '-'
+                    }
+                  ]}
+                />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="history" p={0}>
+                <DataTable
+                  data={history}
+                  emptyMessage="No trade history"
+                  columns={[
+                    {
+                      label: 'Symbol',
+                      key: 'symbol',
+                      render: (item) => (
+                        <Flex direction="column" lh={1.2} gap={0}>
+                          <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
+                          <Group gap={2}>
+                            <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
+                            <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                              {item.side}
+                            </Text>
+                          </Group>
+                        </Flex>
+                      )
+                    },
+                    { label: 'Size', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
+                    { label: 'Entry', key: 'entryPrice' },
+                    { label: 'Exit', key: 'exitPrice' },
+                    {
+                      label: 'Realized PnL',
+                      key: 'realizedPnL',
+                      render: (item) => {
+                        const realizedPnl = Number(item.realizedPnL || 0)
+                        const margin = Number(item.margin || item.marginToRelease || 0)
+                        const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
+
+                        return (
+                          <Flex direction="column" lh={1.2}>
+                            <Group gap={4}>
+                              <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
+                                {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
                               </Text>
+                              {item.note === 'Liquidated' && (
+                                <Tooltip label={`Liquidated at ${item.exitPrice}`}>
+                                  <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
+                                </Tooltip>
+                              )}
                             </Group>
+                            <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
+                              ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+                            </Text>
                           </Flex>
                         )
-                      },
-                      { label: 'Size', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
-                      { label: 'Entry', key: 'entryPrice' },
-                      { label: 'Exit', key: 'exitPrice' },
-                      {
-                        label: 'Realized PnL',
-                        key: 'realizedPnL',
-                        render: (item) => {
-                          const realizedPnl = Number(item.realizedPnL || 0)
-                          const margin = Number(item.margin || item.marginToRelease || 0)
-                          const roi = margin > 0 ? (realizedPnl / margin) * 100 : 0
-
-                          return (
-                            <Flex direction="column" lh={1.2}>
-                              <Group gap={4}>
-                                <Text size="xs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'} fw={600}>
-                                  {realizedPnl >= 0 ? '+' : ''}{realizedPnl.toFixed(2)} {quote}
-                                </Text>
-                                {item.note === 'Liquidated' && (
-                                  <Tooltip label={`Liquidated at ${item.exitPrice}`}>
-                                    <Badge color="var(--red)" size="xs" variant="filled">LIQ</Badge>
-                                  </Tooltip>
-                                )}
-                              </Group>
-                              <Text size="xxs" color={realizedPnl >= 0 ? 'var(--green)' : 'var(--red)'}>
-                                ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
-                              </Text>
-                            </Flex>
-                          )
-                        }
-                      },
-                      { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt || item.updatedAt || item.closedAt) }
-                    ]}
-                  />
-                </Tabs.Panel>
-              </Tabs>
-            </Card>
+                      }
+                    },
+                    { label: 'Time', key: 'time', render: (item) => formatDate(item.createdAt || item.updatedAt || item.closedAt) }
+                  ]}
+                />
+              </Tabs.Panel>
+            </TerminalTabs>
           </Flex>
         </Grid.Col>
 

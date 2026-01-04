@@ -10,14 +10,14 @@ export function TradingTerminalPreview() {
                 height: '400px',
                 borderRadius: '16px',
                 overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.1)',
-                background: 'rgba(0,0,0,0.6)'
+                border: '1px solid var(--glass-border)',
+                background: 'var(--glass-bg)'
             }}
         >
             {/* Header */}
             <Flex justify="space-between" align="center" p="sm" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <Flex gap="sm" align="center">
-                    <Text fw={700} c="white">BTC/USDT</Text>
+                    <Text fw={700} c="var(--mantine-color-text)">BTC/USDT</Text>
                     <Text c="green" fw={700} size="sm">+5.42%</Text>
                 </Flex>
                 <Flex gap="xs">

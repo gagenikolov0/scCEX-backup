@@ -10,14 +10,17 @@ interface SpotlightCardProps extends PaperProps {
 
 export function SpotlightCard({ children, spotlightColor = 'rgba(255, 255, 255, 0.1)', className, style, ...props }: SpotlightCardProps) {
     const divRef = useRef<HTMLDivElement>(null)
-    const [position, setPosition] = useState({ x: 0, y: 0 })
     const [opacity, setOpacity] = useState(0)
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!divRef.current) return
 
         const rect = divRef.current.getBoundingClientRect()
-        setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+        const x = e.clientX - rect.left
+        const y = e.clientY - rect.top
+
+        divRef.current.style.setProperty('--x', `${x}px`)
+        divRef.current.style.setProperty('--y', `${y}px`)
     }
 
     const handleMouseEnter = () => setOpacity(1)
@@ -34,7 +37,7 @@ export function SpotlightCard({ children, spotlightColor = 'rgba(255, 255, 255, 
                 position: 'relative',
                 overflow: 'hidden',
                 ...style
-            }}
+            } as React.CSSProperties}
             {...props}
         >
             <div
@@ -47,7 +50,7 @@ export function SpotlightCard({ children, spotlightColor = 'rgba(255, 255, 255, 
                     bottom: 0,
                     opacity,
                     transition: 'opacity 0.3s',
-                    background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,
+                    background: `radial-gradient(600px circle at var(--x) var(--y), ${spotlightColor}, transparent 40%)`,
                     zIndex: 0
                 }}
             />

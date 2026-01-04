@@ -1,9 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, memo } from 'react'
 import { API_BASE } from '../config/api'
 import { Box, Text, SimpleGrid } from '@mantine/core'
 import BigPrice from './BigPrice'
+import { Virtuoso } from 'react-virtuoso'
 
 type SideRow = [number, number] // [price, size]
+
+const OrderRow = memo(({ price, size, total, color }: { price: string, size: string, total: string, color: string }) => (
+  <SimpleGrid cols={3} spacing={4}>
+    <Text size="xs" color={color} fw={500}>{price}</Text>
+    <Text size="xs">{size}</Text>
+    <Text size="xs" c="dimmed">{total}</Text>
+  </SimpleGrid>
+))
 
 export default function OrderBook({ symbol, market, depth = 50 }: { symbol: string; market: 'spot' | 'futures'; depth?: number }) {
   const [bids, setBids] = useState<SideRow[]>([])
@@ -18,7 +27,6 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
     setBids([]); setAsks([]); setError(null); setStatus('connecting')
     const wsBase = API_BASE.replace(/^http/, 'ws')
     const path = market === 'futures' ? '/ws/futures-depth' : '/ws/spot-depth'
-    // Strict symbol normalization: Spot = No underscore, Futures = Underscore
     const sym = market === 'futures'
       ? (symbol.includes('_') ? symbol : symbol.replace(/(USDT|USDC)$/i, '_$1'))
       : symbol.replace('_', '');
@@ -98,41 +106,52 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
   const askTotalsRev = useMemo(() => totals.askTotals.slice().reverse(), [totals])
 
   return (
-    <Box p="sm" style={{ overflowX: 'hidden' }}>
+    <Box p="sm" style={{ overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {error && <Text color="red" size="sm" mb="xs">{error}</Text>}
       {status === 'connecting' && <Text c="dimmed" size="sm" mb="xs">Connecting...</Text>}
 
-      <SimpleGrid cols={3} spacing={4} mb={8} style={{ position: 'sticky', top: 0, backgroundColor: 'transparent', zIndex: 1 }}>
+      <SimpleGrid cols={3} spacing={4} mb={8} style={{ zIndex: 1 }}>
         <Text size="sm" c="dimmed" fw={500}>Price</Text>
         <Text size="sm" c="dimmed" fw={500}>Size</Text>
         <Text size="sm" c="dimmed" fw={500}>Total</Text>
       </SimpleGrid>
 
-      {/* asks */}
-      <SimpleGrid cols={3} spacing={4}>
-        {revAsks.map((r, i) => (
-          <Box key={`a-${i}`} style={{ display: 'contents' }}>
-            <Text size="xs" color="var(--red)" fw={500}>{fmt(r[0])}</Text>
-            <Text size="xs">{fmt(r[1])}</Text>
-            <Text size="xs" c="dimmed">{fmt(askTotalsRev[i])}</Text>
-          </Box>
-        ))}
-      </SimpleGrid>
+      {/* ASKS (Virtualized) */}
+      <Box style={{ flex: 1, minHeight: 100 }}>
+        <Virtuoso
+          style={{ height: '100%' }}
+          data={revAsks}
+          initialTopMostItemIndex={revAsks.length - 1}
+          itemContent={(i, r) => (
+            <OrderRow
+              price={fmt(r[0])}
+              size={fmt(r[1])}
+              total={fmt(askTotalsRev[i])}
+              color="var(--red)"
+            />
+          )}
+        />
+      </Box>
 
-      <Box py={3} my={4}>
+      <Box py={8} my={4} style={{ borderTop: '1px solid var(--mantine-color-default-border)', borderBottom: '1px solid var(--mantine-color-default-border)' }}>
         <BigPrice symbol={symbol} market={market} />
       </Box>
 
-      {/* bids */}
-      <SimpleGrid cols={3} spacing={4}>
-        {bids.map((r, i) => (
-          <Box key={`b-${i}`} style={{ display: 'contents' }}>
-            <Text size="xs" color="var(--green)" fw={500}>{fmt(r[0])}</Text>
-            <Text size="xs">{fmt(r[1])}</Text>
-            <Text size="xs" c="dimmed">{fmt(totals.bidTotals[i])}</Text>
-          </Box>
-        ))}
-      </SimpleGrid>
+      {/* BIDS (Virtualized) */}
+      <Box style={{ flex: 1, minHeight: 100 }}>
+        <Virtuoso
+          style={{ height: '100%' }}
+          data={bids}
+          itemContent={(i, r) => (
+            <OrderRow
+              price={fmt(r[0])}
+              size={fmt(r[1])}
+              total={fmt(totals.bidTotals[i])}
+              color="var(--green)"
+            />
+          )}
+        />
+      </Box>
     </Box >
   )
 }
