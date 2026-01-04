@@ -128,4 +128,36 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
   }
 })
 
+router.post('/withdraw', requireAuth, async (req: AuthRequest, res: Response) => {
+  const { asset, amount, address, network } = req.body || {}
+
+  // Basic Validation
+  if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) return res.status(400).json({ error: 'Invalid amount' })
+  if (!address || typeof address !== 'string' || address.length < 10) return res.status(400).json({ error: 'Invalid address' })
+  if (!asset) return res.status(400).json({ error: 'Missing asset' })
+
+  const session = await mongoose.startSession()
+  try {
+    const userId = req.user!.id
+    await session.withTransaction(async () => {
+      // Logic: moveMoney SPEND attempts to deduct from Spot position.
+      // If insufficient funds, it throws Error('Insufficient balance')
+      await moveMoney(session, userId, asset, parseFloat(amount), 'SPEND')
+
+      // TODO: Create a Withdrawal Record to track this request
+      // await Withdrawal.create([...])
+    })
+
+    // Update Clients
+    await syncStableBalances(userId)
+
+    return res.json({ ok: true, message: 'Withdrawal submitted' })
+  } catch (e: any) {
+    console.error('Withdrawal error:', e)
+    return res.status(400).json({ error: e.message || 'Withdrawal failed' })
+  } finally {
+    await session.endSession()
+  }
+})
+
 export default router;

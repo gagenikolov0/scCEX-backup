@@ -18,11 +18,16 @@ import {
   UnstyledButton,
   ThemeIcon,
   Text,
+  Badge,
+  SimpleGrid,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 
 import classes from './HeaderMegaMenu.module.css'
 import { useAuth } from '../contexts/AuthContext'
+import { useAccount } from '../contexts/AccountContext'
+import { IconWallet, IconArrowUpRight, IconArrowUp } from '@tabler/icons-react'
+import { CountUp } from './CountUp'
 
 // Home icon: prefer custom /icon.png from public
 function HomeIcon() {
@@ -75,6 +80,42 @@ function MobileNavItem({ title, description, icon, to, onClick }: any) {
         </div>
       </Group>
     </UnstyledButton>
+  )
+}
+
+function WalletDropdownContent() {
+  const { totalPortfolioUSD, futuresAvailable } = useAccount()
+  const totalFutures = parseFloat(futuresAvailable.USDT) + parseFloat(futuresAvailable.USDC)
+  const totalSpot = totalPortfolioUSD - totalFutures
+
+  return (
+    <Stack gap="md">
+      <Box>
+        <Text size="xs" c="dimmed" fw={700} tt="uppercase">Total Balance</Text>
+        <Text size="xl" fw={800} className="text-glow">
+          <CountUp end={totalPortfolioUSD} prefix="$" decimals={2} />
+        </Text>
+        <Group gap="xs" mt={4}>
+          <Badge size="xs" variant="dot" color="cyan">Spot: ${totalSpot.toFixed(2)}</Badge>
+          <Badge size="xs" variant="dot" color="blue">Fut: ${totalFutures.toFixed(2)}</Badge>
+        </Group>
+      </Box>
+
+      <Divider />
+
+      <SimpleGrid cols={2}>
+        <Button component={Link} to="/deposit" leftSection={<IconArrowUpRight size={16} />} variant="light" color="green" size="xs">Deposit</Button>
+        <Button component={Link} to="/withdraw" leftSection={<IconArrowUp size={16} />} variant="light" color="red" size="xs">Withdraw</Button>
+      </SimpleGrid>
+
+      <Divider />
+
+      <Stack gap={4}>
+        <Menu.Item component={Link} to="/wallet?tab=overview" leftSection={<IconWallet size={16} />}>Overview</Menu.Item>
+        <Menu.Item component={Link} to="/wallet?tab=spot" leftSection={<IconCoin size={16} />}>Spot Wallet</Menu.Item>
+        <Menu.Item component={Link} to="/wallet?tab=futures" leftSection={<IconCurrencyDollar size={16} />}>Futures Wallet</Menu.Item>
+      </Stack>
+    </Stack>
   )
 }
 
@@ -178,7 +219,30 @@ export default function Header() {
           {isAuthed ? (
             <>
               <Button component={Link} to="/deposit" color="blue" radius="xl" size="xs" px="md">Deposit</Button>
-              <NavLink to="/wallet" className={({ isActive }) => `${classes.trigger} ${classes.pill} ${isActive ? classes.pillActive : ''}`}>Wallet</NavLink>
+
+              {/* Wallet Dropdown */}
+              <Menu
+                trigger="hover"
+                openDelay={50}
+                closeDelay={50}
+                width={320}
+                position="bottom-end"
+                radius="lg"
+                shadow="lg"
+                withinPortal
+              >
+                <Menu.Target>
+                  <UnstyledButton component={Link} to="/wallet" className={classes.trigger}>
+                    <Center inline>
+                      <Box component="span" mr={5}>Wallet</Box>
+                    </Center>
+                  </UnstyledButton>
+                </Menu.Target>
+                <Menu.Dropdown p="md">
+                  <WalletDropdownContent />
+                </Menu.Dropdown>
+              </Menu>
+
               <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
                 <IconUser size={18} />
               </ActionIcon>

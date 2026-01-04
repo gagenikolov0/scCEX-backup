@@ -1,11 +1,11 @@
 import { Group, Text, Stack, Badge, Paper, Box, Flex, SimpleGrid, ThemeIcon, Progress, RingProgress, Center, Title, Container } from '@mantine/core'
 import { useAccount } from '../contexts/AccountContext'
-import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { formatBalance } from '../lib/utils'
 import { ParticlesBackground } from '../components/ParticlesBackground'
 import { SpotlightCard } from '../components/SpotlightCard'
 import { CountUp } from '../components/CountUp'
-import { IconWallet, IconChartPie, IconActivity, IconCpu, IconBrandTether, IconCurrencyBitcoin, IconCurrencyEthereum, IconCurrencySolana, IconCircle, IconArrowUpRight } from '@tabler/icons-react'
+import { IconWallet, IconChartPie, IconActivity, IconCpu, IconBrandTether, IconCurrencyBitcoin, IconCurrencyEthereum, IconCurrencySolana, IconCircle, IconArrowUpRight, IconArrowUp } from '@tabler/icons-react'
 
 // Helper to map assets to icons
 const getAssetIcon = (asset: string) => {
@@ -27,7 +27,14 @@ const getAssetColor = (asset: string) => {
 
 export default function Wallet() {
   const { spotAvailable, futuresAvailable, positions, totalPortfolioUSD } = useAccount()
-  const [activeTab, setActiveTab] = useState('overview')
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // Default to overview, but respect URL param
+  const activeTab = searchParams.get('tab') || 'overview'
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab })
+  }
 
   const totalFuturesValue = parseFloat(futuresAvailable.USDT) + parseFloat(futuresAvailable.USDC)
   const totalSpotValue = totalPortfolioUSD - totalFuturesValue
@@ -104,13 +111,22 @@ export default function Wallet() {
             </Paper>
 
             {/* Quick Actions / Recent (Placeholder for now, visually nice) */}
-            <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
-              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }}>
+            <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
+              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }} onClick={() => navigate('/deposit')}>
                 <Group>
                   <ThemeIcon size="xl" radius="md" variant="light" color="green"><IconArrowUpRight /></ThemeIcon>
                   <Box>
                     <Text fw={700}>Deposit</Text>
                     <Text size="xs" c="dimmed">Add funds</Text>
+                  </Box>
+                </Group>
+              </SpotlightCard>
+              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }} onClick={() => navigate('/withdraw')}>
+                <Group>
+                  <ThemeIcon size="xl" radius="md" variant="light" color="red"><IconArrowUp /></ThemeIcon>
+                  <Box>
+                    <Text fw={700}>Withdraw</Text>
+                    <Text size="xs" c="dimmed">Send funds</Text>
                   </Box>
                 </Group>
               </SpotlightCard>

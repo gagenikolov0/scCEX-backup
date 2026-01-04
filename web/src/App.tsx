@@ -14,6 +14,7 @@ const Futures = lazy(() => import('./routes/Futures'))
 const Spot = lazy(() => import('./routes/Spot'))
 const Markets = lazy(() => import('./routes/Markets'))
 const Deposit = lazy(() => import('./routes/Deposit'))
+const Withdraw = lazy(() => import('./routes/Withdraw'))
 const Wallet = lazy(() => import('./routes/Wallet'))
 const Settings = lazy(() => import('./routes/Settings'))
 
@@ -45,6 +46,7 @@ function App() {
                       {/* Protected routes */}
                       <Route path="/wallet" element={<Protected><Wallet /></Protected>} />
                       <Route path="/deposit" element={<Protected><Deposit /></Protected>} />
+                      <Route path="/withdraw" element={<Protected><Withdraw /></Protected>} />
                       <Route path="/settings" element={<Protected><Settings /></Protected>} />
 
                       {/* Catch-all route for SPA */}
