@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Box, Loader, Center } from '@mantine/core'
+import { Box } from '@mantine/core'
 import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AccountProvider } from './contexts/AccountContext'
@@ -19,16 +19,29 @@ const Wallet = lazy(() => import('./routes/Wallet'))
 const Settings = lazy(() => import('./routes/Settings'))
 const UserInsight = lazy(() => import('@/routes/UserInsight'))
 
+import { CustomLoader } from './components/CustomLoader'
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
+
 const PageLoader = () => (
-  <Center style={{ height: '100vh' }}>
-    <Loader size="xl" variant="dots" />
-  </Center>
+  <CustomLoader fullScreen />
 )
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <AccountProvider>
           <PriceProvider>
             <MarketProvider>

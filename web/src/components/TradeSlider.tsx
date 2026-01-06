@@ -1,4 +1,5 @@
-import { Slider, Box } from '@mantine/core'
+
+import { Slider, Box, Group } from '@mantine/core'
 
 interface TradeSliderProps {
     value: number
@@ -6,8 +7,16 @@ interface TradeSliderProps {
 }
 
 export default function TradeSlider({ value, onChange }: TradeSliderProps) {
+    const marks = [
+        { value: 0, label: '' },
+        { value: 25, label: '' },
+        { value: 50, label: '' },
+        { value: 75, label: '' },
+        { value: 100, label: '' },
+    ]
+
     return (
-        <Box py="xs" mb="lg">
+        <Box mb="md">
             <Slider
                 value={value}
                 onChange={onChange}
@@ -15,18 +24,36 @@ export default function TradeSlider({ value, onChange }: TradeSliderProps) {
                 min={0}
                 max={100}
                 label={(val) => `${val}%`}
-                marks={[
-                    { value: 0, label: '0%' },
-                    { value: 25, label: '25%' },
-                    { value: 50, label: '50%' },
-                    { value: 75, label: '75%' },
-                    { value: 100, label: '100%' },
-                ]}
+                marks={marks}
+                size="sm"
+                thumbSize={18}
                 styles={{
-                    markLabel: { fontSize: 'var(--mantine-font-size-xxs)', marginTop: 'var(--mantine-spacing-xs)' },
-                    thumb: { borderWidth: 2, padding: 3 }
+                    track: { backgroundColor: 'var(--mantine-color-default-border)' },
+                    bar: { backgroundColor: 'var(--mantine-primary-color-filled)' },
+                    thumb: { borderWidth: 2, padding: 0, borderColor: 'var(--mantine-primary-color-filled)' }
                 }}
             />
+            <Group grow gap="xs" mt="xs">
+                {[25, 50, 75, 100].map(pct => (
+                    <Box
+                        key={pct}
+                        onClick={() => onChange(pct)}
+                        style={{
+                            cursor: 'pointer',
+                            fontSize: '10px',
+                            textAlign: 'center',
+                            padding: '4px 0',
+                            borderRadius: '4px',
+                            backgroundColor: value === pct ? 'var(--mantine-primary-color-light)' : 'var(--mantine-color-default-hover)',
+                            color: value === pct ? 'var(--mantine-primary-color-filled)' : 'var(--mantine-color-dimmed)',
+                            fontWeight: 700,
+                            transition: 'all 0.1s'
+                        }}
+                    >
+                        {pct}%
+                    </Box>
+                ))}
+            </Group>
         </Box>
     )
 }

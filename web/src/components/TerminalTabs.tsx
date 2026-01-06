@@ -21,8 +21,43 @@ interface TerminalTabsProps {
 export function TerminalTabs({ defaultValue, tabs, children, height = 525 }: TerminalTabsProps) {
     return (
         <Card padding={0} withBorder radius="md" h={height} style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column' }} shadow="xs">
-            <Tabs defaultValue={defaultValue} variant="pills" radius="md" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Tabs.List pt={4} px={4} style={{ flexShrink: 0 }}>
+            <Tabs
+                defaultValue={defaultValue}
+                variant="default"
+                radius="none"
+                style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+                styles={() => ({
+                    list: {
+                        backgroundColor: 'var(--bg-2)',
+                        borderBottom: '1px solid var(--mantine-color-default-border)',
+                        height: '42px',
+                        gap: 0
+                    },
+                    tab: {
+                        height: '41px', // 1px less than container to sit on border
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        color: 'var(--mantine-color-dimmed)',
+                        letterSpacing: '0.05em',
+                        padding: '0 16px',
+                        borderRadius: 0,
+                        borderBottom: '2px solid transparent',
+                        marginBottom: '-1px', // Pull down to cover bottom border
+                        '&:hover': {
+                            backgroundColor: 'transparent',
+                            color: 'var(--mantine-color-text)'
+                        },
+                        '&[data-active]': {
+                            borderColor: 'var(--mantine-color-blue-filled)',
+                            color: 'var(--mantine-color-text)',
+                            backgroundColor: 'transparent'
+                        }
+                    }
+                })}
+            >
+                <Tabs.List>
                     {tabs.map(tab => (
                         <Tabs.Tab key={tab.value} value={tab.value} onClick={tab.onClick}>
                             {tab.label}

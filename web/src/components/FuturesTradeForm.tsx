@@ -1,6 +1,7 @@
 import { memo, useState, useEffect, useCallback } from 'react'
-import { Card, TextInput, Button, Tabs, Modal, NumberInput, Slider, Flex, Box, Stack, Group, Text } from '@mantine/core'
+import { Card, TextInput, Button, SegmentedControl, Modal, NumberInput, Slider, Flex, Box, Stack, Group, Text, Badge, SimpleGrid, rem } from '@mantine/core'
 import TradeSlider from './TradeSlider'
+import { IconArrowsSort, IconWallet } from '@tabler/icons-react'
 
 interface FuturesTradeFormProps {
     token: string
@@ -34,6 +35,8 @@ export const FuturesTradeForm = memo(({
     const [openedLeverage, setOpenedLeverage] = useState(false)
     const [tempLeverage, setTempLeverage] = useState('10')
 
+    const activePosition = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
+
     useEffect(() => {
         if (tradeMode === 'open' && percent > 0) {
             const max = parseFloat(available)
@@ -46,194 +49,233 @@ export const FuturesTradeForm = memo(({
     const handlePlaceOrder = useCallback((side: 'long' | 'short') => {
         onPlaceOrder(side, qty, orderType, limitPrice, leverage)
         setQty('')
+        setPercent(0)
     }, [qty, orderType, limitPrice, leverage, onPlaceOrder])
 
     const handleClosePosition = useCallback(() => {
         onClosePosition(`${token}_${quote}`, qty)
+        setQty('')
+        setPercent(0)
     }, [token, quote, qty, onClosePosition])
 
     const handleSliderChange = useCallback((val: number) => {
         setPercent(val)
-        if (tradeMode === 'close') {
-            const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
-            if (pos) {
-                if (val === 100) {
-                    setQty(pos.quantity.toString())
-                } else {
-                    setQty(((pos.quantity * val) / 100).toFixed(8).replace(/\.?0+$/, ''))
-                }
+        if (tradeMode === 'close' && activePosition) {
+            if (val === 100) {
+                setQty(activePosition.quantity.toString())
+            } else {
+                setQty(((activePosition.quantity * val) / 100).toFixed(8).replace(/\.?0+$/, ''))
             }
         }
-    }, [tradeMode, futuresPositions, token, quote])
+    }, [tradeMode, activePosition])
 
     return (
         <Card padding={0} withBorder radius="md" h={1171} style={{ overflowY: 'auto' }} shadow="xs">
-            <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
-                <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Futures Trade</Text>
+            <Box bg="var(--bg-2)" h={39.59} px="sm" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text size="sm" fw={700} tt="uppercase" style={{ letterSpacing: '0.05em' }} px="xs">Trade {token}</Text>
+                <Badge variant="light" color="blue" size="sm" radius="sm" mr="xs">isolated</Badge>
             </Box>
-            <Flex direction="column" gap="md" p="md">
-                <Tabs value={tradeMode} onChange={(val) => setTradeMode(val as 'open' | 'close')} variant="pills" radius="md" color="blue">
-                    <Tabs.List grow>
-                        <Tabs.Tab value="open">Open</Tabs.Tab>
-                        <Tabs.Tab value="close">Close</Tabs.Tab>
-                    </Tabs.List>
-                </Tabs>
+
+            <Flex direction="column" gap="xs" p="md">
+                {/* ... Toggle ... */}
+                <SegmentedControl
+                    value={tradeMode}
+                    onChange={(val) => setTradeMode(val as 'open' | 'close')}
+                    fullWidth
+                    size="xs"
+                    radius="md"
+                    data={[
+                        { label: 'Open', value: 'open' },
+                        { label: 'Close', value: 'close' }
+                    ]}
+                />
 
                 {tradeMode === 'open' && (
                     <>
-                        <Button
-                            variant="default"
-                            fullWidth
-                            size="sm"
-                            justify="space-between"
-                            onClick={() => {
-                                setTempLeverage(leverage)
-                                setOpenedLeverage(true)
-                            }}
-                            rightSection={<Text size="xs" c="dimmed">Isolated</Text>}
-                        >
-                            {leverage}x
-                        </Button>
+                        <Stack gap={6}>
+                            <Button
+                                variant="light"
+                                color="gray"
+                                fullWidth
+                                size="xs"
+                                radius="md"
+                                onClick={() => {
+                                    setTempLeverage(leverage)
+                                    setOpenedLeverage(true)
+                                }}
+                                rightSection={<IconArrowsSort size={10} />}
+                                style={{ border: '1px solid var(--mantine-color-default-border)' }}
+                            >
+                                {leverage}x Leverage
+                            </Button>
+                            <SegmentedControl
+                                value={orderType}
+                                onChange={(val) => setOrderType(val as 'market' | 'limit')}
+                                size="xs"
+                                radius="md"
+                                data={[
+                                    { label: 'Market', value: 'market' },
+                                    { label: 'Limit', value: 'limit' }
+                                ]}
+                            />
+                        </Stack>
 
                         <Modal
                             opened={openedLeverage}
                             onClose={() => setOpenedLeverage(false)}
-                            title="Adjust Leverage"
+                            title={<Text fw={700} size="sm">Adjust Leverage</Text>}
                             centered
                             size="xs"
+                            padding="sm"
+                            radius="md"
+                            overlayProps={{ backgroundOpacity: 0.5, blur: 4 }}
+                            transitionProps={{ transition: 'pop', duration: 200 }}
                             lockScroll={false}
                         >
-                            <Stack gap="md">
-                                <NumberInput
-                                    label="Leverage"
-                                    value={Number(tempLeverage)}
-                                    onChange={(val) => setTempLeverage(String(val))}
-                                    max={1000}
-                                    min={1}
-                                    size="md"
-                                    suffix="x"
-                                />
-
-                                <Group gap="xs">
-                                    {['10', '20', '50', '100', '1000'].map(lv => (
+                            <Stack gap="sm">
+                                <Box bg="var(--bg-2)" p="xs" style={{ borderRadius: 'var(--mantine-radius-md)', textAlign: 'center', border: '1px solid var(--border-1)' }}>
+                                    <Text style={{ fontSize: rem(10) }} c="dimmed" tt="uppercase" fw={700} mb={2}>Current Leverage</Text>
+                                    <Text size="xl" fw={900} c={Number(tempLeverage) > 50 ? 'red' : Number(tempLeverage) > 20 ? 'orange' : 'green'} style={{ lineHeight: 1 }}>{tempLeverage}x</Text>
+                                </Box>
+                                <Stack gap={4}>
+                                    <Group justify="space-between">
+                                        <Text size="xs" fw={500}>Manual</Text>
+                                        <NumberInput
+                                            value={Number(tempLeverage)}
+                                            onChange={(val) => setTempLeverage(String(val))}
+                                            max={1000}
+                                            min={1}
+                                            size="xs"
+                                            w={60}
+                                            styles={{ input: { textAlign: 'center', padding: 0 } }}
+                                        />
+                                    </Group>
+                                    <Slider
+                                        value={Number(tempLeverage)}
+                                        onChange={(val) => setTempLeverage(String(val))}
+                                        max={1000}
+                                        min={1}
+                                        label={null}
+                                        size="sm"
+                                    />
+                                </Stack>
+                                <SimpleGrid cols={5} spacing={4}>
+                                    {[10, 20, 50, 100, 125, 500, 1000].map((preset) => (
                                         <Button
-                                            key={lv}
-                                            size="compact-sm"
-                                            variant={tempLeverage === lv ? "filled" : "outline"}
-                                            color={tempLeverage === lv ? "blue" : "gray"}
-                                            onClick={() => setTempLeverage(lv)}
+                                            key={preset}
+                                            variant={Number(tempLeverage) === preset ? 'filled' : 'light'}
+                                            color="gray"
+                                            size="xs"
+                                            p={0}
+                                            onClick={() => setTempLeverage(String(preset))}
                                         >
-                                            {lv}x
+                                            {preset}x
                                         </Button>
                                     ))}
-                                </Group>
-
-                                <Slider
-                                    value={Number(tempLeverage)}
-                                    onChange={(val) => setTempLeverage(String(val))}
-                                    max={1000}
-                                    min={1}
-                                    step={1}
-                                    label={(val) => `${val}x`}
-                                    marks={[
-                                        { value: 1, label: '1x' },
-                                        { value: 500, label: '500x' },
-                                        { value: 1000, label: '1000x' },
-                                    ]}
-                                />
-
-                                <Group grow mt="md">
-                                    <Button variant="light" color="gray" onClick={() => setOpenedLeverage(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button color="blue" onClick={() => {
-                                        setLeverage(tempLeverage)
-                                        setOpenedLeverage(false)
-                                    }}>
-                                        Confirm
-                                    </Button>
+                                </SimpleGrid>
+                                <Group grow mt="xs">
+                                    <Button variant="subtle" color="gray" size="xs" onClick={() => setOpenedLeverage(false)}>Cancel</Button>
+                                    <Button size="xs" onClick={() => { setLeverage(tempLeverage); setOpenedLeverage(false); }}>Confirm</Button>
                                 </Group>
                             </Stack>
                         </Modal>
                     </>
                 )}
 
-                <Tabs value={orderType} onChange={(v) => setOrderType(v as 'market' | 'limit')} variant="pills" radius="md">
-                    <Tabs.List grow>
-                        <Tabs.Tab value="market">Market</Tabs.Tab>
-                        <Tabs.Tab value="limit">Limit</Tabs.Tab>
-                    </Tabs.List>
-                </Tabs>
+                {/* Available Balance */}
+                <Group justify="space-between" mb={-4}>
+                    <Group gap={4}>
+                        <IconWallet size={10} color="var(--mantine-color-dimmed)" />
+                        <Text c="dimmed" style={{ fontSize: rem(11) }}>
+                            {tradeMode === 'open' ? 'Available:' : 'Position:'}
+                        </Text>
+                        <Text fw={700} style={{ cursor: 'pointer', fontSize: rem(11) }} onClick={() => {
+                            if (tradeMode === 'open') {
+                                setQty(available)
+                            } else if (activePosition) {
+                                setQty(activePosition.quantity.toString())
+                            }
+                        }}>
+                            {tradeMode === 'open' ? Number(available).toFixed(2) : (activePosition ? Number(activePosition.quantity).toFixed(4) : '0.00')}
+                        </Text>
+                    </Group>
+                    <Text c="blue" fw={700} style={{ cursor: 'pointer', fontSize: rem(11) }} onClick={onTransferClick}>Transfer</Text>
+                </Group>
 
-                {orderType === 'limit' && (
-                    <TextInput label="Limit Price" placeholder="0.00" value={limitPrice} onChange={(e) => setLimitPrice(e.currentTarget.value)} size="xs" />
-                )}
+                {/* Inputs */}
+                <Stack gap={6} mt={tradeMode === 'close' ? 4 : 0}>
+                    {orderType === 'limit' && tradeMode === 'open' && (
+                        <TextInput
+                            placeholder="Price"
+                            value={limitPrice}
+                            onChange={(e) => setLimitPrice(e.currentTarget.value)}
+                            rightSection={<Text size="xs" c="dimmed" pr="xs">USDT</Text>}
+                            rightSectionWidth={50}
+                            radius="md"
+                            size="xs"
+                        />
+                    )}
+
+                    <TextInput
+                        placeholder={tradeMode === 'open' ? "Amount" : "Close Amount"}
+                        value={qty}
+                        onChange={(e) => setQty(e.currentTarget.value)}
+                        rightSection={<Text size="xs" c="dimmed" pr="xs">{tradeMode === 'open' ? quote : token}</Text>}
+                        rightSectionWidth={50}
+                        radius="md"
+                        size="xs"
+                    />
+                </Stack>
+
+                <TradeSlider value={percent} onChange={handleSliderChange} />
 
                 {tradeMode === 'open' ? (
-                    <Text size="xs" c="dimmed">Available: {Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} {quote}</Text>
-                ) : (
-                    <Text size="xs" c="dimmed">
-                        Position Available: {
-                            (() => {
-                                const pos = futuresPositions.find(p => p.symbol === `${token}_${quote}`)
-                                return pos ? `${Number(pos.quantity).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token}` : `0 ${token}`
-                            })()
-                        }
-                    </Text>
-                )}
-
-                <TextInput
-                    label={tradeMode === 'open' ? `Quantity (${quote})` : `Quantity (${token})`}
-                    placeholder="0.00"
-                    value={qty}
-                    onChange={(e) => setQty(e.currentTarget.value)}
-                    size="xs"
-                />
-
-                {tradeMode === 'open' && (
-                    <Text size="xs" c="dimmed" mt={-8}>
-                        Est. Margin: <Text component="span" fw={600} c="var(--mantine-color-text)">
-                            {(Number(qty || 0) / Number(leverage || 1)).toFixed(2)} {quote}
-                        </Text>
-                    </Text>
-                )}
-
-                <TradeSlider
-                    value={percent}
-                    onChange={handleSliderChange}
-                />
-
-                <Flex gap="md">
-                    {tradeMode === 'open' ? (
-                        <>
-                            <Button flex={1} color="var(--green)" loading={loadingOrder === 'buy'} onClick={() => handlePlaceOrder('long')} disabled={!isAuthed}>Buy / Long</Button>
-                            <Button flex={1} color="var(--red)" loading={loadingOrder === 'sell'} onClick={() => handlePlaceOrder('short')} disabled={!isAuthed}>Sell / Short</Button>
-                        </>
-                    ) : (
+                    <Flex gap="xs" mt={4}>
                         <Button
                             flex={1}
-                            color="#fe445c"
-                            variant="filled"
-                            onClick={handleClosePosition}
-                            disabled={!isAuthed || !qty}
+                            color="var(--green)"
+                            size="sm"
+                            radius="md"
+                            loading={loadingOrder === 'buy'}
+                            onClick={() => handlePlaceOrder('long')}
+                            disabled={!isAuthed}
                         >
-                            Close Position
+                            Open Long
                         </Button>
-                    )}
-                </Flex>
+                        <Button
+                            flex={1}
+                            color="var(--red)"
+                            size="sm"
+                            radius="md"
+                            loading={loadingOrder === 'sell'}
+                            onClick={() => handlePlaceOrder('short')}
+                            disabled={!isAuthed}
+                        >
+                            Open Short
+                        </Button>
+                    </Flex>
+                ) : (
+                    <Button
+                        fullWidth
+                        color="gray"
+                        variant="light"
+                        size="sm"
+                        radius="md"
+                        mt={4}
+                        onClick={handleClosePosition}
+                        disabled={!isAuthed || !qty}
+                    >
+                        Close Position
+                    </Button>
+                )}
 
-                <Button variant="default" onClick={onTransferClick} disabled={!isAuthed}>Transfer</Button>
-                <Button
-                    variant="filled"
-                    color="blue"
-                    radius="md"
-                    onClick={() => window.location.href = '/deposit'}
-                >
-                    Deposit
-                </Button>
-                {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
+                {!isAuthed && (
+                    <Button variant="light" size="sm" fullWidth radius="md" component="a" href="/login">
+                        Log in or Sign up
+                    </Button>
+                )}
             </Flex>
-        </Card>
+        </Card >
     )
 })
 

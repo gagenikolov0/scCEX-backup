@@ -1,9 +1,10 @@
-import { Card, TextInput, Button, Grid, Group, Text, Loader, Tabs, Modal, Badge, Flex, Box, Stack, Tooltip, ActionIcon } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Group, Text, Loader, Tabs, Modal, Badge, Flex, Box, Stack, Tooltip, ActionIcon, SegmentedControl } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
+import MarketTrades from '../components/MarketTrades'
 import { API_BASE } from '../config/api'
 import { useMarket } from '../contexts/MarketContext'
 import { useIntervals } from '../lib/useIntervals'
@@ -26,6 +27,7 @@ export default function Futures() {
   const quote = (search.get('quote') || 'USDT').toUpperCase()
   const initialBase = (search.get('base') || 'BTC').toUpperCase().trim().replace(/\s+/g, '')
   const [token, setToken] = useState(initialBase)
+  const [sidebarTab, setSidebarTab] = useState<'book' | 'trades'>('book')
 
   const { futuresStats, listen, unlisten } = useMarket()
   const { isAuthed } = useAuth()
@@ -271,14 +273,28 @@ export default function Futures() {
                 </Card>
               </Grid.Col>
 
-              {/* OrderBook */}
+              {/* OrderBook & Trades */}
               <Grid.Col span={{ base: 10, lg: 2 }}>
                 <Card padding={0} radius="md" withBorder shadow="xs" h={630}>
-                  <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
-                    <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Order Book</Text>
+                  <Box bg="var(--bg-2)" p={4} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+                    <SegmentedControl
+                      fullWidth
+                      size="xs"
+                      value={sidebarTab}
+                      onChange={(v) => setSidebarTab(v as any)}
+                      data={[
+                        { label: 'Order Book', value: 'book' },
+                        { label: 'Trades', value: 'trades' }
+                      ]}
+                      styles={{ root: { backgroundColor: 'transparent' } }}
+                    />
                   </Box>
-                  <Box h={600} style={{ overflowY: 'auto' }}>
-                    <OrderBook symbol={`${token}_${quote}`} market="futures" depth={12} />
+                  <Box h={588} style={{ overflowY: 'hidden' }}>
+                    {sidebarTab === 'book' ? (
+                      <OrderBook symbol={`${token}_${quote}`} market="futures" depth={28} />
+                    ) : (
+                      <MarketTrades symbol={`${token}_${quote}`} market="futures" depth={33} />
+                    )}
                   </Box>
                 </Card>
               </Grid.Col>
@@ -603,7 +619,7 @@ export default function Futures() {
         opened={transferOpen}
         onClose={() => setTransferOpen(false)}
         currentSide="futures"
-        asset={quote as 'USDT' | 'USDC'}
+        initialAsset={quote as 'USDT' | 'USDC'}
         onTransferred={() => {
           refreshBalances()
         }}

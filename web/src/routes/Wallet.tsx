@@ -6,8 +6,8 @@ import { PNLCalendar } from '../components/PNLCalendar'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { formatBalance } from '../lib/utils'
 import { ParticlesBackground } from '../components/ParticlesBackground'
-import { SpotlightCard } from '../components/SpotlightCard'
-import { IconWallet, IconChartPie, IconActivity, IconCpu, IconBrandTether, IconCurrencyBitcoin, IconCurrencyEthereum, IconCurrencySolana, IconCircle, IconArrowUpRight, IconArrowUp } from '@tabler/icons-react'
+import { IconWallet, IconChartPie, IconActivity, IconBrandTether, IconCurrencyBitcoin, IconCurrencyEthereum, IconCurrencySolana, IconCircle, IconArrowUpRight, IconArrowsLeftRight } from '@tabler/icons-react'
+import TransferModal from '../components/TransferModal'
 import { useEffect, useState } from 'react'
 import { useMarket } from '../contexts/MarketContext'
 
@@ -37,6 +37,8 @@ export default function Wallet() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [pnlHistory, setPnlHistory] = useState<any[]>([])
   const [pnlLoading, setPnlLoading] = useState(false)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferSide, setTransferSide] = useState<'spot' | 'futures'>('spot')
 
   // Default to overview, but respect URL param
   const activeTab = searchParams.get('tab') || 'overview'
@@ -141,16 +143,18 @@ export default function Wallet() {
                 <Box>
                   <Group gap="xs" mb={4}>
                     <Box w={8} h={8} bg="cyan" style={{ borderRadius: '50%' }} />
-                    <Text size="sm" c="dimmed">Spot Wallet</Text>
+                    <Text size="sm" fw={600}>Spot Wallet</Text>
                   </Group>
+                  <Text size="xs" c="dimmed" fw={700} tt="uppercase" mt="sm" mb={4}>Total Balance</Text>
                   <Text size="xl" fw={700}>${formatBalance(totalSpotValue)}</Text>
                   <Progress value={spotPercent} color="cyan" size="sm" mt="xs" />
                 </Box>
                 <Box>
                   <Group gap="xs" mb={4}>
                     <Box w={8} h={8} bg="blue" style={{ borderRadius: '50%' }} />
-                    <Text size="sm" c="dimmed">Futures Wallet</Text>
+                    <Text size="sm" fw={600}>Futures Wallet</Text>
                   </Group>
+                  <Text size="xs" c="dimmed" fw={700} tt="uppercase" mt="sm" mb={4}>Total Balance</Text>
                   <Text size="xl" fw={700}>${formatBalance(totalFuturesValue)}</Text>
                   <Progress value={futuresPercent} color="blue" size="sm" mt="xs" />
                 </Box>
@@ -182,48 +186,11 @@ export default function Wallet() {
                 <Text fw={700} size="sm">Performance Calendar (6 Months)</Text>
                 {pnlLoading && <Loader size="xs" />}
               </Group>
-              <PNLCalendar data={pnlHistory} livePNL={pnl24h} liveROI={roi24h} />
+              <PNLCalendar data={pnlHistory} livePNL={pnl24h} liveROI={roi24h} fullWidth />
             </Stack>
 
             {/* Quick Actions / Recent (Placeholder for now, visually nice) */}
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
-              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }} onClick={() => navigate('/deposit')}>
-                <Group>
-                  <ThemeIcon size="xl" radius="md" variant="light" color="green"><IconArrowUpRight /></ThemeIcon>
-                  <Box>
-                    <Text fw={700}>Deposit</Text>
-                    <Text size="xs" c="dimmed">Add funds</Text>
-                  </Box>
-                </Group>
-              </SpotlightCard>
-              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }} onClick={() => navigate('/withdraw')}>
-                <Group>
-                  <ThemeIcon size="xl" radius="md" variant="light" color="red"><IconArrowUp /></ThemeIcon>
-                  <Box>
-                    <Text fw={700}>Withdraw</Text>
-                    <Text size="xs" c="dimmed">Send funds</Text>
-                  </Box>
-                </Group>
-              </SpotlightCard>
-              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }}>
-                <Group>
-                  <ThemeIcon size="xl" radius="md" variant="light" color="blue"><IconCpu /></ThemeIcon>
-                  <Box>
-                    <Text fw={700}>Transfer</Text>
-                    <Text size="xs" c="dimmed">Spot ↔ Futures</Text>
-                  </Box>
-                </Group>
-              </SpotlightCard>
-              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }} onClick={() => navigate(`/trader/${username}`)}>
-                <Group>
-                  <ThemeIcon size="xl" radius="md" variant="light" color="orange"><IconActivity /></ThemeIcon>
-                  <Box>
-                    <Text fw={700}>Analyze</Text>
-                    <Text size="xs" c="dimmed">PnL Analysis</Text>
-                  </Box>
-                </Group>
-              </SpotlightCard>
-            </SimpleGrid>
+            {/* Quick Actions Removed */}
           </Stack>
         )
 
@@ -251,6 +218,7 @@ export default function Wallet() {
             <Paper className="glass-card no-move" p="xl" radius="lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
               <Group justify="space-between" align="center">
                 <Stack gap={0}>
+                  <Text size="xs" c="dimmed" fw={700} tt="uppercase" mb="xs">Total Balance</Text>
                   <Group gap="xs" align="flex-baseline">
                     <Text size="32px" fw={900} className="text-glow">
                       ${tabTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -274,9 +242,10 @@ export default function Wallet() {
                     <>
                       <Button variant="light" color="green" radius="md" onClick={() => navigate('/deposit')}>Deposit</Button>
                       <Button variant="light" color="gray" radius="md" onClick={() => navigate('/withdraw')}>Withdraw</Button>
+                      <Button variant="light" color="blue" radius="md" leftSection={<IconArrowsLeftRight size={16} />} onClick={() => { setTransferSide('spot'); setTransferOpen(true); }}>Transfer</Button>
                     </>
                   ) : (
-                    <Button variant="light" color="blue" radius="md">Transfer Funds</Button>
+                    <Button variant="light" color="blue" radius="md" leftSection={<IconArrowsLeftRight size={16} />} onClick={() => { setTransferSide('futures'); setTransferOpen(true); }}>Transfer Funds</Button>
                   )}
                 </Group>
               </Group>
@@ -401,6 +370,16 @@ export default function Wallet() {
           </Container>
         </Box>
       </Flex>
+      <TransferModal
+        opened={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        currentSide={transferSide}
+        initialAsset="USDT"
+        onTransferred={() => {
+          // forcing a re-render or re-fetch might be handled by context updates, 
+          // but we can rely on AccountContext socket updates for balances.
+        }}
+      />
     </Box>
   )
 }

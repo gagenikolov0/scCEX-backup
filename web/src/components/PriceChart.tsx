@@ -562,7 +562,7 @@ function PriceChart(props: Props) {
                 textTransform: 'uppercase'
               }}
             >
-              Close Pos
+              Close
             </Button>
           </Tooltip>
         </Flex>

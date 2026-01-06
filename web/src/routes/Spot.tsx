@@ -1,9 +1,11 @@
-import { Card, TextInput, Button, Grid, Text, Loader, Tabs, Flex, Box, Group } from '@mantine/core'
+import { Card, TextInput, Button, Grid, Text, Loader, Tabs, Flex, Box, Group, Stack, SegmentedControl, rem } from '@mantine/core'
+import { IconWallet } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import PriceChart from '../components/PriceChart'
 import OrderBook from '../components/OrderBook'
+import MarketTrades from '../components/MarketTrades'
 import TransferModal from '../components/TransferModal'
 import { API_BASE } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -28,6 +30,7 @@ export default function Spot() {
   const [price, setPrice] = useState('')
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
   const [placing, setPlacing] = useState<null | 'buy' | 'sell'>(null)
+  const [sidebarTab, setSidebarTab] = useState<'book' | 'trades'>('book')
   const [transferOpen, setTransferOpen] = useState(false)
   const [tradeSide, setTradeSide] = useState<'buy' | 'sell'>('buy')
   const [history, setHistory] = useState<any[]>([])
@@ -202,14 +205,28 @@ export default function Spot() {
                 </Card>
               </Grid.Col>
 
-              {/* OrderBook */}
+              {/* OrderBook & Trades */}
               <Grid.Col span={{ base: 10, lg: 2 }}>
                 <Card padding={0} radius="md" withBorder shadow="xs" h={630}>
-                  <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
-                    <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Order Book</Text>
+                  <Box bg="var(--bg-2)" p={4} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+                    <SegmentedControl
+                      fullWidth
+                      size="xs"
+                      value={sidebarTab}
+                      onChange={(v) => setSidebarTab(v as any)}
+                      data={[
+                        { label: 'Order Book', value: 'book' },
+                        { label: 'Trades', value: 'trades' }
+                      ]}
+                      styles={{ root: { backgroundColor: 'transparent' } }}
+                    />
                   </Box>
-                  <Box h={600} style={{ overflowY: 'auto' }}>
-                    <OrderBook symbol={`${token}${quote}`} market="spot" depth={12} />
+                  <Box h={588} style={{ overflowY: 'hidden' }}>
+                    {sidebarTab === 'book' ? (
+                      <OrderBook symbol={`${token}${quote}`} market="spot" depth={28} />
+                    ) : (
+                      <MarketTrades symbol={`${token}${quote}`} market="spot" depth={33} />
+                    )}
                   </Box>
                 </Card>
               </Grid.Col>
@@ -328,47 +345,80 @@ export default function Spot() {
         {/* Right Side: Sidebar Trade Panel */}
         <Grid.Col span={{ base: 12, lg: 2 }}>
           <Card padding={0} withBorder radius="md" h={1171} style={{ overflowY: 'auto' }} shadow="xs">
-            <Box bg="var(--bg-2)" h={40} px="md" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center' }}>
-              <Text size="sm" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>Spot Trade</Text>
+            <Box bg="var(--bg-2)" h={39.59} px="sm" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text size="sm" fw={700} tt="uppercase" style={{ letterSpacing: '0.05em' }}>Spot Trade</Text>
             </Box>
-            <Flex direction="column" gap="md" p="md">
-              <Tabs value={tradeSide} onChange={(v) => setTradeSide(v as 'buy' | 'sell')} variant="pills" radius="md" color={tradeSide === 'buy' ? 'var(--green)' : 'var(--red)'}>
-                <Tabs.List grow>
-                  <Tabs.Tab value="buy">Buy</Tabs.Tab>
-                  <Tabs.Tab value="sell">Sell</Tabs.Tab>
-                </Tabs.List>
-              </Tabs>
-
-              <Tabs value={orderType} onChange={(v) => setOrderType(v as 'market' | 'limit')} variant="pills" radius="md">
-                <Tabs.List grow>
-                  <Tabs.Tab value="market">Market</Tabs.Tab>
-                  <Tabs.Tab value="limit">Limit</Tabs.Tab>
-                </Tabs.List>
-              </Tabs>
-
-              <Text size="xs" c="dimmed">
-                Available: {tradeSide === 'buy' ? `${Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${quote} ` : `${Number(baseAvail).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${token} `}
-              </Text>
-
-              {orderType === 'limit' && (
-                <TextInput
-                  id="price"
-                  label="Price"
-                  placeholder="0.00"
-                  value={price}
-                  onChange={(e) => setPrice(e.currentTarget.value)}
-                  disabled={!isAuthed}
-                />
-              )}
-
-              <TextInput
-                label="Quantity"
-                placeholder="0.00"
-                value={qty}
-                onChange={(e) => setQty(e.currentTarget.value)}
+            <Flex direction="column" gap="sm" p="md">
+              <SegmentedControl
+                value={tradeSide}
+                onChange={(v) => setTradeSide(v as 'buy' | 'sell')}
+                fullWidth
                 size="xs"
-                rightSection={<Text size="xs" c="dimmed" pr="md">{token}</Text>}
+                radius="md"
+                color={tradeSide === 'buy' ? 'green' : 'red'}
+                data={[
+                  { label: 'Buy', value: 'buy' },
+                  { label: 'Sell', value: 'sell' }
+                ]}
               />
+
+              <SegmentedControl
+                value={orderType}
+                onChange={(v) => setOrderType(v as 'market' | 'limit')}
+                size="xs"
+                radius="md"
+                data={[
+                  { label: 'Limit', value: 'limit' },
+                  { label: 'Market', value: 'market' }
+                ]}
+              />
+
+              {/* Balance & Info */}
+              <Group justify="space-between" mb={-4}>
+                <Group gap={4}>
+                  <IconWallet size={10} color="var(--mantine-color-dimmed)" />
+                  <Text style={{ fontSize: rem(11) }} c="dimmed">Available:</Text>
+                  <Text style={{ fontSize: rem(11), cursor: 'pointer' }} fw={700} onClick={() => {
+                    if (tradeSide === 'buy') {
+                      setQty(available)
+                    } else {
+                      setQty(baseAvail)
+                    }
+                  }}>
+                    {tradeSide === 'buy'
+                      ? `${Number(available).toLocaleString(undefined, { maximumFractionDigits: 4 })}`
+                      : `${Number(baseAvail).toLocaleString(undefined, { maximumFractionDigits: 4 })}`}
+                  </Text>
+                  <Text style={{ fontSize: rem(11) }} c="dimmed">{tradeSide === 'buy' ? quote : token}</Text>
+                </Group>
+                <Text style={{ fontSize: rem(11), cursor: 'pointer' }} c="blue" fw={700} onClick={() => setTransferOpen(true)}>Transfer</Text>
+              </Group>
+
+              {/* Inputs */}
+              <Stack gap={6}>
+                {orderType === 'limit' && (
+                  <TextInput
+                    placeholder="Price"
+                    value={price}
+                    onChange={(e) => setPrice(e.currentTarget.value)}
+                    disabled={!isAuthed}
+                    rightSection={<Text size="xs" c="dimmed" pr="xs">{quote}</Text>}
+                    rightSectionWidth={50}
+                    radius="md"
+                    size="xs"
+                  />
+                )}
+
+                <TextInput
+                  placeholder="Amount"
+                  value={qty}
+                  onChange={(e) => setQty(e.currentTarget.value)}
+                  rightSection={<Text size="xs" c="dimmed" pr="xs">{token}</Text>}
+                  rightSectionWidth={50}
+                  radius="md"
+                  size="xs"
+                />
+              </Stack>
 
               <TradeSlider
                 value={percent}
@@ -392,41 +442,25 @@ export default function Spot() {
                 }}
               />
 
-              <Flex gap="md">
-                {tradeSide === 'buy' ? (
-                  <Button
-                    flex={1}
-                    variant="filled"
-                    color="var(--green)"
-                    loading={placing === 'buy'}
-                    disabled={!isAuthed}
-                    onClick={() => placeOrder('buy')}
-                  >
-                    Buy {token}
-                  </Button>
-                ) : (
-                  <Button
-                    flex={1}
-                    variant="filled"
-                    color="var(--red)"
-                    loading={placing === 'sell'}
-                    disabled={!isAuthed}
-                    onClick={() => placeOrder('sell')}
-                  >
-                    Sell {token}
-                  </Button>
-                )}
-              </Flex>
-              <Button variant="default" onClick={() => setTransferOpen(true)} disabled={!isAuthed}>Transfer</Button>
               <Button
-                variant="filled"
-                color="blue"
+                fullWidth
+                size="sm"
                 radius="md"
-                onClick={() => window.location.href = '/deposit'}
+                variant="filled"
+                color={tradeSide === 'buy' ? 'var(--green)' : 'var(--red)'}
+                loading={placing === tradeSide}
+                disabled={!isAuthed}
+                onClick={() => placeOrder(tradeSide)}
+                mt={4}
               >
-                Deposit
+                {tradeSide === 'buy' ? `Buy ${token}` : `Sell ${token}`}
               </Button>
-              {!isAuthed && <Text size="xs" c="dimmed">Login to trade and see your balances.</Text>}
+
+              {!isAuthed && (
+                <Button variant="light" size="sm" fullWidth radius="md" component="a" href="/login">
+                  Log in or Sign up
+                </Button>
+              )}
             </Flex>
           </Card>
         </Grid.Col>
@@ -436,7 +470,7 @@ export default function Spot() {
         opened={transferOpen}
         onClose={() => setTransferOpen(false)}
         currentSide="spot"
-        asset={quote as 'USDT' | 'USDC'}
+        initialAsset={quote as 'USDT' | 'USDC'}
         onTransferred={() => {
           refreshBalances()
           refreshOrders()

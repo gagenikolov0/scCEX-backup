@@ -25,7 +25,7 @@ import {
   Loader,
   Modal,
 } from '@mantine/core'
-import { useDisclosure, useDebouncedValue, useHotkeys } from '@mantine/hooks'
+import { useDisclosure, useDebouncedValue, useHotkeys, useWindowScroll } from '@mantine/hooks'
 
 import classes from './HeaderMegaMenu.module.css'
 import { useAuth } from '../contexts/AuthContext'
@@ -140,6 +140,7 @@ export default function Header() {
   const [userResults, setUserResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const hasRefreshedRef = useRef(false)
+  const [scroll] = useWindowScroll()
 
   const { colorScheme, setColorScheme } = useMantineColorScheme()
   const toggleTheme = () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')
@@ -262,8 +263,23 @@ export default function Header() {
     />
   )
 
+  const isScrolled = scroll.y > 0
+
   return (
-    <Box component="header" className={classes.header}>
+    <Box
+      component="header"
+      className={classes.header}
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        backgroundColor: isScrolled ? 'var(--glass-bg)' : 'var(--bg-1)',
+        backdropFilter: isScrolled ? 'blur(var(--glass-blur))' : 'none',
+        borderBottom: isScrolled ? '1px solid var(--glass-border)' : '1px solid transparent',
+        boxShadow: isScrolled ? '0 4px 30px var(--glass-shadow)' : 'none',
+        transition: 'all 0.3s ease'
+      }}
+    >
       <Group justify="space-between" h="100%" wrap="nowrap">
         {/* Left: Home & Navigation */}
         <Group h="100%" gap={0} wrap="nowrap">
@@ -297,7 +313,7 @@ export default function Header() {
               Markets
             </NavLink>
 
-            <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-start" radius="md" shadow="md" withinPortal
+            <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-start" radius="md" shadow="md" withinPortal zIndex={1100}
               styles={{
                 dropdown: {
                   backgroundColor: 'var(--glass-bg)',
@@ -315,12 +331,12 @@ export default function Header() {
                 </Box>
               </Menu.Target>
               <Menu.Dropdown p={4}>
-                <DropdownItem to="/futures?quote=USDT" title="USDT-M Futures" description="Trade perpetual contracts settled in USDT" icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />} />
-                <DropdownItem to="/futures?quote=USDC" title="USDC-M Futures" description="Trade perpetual contracts settled in USDC" icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />} />
+                <DropdownItem to="/futures?quote=USDT" title="USDT-M Futures" description="Trade perpetual contracts settled in USDT" icon={<img src="/usdtfutures.png" width={20} height={20} />} />
+                <DropdownItem to="/futures?quote=USDC" title="USDC-M Futures" description="Trade perpetual contracts settled in USDC" icon={<img src="/usdcfutures.png" width={20} height={20} />} />
               </Menu.Dropdown>
             </Menu>
 
-            <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-start" radius="md" shadow="md" withinPortal
+            <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-start" radius="md" shadow="md" withinPortal zIndex={1100}
               styles={{
                 dropdown: {
                   backgroundColor: 'var(--glass-bg)',
@@ -338,8 +354,8 @@ export default function Header() {
                 </Box>
               </Menu.Target>
               <Menu.Dropdown p={4}>
-                <DropdownItem to="/spot?quote=USDT" title="USDT Market" description="Trade top tokens with USDT pairs" icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />} />
-                <DropdownItem to="/spot?quote=USDC" title="USDC Market" description="Trade top tokens with USDC pairs" icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />} />
+                <DropdownItem to="/spot?quote=USDT" title="USDT Market" description="Trade top tokens with USDT pairs" icon={<img src="/usdt.png" width={20} height={20} />} />
+                <DropdownItem to="/spot?quote=USDC" title="USDC Market" description="Trade top tokens with USDC pairs" icon={<img src="/usdc.png" width={20} height={20} />} />
               </Menu.Dropdown>
             </Menu>
           </Group>
@@ -369,7 +385,7 @@ export default function Header() {
             {isAuthed ? (
               <>
                 <Button component={Link} to="/deposit" color="blue" radius="xl" size="xs" px="md">Deposit</Button>
-                <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-end" radius="lg" shadow="lg" withinPortal
+                <Menu trigger="hover" openDelay={50} closeDelay={50} width={300} position="bottom-end" radius="lg" shadow="lg" withinPortal zIndex={1005}
                   styles={{
                     dropdown: {
                       backgroundColor: 'var(--glass-bg)',
@@ -404,7 +420,7 @@ export default function Header() {
                   </Menu.Dropdown>
                 </Menu>
 
-                <Menu trigger="hover" openDelay={50} closeDelay={50} width={200} position="bottom-end" radius="md" shadow="md" withinPortal>
+                <Menu trigger="hover" openDelay={50} closeDelay={50} width={200} position="bottom-end" radius="md" shadow="md" withinPortal zIndex={1005}>
                   <Menu.Target>
                     <ActionIcon variant="subtle" radius="xl" size="lg" aria-label="User settings">
                       <IconUser size={18} />
@@ -456,16 +472,16 @@ export default function Header() {
           <Button variant="subtle" fullWidth style={{ justifyContent: 'flex-start' }} className={classes.link} onClick={toggleFutures}>Futures</Button>
           <Collapse in={futuresOpen}>
             <Stack gap={0} pl="md">
-              <MobileNavItem to="/futures?quote=USDT" title="USDT-M Futures" description="Trade perpetual contracts settled in USDT" icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />} onClick={closeDrawer} />
-              <MobileNavItem to="/futures?quote=USDC" title="USDC-M Futures" description="Trade perpetual contracts settled in USDC" icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />} onClick={closeDrawer} />
+              <MobileNavItem to="/futures?quote=USDT" title="USDT-M Futures" description="Trade perpetual contracts settled in USDT" icon={<img src="/usdtfutures.png" width={20} height={20} />} onClick={closeDrawer} />
+              <MobileNavItem to="/futures?quote=USDC" title="USDC-M Futures" description="Trade perpetual contracts settled in USDC" icon={<img src="/usdcfutures.png" width={20} height={20} />} onClick={closeDrawer} />
             </Stack>
           </Collapse>
 
           <Button variant="subtle" fullWidth style={{ justifyContent: 'flex-start' }} className={classes.link} onClick={toggleSpot}>Spot</Button>
           <Collapse in={spotOpen}>
             <Stack gap={0} pl="md">
-              <MobileNavItem to="/spot?quote=USDT" title="USDT Market" description="Trade top tokens with USDT pairs" icon={<IconCurrencyDollar size={20} color="var(--mantine-color-green-6)" />} onClick={closeDrawer} />
-              <MobileNavItem to="/spot?quote=USDC" title="USDC Market" description="Trade top tokens with USDC pairs" icon={<IconCoin size={20} color="var(--mantine-color-blue-6)" />} onClick={closeDrawer} />
+              <MobileNavItem to="/spot?quote=USDT" title="USDT Market" description="Trade top tokens with USDT pairs" icon={<img src="/usdt.png" width={20} height={20} />} onClick={closeDrawer} />
+              <MobileNavItem to="/spot?quote=USDC" title="USDC Market" description="Trade top tokens with USDC pairs" icon={<img src="/usdc.png" width={20} height={20} />} onClick={closeDrawer} />
             </Stack>
           </Collapse>
 

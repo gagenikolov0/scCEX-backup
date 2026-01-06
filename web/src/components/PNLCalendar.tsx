@@ -12,13 +12,14 @@ interface PNLCalendarProps {
     data: PNLDay[];
     livePNL?: number;
     liveROI?: number;
+    fullWidth?: boolean;
 }
 
 const formatRoi = (roi: number) => {
     return `${roi > 0 ? '+' : ''}${roi.toFixed(1)}%`;
 };
 
-export const PNLCalendar: React.FC<PNLCalendarProps> = ({ data, livePNL, liveROI }) => {
+export const PNLCalendar: React.FC<PNLCalendarProps> = ({ data, livePNL, liveROI, fullWidth }) => {
     const [viewDate, setViewDate] = useState(new Date());
 
     const { monthDays, monthLabel } = useMemo(() => {
@@ -82,7 +83,7 @@ export const PNLCalendar: React.FC<PNLCalendarProps> = ({ data, livePNL, liveROI
     const weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
     return (
-        <Paper p="xl" radius="lg" withBorder bg="var(--mantine-color-body)" shadow="sm" maw={850} mx="auto">
+        <Paper p={{ base: 'xs', md: 'xl' }} radius="lg" withBorder bg="var(--mantine-color-body)" shadow="sm" maw={fullWidth ? '100%' : 850} w={fullWidth ? '100%' : 'auto'} mx="auto">
             <Stack gap="lg">
                 <Group justify="space-between" align="center">
                     <Stack gap={0}>
@@ -103,15 +104,15 @@ export const PNLCalendar: React.FC<PNLCalendarProps> = ({ data, livePNL, liveROI
                 </Group>
 
                 <Box>
-                    <SimpleGrid cols={7} spacing="md" mb="md">
+                    <SimpleGrid cols={7} spacing={{ base: 4, md: 'md' }} verticalSpacing={{ base: 4, md: 'md' }} mb="md">
                         {weekdays.map(w => (
                             <Center key={w}>
-                                <Text size="xs" fw={800} c="dimmed">{w}</Text>
+                                <Text size="xs" fw={800} c="dimmed" fz={{ base: 10, md: 12 }}>{w}</Text>
                             </Center>
                         ))}
                     </SimpleGrid>
 
-                    <SimpleGrid cols={7} spacing="md">
+                    <SimpleGrid cols={7} spacing={{ base: 4, md: 'md' }} verticalSpacing={{ base: 4, md: 'md' }}>
                         {monthDays.map((day, i) => {
                             if (!day) return <Box key={`pad-${i}`} />;
 
@@ -123,8 +124,9 @@ export const PNLCalendar: React.FC<PNLCalendarProps> = ({ data, livePNL, liveROI
                             return (
                                 <Paper
                                     key={i}
-                                    p="sm"
+                                    p={{ base: 4, md: 'sm' }}
                                     radius="md"
+                                    mih={{ base: 56, md: 84 }}
                                     style={{
                                         aspectRatio: '1/1',
                                         display: 'flex',
@@ -133,32 +135,31 @@ export const PNLCalendar: React.FC<PNLCalendarProps> = ({ data, livePNL, liveROI
                                         backgroundColor: getColor(currentPnl, hasPerformance),
                                         border: `1px solid ${getBorderColor(currentPnl, hasPerformance)}`,
                                         position: 'relative',
-                                        minHeight: 84, // Increased from 68
                                         boxShadow: (isToday && hasPerformance) ? '0 0 10px var(--mantine-primary-color-light)' : 'none'
                                     }}
                                 >
                                     <Group justify="space-between" align="flex-start">
-                                        <Text size="sm" fw={800} c={hasPerformance ? undefined : 'dimmed'}>{day.day}</Text>
-                                        <Group gap={4}>
-                                            {isToday && <Badge size="xs" variant="filled" color="blue" radius="xs" h={14} py={0} px={4} style={{ fontSize: 8 }}>LIVE</Badge>}
-                                            {hasPerformance && (
+                                        <Text size="sm" fw={800} c={hasPerformance ? undefined : 'dimmed'} fz={{ base: 10, md: 14 }}>{day.day}</Text>
+                                        <Box>
+                                            {isToday && <Badge size="xs" variant="filled" color="blue" radius="xs" h={{ base: 10, md: 14 }} py={0} px={{ base: 2, md: 4 }} style={{ fontSize: 8, position: 'absolute', top: 4, right: 4 }}>LIVE</Badge>}
+                                            {hasPerformance && !isToday && (
                                                 <ThemeIcon
-                                                    size={14}
+                                                    size={{ base: 10, md: 14 } as any}
                                                     variant="transparent"
                                                     color={currentPnl >= 0 ? 'green' : 'red'}
                                                 >
-                                                    {currentPnl >= 0 ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
+                                                    {currentPnl >= 0 ? <IconTrendingUp size="100%" /> : <IconTrendingDown size="100%" />}
                                                 </ThemeIcon>
                                             )}
-                                        </Group>
+                                        </Box>
                                     </Group>
 
                                     {hasPerformance ? (
-                                        <Stack gap={0} align="center">
-                                            <Text size="14px" fw={950} color={currentPnl >= 0 ? 'green' : 'red'} lh={1.2}>
+                                        <Stack gap={0} align="center" justify="center" h="100%">
+                                            <Text fw={950} color={currentPnl >= 0 ? 'green' : 'red'} lh={1.2} fz={{ base: 11, md: 14 }}>
                                                 {currentPnl > 0 ? '+' : ''}{currentPnl.toFixed(1)}
                                             </Text>
-                                            <Text size="10px" fw={700} color={currentRoi >= 0 ? 'green' : 'red'} opacity={0.8}>
+                                            <Text fw={700} color={currentRoi >= 0 ? 'green' : 'red'} opacity={0.8} fz={{ base: 8, md: 10 }}>
                                                 {formatRoi(currentRoi)}
                                             </Text>
                                         </Stack>

@@ -91,7 +91,7 @@ export default function SharePNLModal({ opened, onClose, data }: SharePNLModalPr
                         p={32}
                         radius="xl"
                         style={{
-                            background: 'linear-gradient(135deg, #000000 0%, #141517 100%)',
+                            background: 'linear-gradient(135deg, #0a0a0a 0%, #141517 100%)',
                             border: '1px solid #373a40',
                             position: 'relative',
                             overflow: 'hidden',

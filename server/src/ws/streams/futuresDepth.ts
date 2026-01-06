@@ -13,7 +13,7 @@ const subs = new Map<string, Set<WebSocket>>() // key: SYMBOL:DEPTH
 const timers = new Map<string, NodeJS.Timeout>() // key: SYMBOL:DEPTH
 
 function keyFor(sym: string, depth: number): string { return `${sym}:${depth}` }
-function normalize(sym: string): string { return sym.toUpperCase().includes('_') ? sym.toUpperCase() : sym.toUpperCase().replace(/(USDT|USDC)$/,'_$1') }
+function normalize(sym: string): string { return sym.toUpperCase().includes('_') ? sym.toUpperCase() : sym.toUpperCase().replace(/(USDT|USDC)$/, '_$1') }
 
 async function send(symbol: string, depth: number) {
 	try {
@@ -29,7 +29,7 @@ async function send(symbol: string, depth: number) {
 			try {
 				const r = await fetch(u)
 				if (r.ok) { data = await r.json(); break }
-			} catch {}
+			} catch { }
 		}
 		const d = data?.data ?? data
 		const bids = Array.isArray(d?.bids) ? d.bids.slice(0, depth).map((x: any[]) => [Number(x[0]), Number(x[1])]) : []
@@ -38,14 +38,14 @@ async function send(symbol: string, depth: number) {
 		const k = keyFor(symbol, depth)
 		const set = subs.get(k)
 		if (!set || set.size === 0) return
-		for (const c of set) { try { (c as any).send(payload) } catch {} }
-	} catch {}
+		for (const c of set) { try { (c as any).send(payload) } catch { } }
+	} catch { }
 }
 
 function start(symbol: string, depth: number) {
 	const k = keyFor(symbol, depth)
 	if (timers.has(k)) return
-	timers.set(k, setInterval(() => { void send(symbol, depth) }, 1000))
+	timers.set(k, setInterval(() => { void send(symbol, depth) }, 3000))
 	void send(symbol, depth)
 }
 function stop(symbol: string, depth: number) {
@@ -68,14 +68,14 @@ stream.wss.on('connection', (ws: any) => {
 				start(sym, depth)
 			} else if (msg.type === 'unsub') {
 				for (const [k, set] of subs) {
-					if (set.delete(ws as any) && set.size === 0) { subs.delete(k); const [s, d] = (k||'').split(':'); stop(s||'', Number(d||'0')) }
+					if (set.delete(ws as any) && set.size === 0) { subs.delete(k); const [s, d] = (k || '').split(':'); stop(s || '', Number(d || '0')) }
 				}
 			}
-		} catch {}
+		} catch { }
 	})
 	ws.on('close', () => {
 		for (const [k, set] of subs) {
-			if (set.delete(ws as any) && set.size === 0) { subs.delete(k); const [s, d] = (k||'').split(':'); stop(s||'', Number(d||'0')) }
+			if (set.delete(ws as any) && set.size === 0) { subs.delete(k); const [s, d] = (k || '').split(':'); stop(s || '', Number(d || '0')) }
 		}
 	})
 })

@@ -22,14 +22,14 @@ async function send(symbol: string, depth: number) {
 		const key = `${symbol}:${depth}`
 		const set = subs.get(key)
 		if (!set || set.size === 0) return
-		for (const c of set) { try { (c as any).send(payload) } catch {} }
-	} catch {}
+		for (const c of set) { try { (c as any).send(payload) } catch { } }
+	} catch { }
 }
 
 function start(symbol: string, depth: number) {
 	const key = `${symbol}:${depth}`
 	if (timers.has(key)) return
-	timers.set(key, setInterval(() => { void send(symbol, depth) }, 1000))
+	timers.set(key, setInterval(() => { void send(symbol, depth) }, 3000))
 	void send(symbol, depth)
 }
 function stop(symbol: string, depth: number) {
@@ -55,7 +55,7 @@ stream.wss.on('connection', (ws: any) => {
 					if (set.delete(ws as any) && set.size === 0) { subs.delete(k); const [sym, d] = (k || '').split(':'); stop(sym || '', Number(d || '50')) }
 				}
 			}
-		} catch {}
+		} catch { }
 	})
 	ws.on('close', () => {
 		for (const [k, set] of subs) {

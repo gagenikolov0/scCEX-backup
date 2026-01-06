@@ -7,7 +7,21 @@ import { MantineProvider, createTheme } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 
 const theme = createTheme({
-  primaryColor: 'gray',
+  primaryColor: 'blue',
+  colors: {
+    blue: [
+      '#e8f0ff',
+      '#d2e1ff',
+      '#a6c3ff',
+      '#79a5ff',
+      '#4c87fe',
+      '#2369fe',
+      '#1362fe', // Primary [6]
+      '#0053e2',
+      '#004abc',
+      '#003e97',
+    ],
+  },
   fontSizes: {
     xxs: 'var(--fz-xxs)',
     xs: 'var(--fz-xs)',

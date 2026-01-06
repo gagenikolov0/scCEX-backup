@@ -223,6 +223,7 @@ router.get("/insight/:username", requireAuth, async (req: AuthRequest, res: Resp
       user: {
         username: user.username,
         profilePicture: user.profilePicture,
+        referralCode: user.referralCode,
         createdAt: user.createdAt
       },
       balances: {

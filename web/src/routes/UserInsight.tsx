@@ -14,6 +14,9 @@ import {
     Loader,
     Center,
     ThemeIcon,
+    SimpleGrid,
+    RingProgress,
+    Box,
 } from '@mantine/core'
 import { IconHistory, IconTrendingUp, IconTrendingDown, IconWallet, IconCalendarTime, IconChartBar, IconHash, IconTarget } from '@tabler/icons-react'
 import { API_BASE } from '../config/api'
@@ -82,6 +85,13 @@ export default function UserInsight() {
                                         <IconCalendarTime size={14} color="var(--mantine-color-dimmed)" />
                                         <Text size="xs" c="dimmed">Joined {new Date(data.user.createdAt).toLocaleDateString()}</Text>
                                     </Group>
+                                    {data.user.referralCode && (
+                                        <Group gap={4} style={{ cursor: 'pointer' }} onClick={() => navigator.clipboard.writeText(data.user.referralCode)}>
+                                            <Badge variant="outline" color="gray" size="sm" style={{ textTransform: 'none' }}>
+                                                Referral: {data.user.referralCode}
+                                            </Badge>
+                                        </Group>
+                                    )}
                                 </Group>
                             </Stack>
                         </Group>
@@ -120,20 +130,71 @@ export default function UserInsight() {
                 {/* Performance Stats Overlay */}
                 <Grid>
                     <Grid.Col span={{ base: 12, md: 4 }}>
-                        <Paper p="md" radius="md" withBorder h="100%">
-                            <Group justify="space-between">
-                                <Text size="xs" fw={700} c="dimmed" tt="uppercase">Win Rate (Recent)</Text>
+                        <Paper p="md" radius="md" withBorder h="100%" style={{ background: 'rgba(51, 154, 240, 0.02)' }}>
+                            <Group justify="space-between" mb="xs">
+                                <Text size="xs" fw={700} c="dimmed" tt="uppercase">Performance Stats</Text>
                                 <IconTarget size={16} color="var(--mantine-color-blue-6)" />
                             </Group>
-                            <Text size="xl" fw={900}>
-                                {(() => {
-                                    const closed = data.history || [];
-                                    if (closed.length === 0) return '0%';
-                                    const wins = closed.filter((h: any) => h.realizedPnL > 0).length;
-                                    return `${Math.round((wins / closed.length) * 100)}%`;
-                                })()}
-                            </Text>
-                            <Text size="xs" c="dimmed">Based on last {data.history?.length || 0} trades</Text>
+
+                            {(() => {
+                                const closed = data.history || [];
+                                const totalTrades = closed.length;
+                                const wins = closed.filter((h: any) => h.realizedPnL > 0);
+                                const losses = closed.filter((h: any) => h.realizedPnL < 0);
+
+                                const winRate = totalTrades > 0 ? Math.round((wins.length / totalTrades) * 100) : 0;
+
+                                const totalWinAmount = wins.reduce((sum: number, h: any) => sum + (h.realizedPnL || 0), 0);
+                                const totalLossAmount = Math.abs(losses.reduce((sum: number, h: any) => sum + (h.realizedPnL || 0), 0));
+                                const profitFactor = totalLossAmount > 0 ? (totalWinAmount / totalLossAmount).toFixed(2) : (totalWinAmount > 0 ? '∞' : '1.00');
+
+                                const netPnl = closed.reduce((sum: number, h: any) => sum + (h.realizedPnL || 0), 0);
+                                const avgTrade = totalTrades > 0 ? (netPnl / totalTrades).toFixed(2) : '0.00';
+
+                                return (
+                                    <Stack gap="md">
+                                        <Group justify="center" py="xs">
+                                            <RingProgress
+                                                size={120}
+                                                roundCaps
+                                                thickness={8}
+                                                sections={[{ value: winRate, color: 'blue' }]}
+                                                label={
+                                                    <Center>
+                                                        <Box ta="center">
+                                                            <Text size="xl" fw={900} lh={1}>{winRate}%</Text>
+                                                            <Text size="10px" c="dimmed" tt="uppercase" fw={700}>Win Rate</Text>
+                                                        </Box>
+                                                    </Center>
+                                                }
+                                            />
+                                        </Group>
+
+                                        <SimpleGrid cols={2} spacing="xs">
+                                            <Box ta="center">
+                                                <Text size="10px" c="dimmed" fw={700} tt="uppercase">Profit Factor</Text>
+                                                <Text size="sm" fw={800}>{profitFactor}</Text>
+                                            </Box>
+                                            <Box ta="center">
+                                                <Text size="10px" c="dimmed" fw={700} tt="uppercase">Avg Trade</Text>
+                                                <Text size="sm" fw={800} color={parseFloat(avgTrade) >= 0 ? 'green' : 'red'}>
+                                                    {parseFloat(avgTrade) >= 0 ? '+' : ''}{avgTrade}
+                                                </Text>
+                                            </Box>
+                                            <Box ta="center">
+                                                <Text size="10px" c="dimmed" fw={700} tt="uppercase">Total Trades</Text>
+                                                <Text size="sm" fw={800}>{totalTrades}</Text>
+                                            </Box>
+                                            <Box ta="center">
+                                                <Text size="10px" c="dimmed" fw={700} tt="uppercase">Net PNL</Text>
+                                                <Text size="sm" fw={800} color={netPnl >= 0 ? 'green' : 'red'}>
+                                                    {netPnl >= 0 ? '+' : ''}{netPnl.toFixed(2)}
+                                                </Text>
+                                            </Box>
+                                        </SimpleGrid>
+                                    </Stack>
+                                );
+                            })()}
                         </Paper>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, md: 8 }}>
@@ -283,6 +344,6 @@ export default function UserInsight() {
                     </Grid.Col>
                 </Grid>
             </Stack>
-        </Container>
+        </Container >
     )
 }

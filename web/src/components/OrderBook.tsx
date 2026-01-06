@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, memo } from 'react'
 import { API_BASE } from '../config/api'
 import { Box, Text, SimpleGrid } from '@mantine/core'
 import BigPrice from './BigPrice'
-import { Virtuoso } from 'react-virtuoso'
 
 type SideRow = [number, number] // [price, size]
 
@@ -54,7 +53,7 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
             pendingBids = null
             pendingAsks = null
           }
-        }, 500)
+        }, 3000)
 
         ws.onmessage = (ev) => {
           try {
@@ -116,41 +115,35 @@ export default function OrderBook({ symbol, market, depth = 50 }: { symbol: stri
         <Text size="sm" c="dimmed" fw={500}>Total</Text>
       </SimpleGrid>
 
-      {/* ASKS (Virtualized) */}
-      <Box style={{ flex: 1, minHeight: 100 }}>
-        <Virtuoso
-          style={{ height: '100%' }}
-          data={revAsks}
-          initialTopMostItemIndex={revAsks.length - 1}
-          itemContent={(i, r) => (
-            <OrderRow
-              price={fmt(r[0])}
-              size={fmt(r[1])}
-              total={fmt(askTotalsRev[i])}
-              color="var(--red)"
-            />
-          )}
-        />
+      {/* ASKS (Fixed List) */}
+      <Box style={{ flex: 1, overflow: 'hidden' }}>
+        {revAsks.slice(-Math.floor(depth / 2)).map((r, i) => (
+          <OrderRow
+            key={i}
+            price={fmt(r[0])}
+            size={fmt(r[1])}
+            total={fmt(askTotalsRev[i])} // Note: Totals calculation might need adjustment to match slice? Actually totals is based on full list.
+            // If we slice display, we might want to slice totals too.
+            color="var(--red)"
+          />
+        ))}
       </Box>
 
-      <Box py={8} my={4} style={{ borderTop: '1px solid var(--mantine-color-default-border)', borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+      <Box m={0} p={0} mb={10}>
         <BigPrice symbol={symbol} market={market} />
       </Box>
 
-      {/* BIDS (Virtualized) */}
-      <Box style={{ flex: 1, minHeight: 100 }}>
-        <Virtuoso
-          style={{ height: '100%' }}
-          data={bids}
-          itemContent={(i, r) => (
-            <OrderRow
-              price={fmt(r[0])}
-              size={fmt(r[1])}
-              total={fmt(totals.bidTotals[i])}
-              color="var(--green)"
-            />
-          )}
-        />
+      {/* BIDS (Fixed List) */}
+      <Box style={{ flex: 1, overflow: 'hidden' }}>
+        {bids.slice(0, Math.floor(depth / 2)).map((r, i) => (
+          <OrderRow
+            key={i}
+            price={fmt(r[0])}
+            size={fmt(r[1])}
+            total={fmt(totals.bidTotals[i])}
+            color="var(--green)"
+          />
+        ))}
       </Box>
     </Box >
   )

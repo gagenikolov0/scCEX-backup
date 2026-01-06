@@ -23,11 +23,11 @@ const DataTable = memo(({ data, columns, emptyMessage, maxHeight = '430px', minW
                 style={{ height: '100%' }}
                 data={data}
                 fixedHeaderContent={() => (
-                    <Table.Tr bg="var(--bg-1)" style={{ boxShadow: '0 1px 0 var(--mantine-color-default-border)' }}>
+                    <Table.Tr bg="var(--bg-1)" style={{ borderBottom: '1px solid var(--border-1)' }}>
                         {columns.map((col) => {
                             const label = typeof col === 'string' ? col : col.label
                             return (
-                                <Table.Th key={label} c="dimmed" fw={600} py={12} style={{ whiteSpace: 'nowrap', border: 'none' }}>
+                                <Table.Th key={label} c="dimmed" fw={600} py={12} style={{ whiteSpace: 'nowrap', border: 'none', background: 'inherit' }}>
                                     {label}
                                 </Table.Th>
                             )
@@ -41,14 +41,14 @@ const DataTable = memo(({ data, columns, emptyMessage, maxHeight = '430px', minW
                             const label = typeof col === 'string' ? col : col.label
 
                             if (typeof col !== 'string' && col.render) {
-                                return <Table.Td key={label} py={12} style={{ border: 'none' }}>{col.render(item)}</Table.Td>
+                                return <Table.Td key={label} py={16} style={{ border: 'none' }}>{col.render(item)}</Table.Td>
                             }
-                            return <Table.Td key={label} py={12} style={{ border: 'none' }}>{item[key] ?? '-'}</Table.Td>
+                            return <Table.Td key={label} py={16} style={{ border: 'none' }}>{item[key] ?? '-'}</Table.Td>
                         })}
                     </>
                 )}
                 components={{
-                    Table: (props) => <Table {...props} style={{ minWidth, tableLayout: 'fixed' }} verticalSpacing="xs" horizontalSpacing={8} highlightOnHover fs="sm" withRowBorders={false} />,
+                    Table: (props) => <Table {...props} style={{ minWidth, tableLayout: 'fixed' }} verticalSpacing="md" horizontalSpacing={8} highlightOnHover fs="sm" withRowBorders={false} />,
                     EmptyPlaceholder: () => (
                         <Table.Tbody>
                             <Table.Tr>

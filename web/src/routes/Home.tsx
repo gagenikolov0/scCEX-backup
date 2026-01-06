@@ -64,9 +64,9 @@ export default function Home() {
       }} />
 
       {/* Hero Section */}
-      <Box style={{ position: 'relative', zIndex: 1 }} py={120} px="md">
+      <Box style={{ position: 'relative', zIndex: 1 }} py={{ base: 60, md: 120 }} px="md">
         <Container size="lg">
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={80} style={{ alignItems: 'center' }}>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 40, md: 80 }} style={{ alignItems: 'center' }}>
 
             {/* Left Content */}
             <Stack gap="xl" className="reveal-on-scroll visible">
@@ -76,20 +76,20 @@ export default function Home() {
                 </Badge>
               </Group>
 
-              <Title order={1} size={72} fw={950} style={{ lineHeight: 1.05, letterSpacing: '-2px' }}>
+              <Title order={1} fz={{ base: 42, md: 72 }} fw={950} style={{ lineHeight: 1.05, letterSpacing: '-2px' }}>
                 Trade with <br />
                 <Text span inherit className="animate-text-shimmer" style={{ backgroundClip: 'text', WebkitBackgroundClip: 'text' }}>Transparency.</Text>
               </Title>
 
-              <Text c="dimmed" size="xl" maw={500} lh={1.6} fw={500}>
+              <Text c="dimmed" fz={{ base: 'lg', md: 'xl' }} maw={500} lh={1.6} fw={500}>
                 The era of fake PnL cards is over. Experience the first exchange where every position, every trade, and every profile is <Text span inherit c="blue" fw={700}>verifiably real.</Text>
               </Text>
 
               <Group pt="md">
-                <Button size="xl" radius="md" variant="gradient" gradient={{ from: 'blue', to: 'indigo' }} onClick={() => navigate('/spot')}>
+                <Button size="xl" h={{ base: 54, md: 60 }} radius="md" variant="gradient" gradient={{ from: 'blue', to: 'indigo' }} onClick={() => navigate('/spot')}>
                   Start Trading
                 </Button>
-                <Button size="xl" radius="md" variant="light" color="gray" onClick={() => navigate('/markets')}>
+                <Button size="xl" h={{ base: 54, md: 60 }} radius="md" variant="light" color="gray" onClick={() => navigate('/markets')}>
                   Explore Markets
                 </Button>
               </Group>
@@ -132,16 +132,16 @@ export default function Home() {
       </Box>
 
       {/* Market Ticker Section */}
-      <Box style={{ position: 'relative', zIndex: 1 }} py={60}>
+      <Box style={{ position: 'relative', zIndex: 1 }} py={{ base: 40, md: 60 }}>
         <Container size="lg">
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
+          <SimpleGrid cols={{ base: 2, sm: 2, md: 4 }} spacing="lg">
             {topAssets.length > 0 ? topAssets.map(asset => {
               const change = parseFloat(asset.change24h || '0')
               return (
                 <SpotlightCard
                   key={asset.symbol}
                   className="glass-card reveal-on-scroll"
-                  p="lg" radius="lg"
+                  p={{ base: 'md', md: 'lg' }} radius="lg"
                   onClick={() => navigate(`/spot?base=${asset.symbol.replace('USDT', '')}&quote=USDT`)}
                   style={{ cursor: 'pointer', height: '100%' }}
                 >
@@ -172,25 +172,26 @@ export default function Home() {
       </Box>
 
       {/* Features Section */}
-      <Box style={{ position: 'relative', zIndex: 1 }} py={100}>
+      <Box style={{ position: 'relative', zIndex: 1 }} py={{ base: 60, md: 100 }}>
         <Container size="lg">
-          <Stack align="center" mb={60} className="reveal-on-scroll">
+          <Stack align="center" mb={{ base: 40, md: 60 }} className="reveal-on-scroll">
             <Badge size="xl" variant="light" color="indigo" radius="md">Security Core</Badge>
-            <Title order={2} size={48} fw={950} style={{ letterSpacing: '-1px' }}>Built for the <Text span inherit c="indigo">Elite.</Text></Title>
+            <Title order={2} fz={{ base: 32, md: 48 }} fw={950} style={{ letterSpacing: '-1px' }}>Built for the <Text span inherit c="indigo">Elite.</Text></Title>
           </Stack>
           <Paper radius="xl" p={0} style={{ background: 'transparent' }}>
-            <SimpleGrid cols={{ base: 1, md: 3 }} spacing={40}>
+            <SimpleGrid cols={{ base: 1, md: 3 }} spacing={{ base: 20, md: 40 }}>
               {FEATURES.map((feature, i) => (
                 <Stack key={i} p="xl" style={{ borderLeft: '1px solid rgba(255,255,255,0.05)' }} className="reveal-on-scroll">
                   <ThemeIcon
                     variant="gradient"
                     gradient={{ from: feature.color, to: 'cyan' }}
-                    size={60}
+                    w={{ base: 48, md: 60 }}
+                    h={{ base: 48, md: 60 }}
                     radius="md"
                     mb="md"
                     style={{ transition: 'none' }}
                   >
-                    <feature.icon size={30} />
+                    <feature.icon size={26} />
                   </ThemeIcon>
                   <Title order={3} size="h3" mb="xs" fw={800}>{feature.title}</Title>
                   <Text c="dimmed" lh={1.6}>
@@ -204,9 +205,9 @@ export default function Home() {
       </Box>
 
       {/* Social Transparency & Trader Insights Section */}
-      <Box style={{ position: 'relative', zIndex: 1 }} py={100} bg="rgba(0,0,0,0.2)">
+      <Box style={{ position: 'relative', zIndex: 1 }} py={{ base: 60, md: 100 }} bg="rgba(0,0,0,0.2)">
         <Container size="lg">
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={80} style={{ alignItems: 'center' }}>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 40, md: 80 }} style={{ alignItems: 'center' }}>
 
             {/* Visual Showcase - Live Terminal Preview instead of mocks */}
             <Box style={{ position: 'relative' }} className="reveal-on-scroll">
@@ -218,7 +219,7 @@ export default function Home() {
             {/* Content */}
             <Stack gap="xl" className="reveal-on-scroll">
               <Badge variant="light" color="blue" size="lg" radius="md">Social Insight</Badge>
-              <Title order={2} size={48} fw={950} style={{ lineHeight: 1.1, letterSpacing: '-1.5px' }}>
+              <Title order={2} fz={{ base: 32, md: 48 }} fw={950} style={{ lineHeight: 1.1, letterSpacing: '-1.5px' }}>
                 No more fake <br />
                 <Text span inherit c="blue">PnL Cards.</Text>
               </Title>
@@ -265,21 +266,21 @@ export default function Home() {
       </Box>
 
       {/* Extreme Leverage Section */}
-      <Box style={{ position: 'relative', zIndex: 1 }} py={120}>
+      <Box style={{ position: 'relative', zIndex: 1 }} py={{ base: 60, md: 120 }}>
         <Container size="lg">
           <Paper
             className="glass-card reveal-on-scroll"
-            p={60}
+            p={{ base: 30, md: 60 }}
             radius="32px"
             style={{
               overflow: 'hidden',
               background: 'radial-gradient(circle at 100% 0%, rgba(50, 150, 255, 0.1) 0%, transparent 50%), var(--glass-bg)'
             }}
           >
-            <SimpleGrid cols={{ base: 1, md: 2 }} spacing={60} style={{ alignItems: 'center' }}>
+            <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 30, md: 60 }} style={{ alignItems: 'center' }}>
               <Stack gap="xl">
                 <Badge variant="light" color="red" size="lg" radius="md">High-Performance Core</Badge>
-                <Title order={2} size={56} fw={950} style={{ lineHeight: 1, letterSpacing: '-2px' }}>
+                <Title order={2} fz={{ base: 36, md: 56 }} fw={950} style={{ lineHeight: 1, letterSpacing: '-2px' }}>
                   Maximum Power. <br />
                   <Text span inherit className="animate-text-shimmer">Zero Compromise.</Text>
                 </Title>
@@ -320,8 +321,8 @@ export default function Home() {
                 <Stack align="center" gap={0}>
                   <Text
                     fw={950}
+                    fz={{ base: 80, md: 180 }}
                     style={{
-                      fontSize: '180px',
                       lineHeight: 1,
                       letterSpacing: '-10px',
                       background: 'linear-gradient(to bottom, #fff, rgba(255,255,255,0.2))',
@@ -349,12 +350,12 @@ export default function Home() {
       </Box>
 
       {/* CTA Footer */}
-      <Box py={100} px="md" style={{ position: 'relative', zIndex: 1 }}>
+      <Box py={{ base: 60, md: 100 }} px="md" style={{ position: 'relative', zIndex: 1 }}>
         <Container size="lg">
           <SpotlightCard
             className="glass-card reveal-on-scroll"
             radius="30px"
-            p={80}
+            p={{ base: 40, md: 80 }}
             style={{ overflow: 'hidden', position: 'relative', textAlign: 'center' }}
           >
             <Box style={{
@@ -364,8 +365,8 @@ export default function Home() {
             }} />
 
             <Stack align="center" gap="xl" style={{ position: 'relative', zIndex: 1 }}>
-              <Title order={2} size={50} fw={950} style={{ letterSpacing: '-2px' }}>Join the Transparency Era</Title>
-              <Text c="dimmed" size="xl" maw={600} fw={500}>
+              <Title order={2} fz={{ base: 32, md: 50 }} fw={950} style={{ letterSpacing: '-2px' }}>Join the Transparency Era</Title>
+              <Text c="dimmed" fz={{ base: 'lg', md: 'xl' }} maw={600} fw={500}>
                 The world's first verifiably transparent exchange is here.
               </Text>
               <Button
