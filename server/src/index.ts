@@ -14,6 +14,7 @@ import userRoutes from "./routes/user"
 import marketsRoutes from "./routes/markets"
 import spotRoutes from "./routes/spot"
 import futuresRoutes from "./routes/futures"
+import { futuresPnlService } from "./utils/pnlService"
 
 const app = express()
 const httpServer = http.createServer(app)
@@ -66,6 +67,21 @@ const start = async () => {
   const { futuresEngine } = await import('./utils/futuresEngine')
   console.log('Starting Futures Engine...')
   futuresEngine.start()
+
+  // PNL Snapshot Scheduler (Check every hour)
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getUTCHours() === 0) {
+      console.log('[Scheduler] It is midnight UTC. Taking PNL snapshots...');
+      await futuresPnlService.takeDailySnapshots();
+    }
+  }, 60 * 60 * 1000);
+
+  // Initial Snapshot on startup
+  setTimeout(async () => {
+    console.log('[Scheduler] Startup check: Ensuring today\'s PNL snapshot exists...');
+    await futuresPnlService.takeDailySnapshots();
+  }, 5000);
 
   httpServer.listen(config.port, () => {
     console.log(`Server listening on http://localhost:${config.port}`)

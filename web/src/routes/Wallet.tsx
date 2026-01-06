@@ -1,11 +1,14 @@
-import { Group, Text, Stack, Badge, Paper, Box, Flex, SimpleGrid, ThemeIcon, Progress, RingProgress, Center, Title, Container } from '@mantine/core'
+import { Group, Text, Stack, Badge, Paper, Box, Flex, SimpleGrid, ThemeIcon, Progress, RingProgress, Center, Table, Container, Loader, Divider, Button } from '@mantine/core'
 import { useAccount } from '../contexts/AccountContext'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { API_BASE } from '../config/api'
+import { PNLCalendar } from '../components/PNLCalendar'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { formatBalance } from '../lib/utils'
 import { ParticlesBackground } from '../components/ParticlesBackground'
 import { SpotlightCard } from '../components/SpotlightCard'
 import { IconWallet, IconChartPie, IconActivity, IconCpu, IconBrandTether, IconCurrencyBitcoin, IconCurrencyEthereum, IconCurrencySolana, IconCircle, IconArrowUpRight, IconArrowUp } from '@tabler/icons-react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useMarket } from '../contexts/MarketContext'
 
 // Helper to map assets to icons
@@ -27,10 +30,13 @@ const getAssetColor = (asset: string) => {
 }
 
 export default function Wallet() {
-  const { spotAvailable, futuresAvailable, positions } = useAccount()
-  const { spotStats, listen, unlisten } = useMarket()
+  const { spotAvailable, futuresAvailable, positions, username, pnl24h, roi24h, spotEquity, futuresEquity, totalPortfolioUSD: contextTotalPortfolioUSD } = useAccount()
+  const { accessToken } = useAuth()
+  const { listen, unlisten } = useMarket()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [pnlHistory, setPnlHistory] = useState<any[]>([])
+  const [pnlLoading, setPnlLoading] = useState(false)
 
   // Default to overview, but respect URL param
   const activeTab = searchParams.get('tab') || 'overview'
@@ -40,44 +46,40 @@ export default function Wallet() {
   }
 
 
-  // Listen for spot price updates to keep balance fresh
+  // Listen for spot price updates to keep balance fresh for asset list
   useEffect(() => {
-    listen('spot')
-    return () => unlisten('spot')
-  }, [listen, unlisten])
+    if (activeTab === 'spot') {
+      listen('spot')
+      return () => unlisten('spot')
+    }
+  }, [listen, unlisten, activeTab])
 
-  // Efficient Map for O(1) lookups
-  const priceMap = useMemo(() => {
-    const map = new Map<string, number>()
-    spotStats.forEach(s => {
-      map.set(s.symbol, parseFloat(s.lastPrice || '0'))
-      // handle potential format diffs if needed, usually symbols are like BTCUSDT
-      if (s.symbol.endsWith('USDT')) map.set(s.symbol.replace('USDT', ''), parseFloat(s.lastPrice || '0'))
-    })
-    return map
-  }, [spotStats])
+  useEffect(() => {
+    const fetchPNL = async () => {
+      if (!accessToken || !username) return
+      setPnlLoading(true)
+      try {
+        const res = await fetch(`${API_BASE}/api/user/futures-pnl/${username}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setPnlHistory(data.history || [])
+        }
+      } catch (e) {
+        console.error('PNL Fetch error:', e)
+      } finally {
+        setPnlLoading(false)
+      }
+    }
+    fetchPNL()
+  }, [accessToken, username])
 
-  const totalFuturesValue = useMemo(() => {
-    return parseFloat(futuresAvailable.USDT || '0') + parseFloat(futuresAvailable.USDC || '0')
-  }, [futuresAvailable])
 
-  const totalSpotValue = useMemo(() => {
-    let total = parseFloat(spotAvailable.USDT || '0') + parseFloat(spotAvailable.USDC || '0')
+  const totalFuturesValue = futuresEquity
+  const totalSpotValue = spotEquity
 
-    positions.forEach(pos => {
-      // If allow other quotes later, might need adjustment. Assume USDT based for now or derived from priceMap keys
-      // symbol usually e.g. BTCUSDT. Asset is BTC.
-      const price = priceMap.get(pos.asset + 'USDT') || priceMap.get(pos.asset + 'USDC') || 0
-      total += parseFloat(pos.available) * price
-      // We can add reserved too if we want 'Total Equity' not just 'Available'
-      // usually wallet balance includes reserved (in orders)
-      total += parseFloat(pos.reserved) * price
-    })
-
-    return total
-  }, [spotAvailable, positions, priceMap])
-
-  const totalPortfolioUSD = totalSpotValue + totalFuturesValue
+  const totalPortfolioUSD = contextTotalPortfolioUSD
 
   // Calculate percentages for the ring chart
   const spotPercent = totalPortfolioUSD > 0 ? (totalSpotValue / totalPortfolioUSD) * 100 : 0
@@ -107,8 +109,8 @@ export default function Wallet() {
                   <Text c="dimmed" size="lg" fw={500}>Estimated Total Value</Text>
                   <Flex align="center" gap="sm">
                     <Text
-                      fz={56}
-                      fw={950}
+                      fz={38}
+                      fw={900}
                       lh={1}
                       className="text-glow"
                       style={{ letterSpacing: '-0.02em' }}
@@ -153,7 +155,35 @@ export default function Wallet() {
                   <Progress value={futuresPercent} color="blue" size="sm" mt="xs" />
                 </Box>
               </SimpleGrid>
+
+              <Divider mt="md" />
+
+              <Group justify="space-between" align="center">
+                <Box>
+                  <Text size="xs" c="dimmed" fw={700} tt="uppercase">24h Futures PNL</Text>
+                  <Group gap={6}>
+                    <Text size="lg" fw={800} color={pnl24h >= 0 ? 'green' : 'red'}>
+                      {pnl24h >= 0 ? '+' : ''}{pnl24h.toFixed(2)} USDT
+                    </Text>
+                    <Badge color={roi24h >= 0 ? 'green' : 'red'} variant="light">
+                      {roi24h >= 0 ? '+' : ''}{roi24h.toFixed(2)}%
+                    </Badge>
+                  </Group>
+                </Box>
+                <Button variant="subtle" size="xs" component={Link} to={`/trader/${username}`} rightSection={<IconArrowUpRight size={14} />}>
+                  View Full Analytics
+                </Button>
+              </Group>
             </Paper>
+
+            {/* PNL Calendar Integrated directly into Wallet */}
+            <Stack gap="xs">
+              <Group justify="space-between" align="center">
+                <Text fw={700} size="sm">Performance Calendar (6 Months)</Text>
+                {pnlLoading && <Loader size="xs" />}
+              </Group>
+              <PNLCalendar data={pnlHistory} livePNL={pnl24h} liveROI={roi24h} />
+            </Stack>
 
             {/* Quick Actions / Recent (Placeholder for now, visually nice) */}
             <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
@@ -184,7 +214,7 @@ export default function Wallet() {
                   </Box>
                 </Group>
               </SpotlightCard>
-              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }}>
+              <SpotlightCard p="lg" radius="md" className="glass-card no-move" style={{ cursor: 'pointer' }} onClick={() => navigate(`/trader/${username}`)}>
                 <Group>
                   <ThemeIcon size="xl" radius="md" variant="light" color="orange"><IconActivity /></ThemeIcon>
                   <Box>
@@ -200,116 +230,177 @@ export default function Wallet() {
       case 'spot':
       case 'futures':
         const isSpot = activeTab === 'spot'
-        // Merge USDT/USDC into list for Uniform mapping
-        const assetList = isSpot ?
-          [...['USDT', 'USDC'], ...positions.filter(p => !['USDT', 'USDC'].includes(p.asset)).map(p => p.asset)]
-          : ['USDT', 'USDC']
+        const tabTotal = isSpot ? totalSpotValue : totalFuturesValue
+
+        // Prepare table data: Always show USDT/USDC, plus any asset user actually holds
+        const displayAssets = isSpot
+          ? Array.from(new Set([
+            'USDT',
+            'USDC',
+            ...positions.filter(p => (parseFloat(p.available || '0') + parseFloat(p.reserved || '0')) > 0).map(p => p.asset)
+          ]))
+          : Array.from(new Set([
+            'USDT',
+            'USDC',
+            ...Object.keys(futuresAvailable).filter(asset => parseFloat((futuresAvailable as any)[asset] || '0') > 0)
+          ]))
 
         return (
-          <Stack gap="lg">
-            <Title order={2} size="h2">{isSpot ? 'Spot Assets' : 'Futures Collateral'}</Title>
-
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-              {assetList.map(asset => {
-                const available = isSpot
-                  ? (['USDT', 'USDC'].includes(asset) ? spotAvailable[asset as keyof typeof spotAvailable] : positions.find(p => p.asset === asset)?.available)
-                  : (futuresAvailable as any)[asset]
-                const reserved = isSpot
-                  ? (['USDT', 'USDC'].includes(asset) ? '0' : positions.find(p => p.asset === asset)?.reserved)
-                  : '0' // Futures doesn't show reserved logic simply here yet
-
-                const AssetIcon = getAssetIcon(asset)
-                const color = getAssetColor(asset)
-
-                return (
-                  <SpotlightCard
-                    p="xl"
-                    radius="md"
-                    className="glass-card no-move"
-                    spotlightColor={`var(--mantine-color-${color}-5)`}
-                  >
-                    <Flex justify="space-between" align="flex-start" mb="lg">
-                      <Group>
-                        <ThemeIcon size={42} radius="xl" variant="light" color={color}>
-                          <AssetIcon size={24} />
-                        </ThemeIcon>
-                        <Box>
-                          <Text fw={700} size="lg">{asset}</Text>
-                          <Badge variant="dot" color={color} size="xs">{isSpot ? 'Spot' : 'Margined'}</Badge>
-                        </Box>
-                      </Group>
-                      <Text fw={700} size="xl">${['USDT', 'USDC'].includes(asset) ? '1.00' : '---'}</Text>
-                    </Flex>
-
-                    <Stack gap={4}>
-                      <Text size="sm" c="dimmed">Available Balance</Text>
-                      <Text size="2xl" fw={700} className="text-glow">
-                        {parseFloat(available || '0').toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+          <Stack gap="xl">
+            {/* Tab Hero Balance */}
+            <Paper className="glass-card no-move" p="xl" radius="lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <Group justify="space-between" align="center">
+                <Stack gap={0}>
+                  <Group gap="xs" align="flex-baseline">
+                    <Text size="32px" fw={900} className="text-glow">
+                      ${tabTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                    <Text size="sm" c="dimmed" fw={600}>USDT</Text>
+                  </Group>
+                  {!isSpot && (
+                    <Group gap="xs" mt={4}>
+                      <Text size="xs" c="dimmed" fw={700} tt="uppercase">24h PNL: </Text>
+                      <Text size="sm" fw={800} color={pnl24h >= 0 ? 'green' : 'red'}>
+                        {pnl24h >= 0 ? '+' : ''}{pnl24h.toFixed(2)} USDT
                       </Text>
-                      {parseFloat(reserved || '0') > 0 && (
-                        <Text size="xs" c="orange">Locked: {formatBalance(reserved || '0')}</Text>
-                      )}
-                    </Stack>
-                  </SpotlightCard>
-                )
-              })}
-            </SimpleGrid>
+                      <Badge color={roi24h >= 0 ? 'green' : 'red'} variant="light" size="xs">
+                        {roi24h >= 0 ? '+' : ''}{roi24h.toFixed(2)}%
+                      </Badge>
+                    </Group>
+                  )}
+                </Stack>
+                <Group gap="sm">
+                  {isSpot ? (
+                    <>
+                      <Button variant="light" color="green" radius="md" onClick={() => navigate('/deposit')}>Deposit</Button>
+                      <Button variant="light" color="gray" radius="md" onClick={() => navigate('/withdraw')}>Withdraw</Button>
+                    </>
+                  ) : (
+                    <Button variant="light" color="blue" radius="md">Transfer Funds</Button>
+                  )}
+                </Group>
+              </Group>
+            </Paper>
+
+            <Box style={{ overflowX: 'auto' }}>
+              <Table verticalSpacing="md" horizontalSpacing="md" className="no-move" style={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                <Table.Thead>
+                  <Table.Tr style={{ border: 'none' }}>
+                    <Table.Th c="dimmed" fw={600} style={{ border: 'none' }}>Asset</Table.Th>
+                    <Table.Th c="dimmed" fw={600} style={{ border: 'none' }}>Total Balance</Table.Th>
+                    <Table.Th c="dimmed" fw={600} style={{ border: 'none' }}>Available</Table.Th>
+                    <Table.Th c="dimmed" fw={600} style={{ border: 'none' }}>Reserved</Table.Th>
+                    <Table.Th style={{ border: 'none' }}></Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {displayAssets.map(asset => {
+                    const posData = isSpot ? positions.find(p => p.asset === asset) : null
+                    const available = isSpot
+                      ? (['USDT', 'USDC'].includes(asset) ? spotAvailable[asset as keyof typeof spotAvailable] : posData?.available)
+                      : (futuresAvailable as any)[asset]
+                    const reserved = isSpot
+                      ? (['USDT', 'USDC'].includes(asset) ? posData?.reserved : posData?.reserved)
+                      : '0'
+
+                    const total = parseFloat(available || '0') + parseFloat(reserved || '0')
+                    const isStable = ['USDT', 'USDC'].includes(asset)
+
+                    const AssetIcon = getAssetIcon(asset)
+                    const color = getAssetColor(asset)
+
+                    return (
+                      <Table.Tr key={asset} className="glass-card-hover" style={{ borderRadius: '12px', background: 'rgba(255,255,255,0.01)' }}>
+                        <Table.Td style={{ border: 'none', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>
+                          <Group gap="sm">
+                            <ThemeIcon size={32} radius="xl" variant="light" color={color}>
+                              <AssetIcon size={18} />
+                            </ThemeIcon>
+                            <Box>
+                              <Text fw={700} size="sm">{asset}</Text>
+                              <Text size="xs" c="dimmed">{isStable ? 'Stablecoin' : 'Digital Asset'}</Text>
+                            </Box>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td style={{ border: 'none' }}>
+                          <Text fw={700} size="sm">{formatBalance(total)}</Text>
+                        </Table.Td>
+                        <Table.Td style={{ border: 'none' }}>
+                          <Text size="sm">{formatBalance(available || '0')}</Text>
+                        </Table.Td>
+                        <Table.Td style={{ border: 'none' }}>
+                          <Text size="sm" c={parseFloat(reserved || '0') > 0 ? 'orange' : 'dimmed'}>
+                            {formatBalance(reserved || '0')}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td style={{ border: 'none', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }} ta="right">
+                          <Button
+                            variant="subtle"
+                            color="blue"
+                            size="compact-xs"
+                            fw={700}
+                            onClick={() => navigate(isSpot ? `/trade/${asset}_USDT` : `/futures/${asset}_USDT`)}
+                          >
+                            Trade
+                          </Button>
+                        </Table.Td>
+                      </Table.Tr>
+                    )
+                  })}
+                </Table.Tbody>
+              </Table>
+            </Box>
           </Stack>
         )
     }
   }
 
   return (
-    <Box style={{ minHeight: 'calc(100vh - 60px)', position: 'relative', overflow: 'hidden' }}>
+    <Box style={{ position: 'relative', zIndex: 1 }}>
       <ParticlesBackground />
+      <Flex direction={{ base: 'column', sm: 'row' }}>
+        {/* Floating Sidebar */}
+        <Box w={240} p="md" visibleFrom="sm" style={{ position: 'sticky', top: 0, height: 'fit-content' }}>
+          <Paper className="glass-card no-move" radius="lg" p="md" style={{ background: 'var(--mantine-color-default-hover)' }}>
+            <Stack gap="sm">
+              <Text size="xs" c="dimmed" fw={700} tt="uppercase" mb="xs">Menu</Text>
+              {tabs.map(tab => (
+                <Box
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    cursor: 'pointer',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: activeTab === tab.id ? 'var(--mantine-color-default-hover)' : 'transparent',
+                    border: activeTab === tab.id ? '1px solid var(--glass-border)' : '1px solid transparent',
+                    transition: 'all 0.2s',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Active Indicator Line */}
+                  {activeTab === tab.id && (
+                    <Box style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: '3px', background: 'var(--mantine-primary-color-5)', borderRadius: '0 4px 4px 0' }} />
+                  )}
 
-      <Box style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-        <Flex style={{ height: 'calc(100vh - 60px)' }}>
-          {/* Floating Sidebar */}
-          <Box w={240} p="md" visibleFrom="sm">
-            <Paper h="100%" className="glass-card no-move" radius="lg" p="md" style={{ background: 'var(--mantine-color-default-hover)' }}>
-              <Stack gap="sm">
-                <Text size="xs" c="dimmed" fw={700} tt="uppercase" mb="xs">Menu</Text>
-                {tabs.map(tab => (
-                  <Box
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    style={{
-                      cursor: 'pointer',
-                      padding: '12px 16px',
-                      borderRadius: '12px',
-                      background: activeTab === tab.id ? 'var(--mantine-color-default-hover)' : 'transparent',
-                      border: activeTab === tab.id ? '1px solid var(--glass-border)' : '1px solid transparent',
-                      transition: 'all 0.2s',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {/* Active Indicator Line */}
-                    {activeTab === tab.id && (
-                      <Box style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: '3px', background: 'var(--mantine-primary-color-5)', borderRadius: '0 4px 4px 0' }} />
-                    )}
+                  <Group>
+                    <tab.icon size={20} color={activeTab === tab.id ? 'var(--mantine-color-blue-6)' : 'gray'} />
+                    <Text fw={500} c={activeTab === tab.id ? 'var(--mantine-color-text)' : 'dimmed'}>{tab.label}</Text>
+                  </Group>
+                </Box>
+              ))}
+            </Stack>
+          </Paper>
+        </Box>
 
-                    <Group>
-                      <tab.icon size={20} color={activeTab === tab.id ? 'var(--mantine-color-blue-6)' : 'gray'} />
-                      <Text fw={500} c={activeTab === tab.id ? 'var(--mantine-color-text)' : 'dimmed'}>{tab.label}</Text>
-                    </Group>
-                  </Box>
-                ))}
-              </Stack>
-            </Paper>
-          </Box>
-
-          {/* Mobile Tab Fallback (Simple) - could be improved but focusing on desktop polish as requested usually */}
-
-          {/* Main Content */}
-          <Box flex={1} p={{ base: 'md', md: 'xl' }} style={{ overflowY: 'auto' }}>
-            <Container size="xl" px={{ base: 0, md: 'md' }}>
-              {renderContent()}
-            </Container>
-          </Box>
-        </Flex>
-      </Box>
+        {/* Main Content */}
+        <Box flex={1} p={{ base: 'md', md: 'xl' }}>
+          <Container size="xl" px={{ base: 0, md: 'md' }}>
+            {renderContent()}
+          </Container>
+        </Box>
+      </Flex>
     </Box>
   )
 }

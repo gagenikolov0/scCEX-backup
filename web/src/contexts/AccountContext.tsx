@@ -29,10 +29,14 @@ interface AccountContextType {
   futuresPositions: any[]
   orders: Order[]
   totalPortfolioUSD: number
+  spotEquity: number
+  futuresEquity: number
   email: string | null
   username: string | null
   referralCode: string | null
   profilePicture: string | null
+  pnl24h: number
+  roi24h: number
   refreshBalances: () => Promise<boolean>
   refreshOrders: () => Promise<boolean>
 }
@@ -60,10 +64,14 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   const [futuresPositions, setFuturesPositions] = useState<any[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [totalPortfolioUSD, setTotalPortfolioUSD] = useState<number>(0)
+  const [spotEquity, setSpotEquity] = useState<number>(0)
+  const [futuresEquity, setFuturesEquity] = useState<number>(0)
   const [email, setEmail] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
   const [referralCode, setReferralCode] = useState<string | null>(null)
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [pnl24h, setPnl24h] = useState<number>(0)
+  const [roi24h, setRoi24h] = useState<number>(0)
 
   const location = useLocation()
   const shouldFetch = useMemo(() => {
@@ -113,6 +121,19 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
         if (typeof data.balances?.totalPortfolioUSD === 'number') {
           setTotalPortfolioUSD(data.balances.totalPortfolioUSD)
+        }
+        if (typeof data.balances?.spotEquity === 'number') {
+          setSpotEquity(data.balances.spotEquity)
+        }
+        if (typeof data.balances?.futuresEquity === 'number') {
+          setFuturesEquity(data.balances.futuresEquity)
+        }
+
+        if (typeof data.balances?.pnl24h === 'number') {
+          setPnl24h(data.balances.pnl24h)
+        }
+        if (typeof data.balances?.roi24h === 'number') {
+          setRoi24h(data.balances.roi24h)
         }
 
         if (data.user?.email) {
@@ -291,6 +312,14 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
             })
           } else if (msg.kind === 'portfolio' && typeof msg.totalPortfolioUSD === 'number') {
             setTotalPortfolioUSD(msg.totalPortfolioUSD)
+            if (typeof msg.spotEquity === 'number') setSpotEquity(msg.spotEquity)
+            if (typeof msg.futuresEquity === 'number') setFuturesEquity(msg.futuresEquity)
+            if (typeof msg.pnl24h === 'number') setPnl24h(msg.pnl24h)
+            if (typeof msg.roi24h === 'number') setRoi24h(msg.roi24h)
+          } else if (msg.kind === 'futuresPnl') {
+            setFuturesEquity(msg.equity)
+            setPnl24h(msg.pnl)
+            setRoi24h(msg.roi)
           }
         } catch (e) {
           console.error('WS Parse error', e)
@@ -331,10 +360,14 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       futuresPositions,
       orders,
       totalPortfolioUSD,
+      spotEquity,
+      futuresEquity,
       email,
       username,
       referralCode,
       profilePicture,
+      pnl24h,
+      roi24h,
       refreshBalances,
       refreshOrders
     }}>

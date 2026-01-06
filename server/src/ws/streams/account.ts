@@ -1,7 +1,8 @@
 import { WebSocketServer } from 'ws'
 import type { IncomingMessage } from 'http'
 import { verifyAccessToken } from '../../utils/jwt'
-import { calculateTotalPortfolioUSD } from '../../utils/portfolio'
+import { calculateTotalPortfolioUSD, calculateSpotEquity } from '../../utils/portfolio'
+import { futuresPnlService } from '../../utils/pnlService'
 
 type AccountEvent =
   | { kind: 'balance'; spotAvailable: { USDT: string; USDC: string } }
@@ -9,7 +10,8 @@ type AccountEvent =
   | { kind: 'order'; order: any }
   | { kind: 'futuresBalance'; futuresAvailable: { USDT: string; USDC: string } }
   | { kind: 'futuresPosition'; symbol: string; position: any }
-  | { kind: 'portfolio'; totalPortfolioUSD: number }
+  | { kind: 'portfolio'; totalPortfolioUSD: number; spotEquity?: number; futuresEquity?: number; pnl24h?: number; roi24h?: number }
+  | { kind: 'futuresPnl'; equity: number; pnl: number; roi: number }
 
 export const stream = {
   paths: ['/ws/account'],
@@ -46,8 +48,27 @@ function stopBroadcastingIfNoUsers() {
 async function broadcastPortfolioUpdates() {
   for (const userId of userSockets.keys()) {
     try {
-      const totalUSD = await calculateTotalPortfolioUSD(userId)
-      emitAccountEvent(userId, { kind: 'portfolio', totalPortfolioUSD: totalUSD })
+      const [totalUSD, spotEquity, futuresPnl] = await Promise.all([
+        calculateTotalPortfolioUSD(userId),
+        calculateSpotEquity(userId),
+        futuresPnlService.calculateRealTimePNL(userId)
+      ])
+
+      emitAccountEvent(userId, {
+        kind: 'portfolio',
+        totalPortfolioUSD: totalUSD,
+        spotEquity: spotEquity,
+        futuresEquity: futuresPnl.equity,
+        pnl24h: futuresPnl.pnl,
+        roi24h: futuresPnl.roi
+      })
+
+      emitAccountEvent(userId, {
+        kind: 'futuresPnl',
+        equity: futuresPnl.equity,
+        pnl: futuresPnl.pnl,
+        roi: futuresPnl.roi
+      })
     } catch {
       // Quiet fail for one user
     }

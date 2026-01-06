@@ -8,6 +8,8 @@ export interface UserDocument extends Document {
   profilePicture?: string | null
   addressGroupId?: mongoose.Types.ObjectId | null
   refreshTokenVersion: number
+  lastUsernameChange?: Date | null
+  lastPfpChange?: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -21,6 +23,8 @@ const UserSchema = new Schema<UserDocument>(
     profilePicture: { type: String, default: null },
     addressGroupId: { type: Schema.Types.ObjectId, ref: "AddressGroup", default: null },
     refreshTokenVersion: { type: Number, default: 0 },
+    lastUsernameChange: { type: Date, default: null },
+    lastPfpChange: { type: Date, default: null },
   },
   { timestamps: true }
 )

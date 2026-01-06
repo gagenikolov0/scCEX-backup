@@ -8,11 +8,12 @@ import { FuturesPositionHistory } from '../models/FuturesPositionHistory'
 import { priceService } from '../utils/priceService'
 import { syncFuturesBalances, syncOrder, syncFuturesPosition } from '../utils/emitters'
 import { futuresEngine } from '../utils/futuresEngine'
+import { tradeLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
 
 // Place a futures order
-router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/orders', requireAuth, tradeLimiter, async (req: AuthRequest, res: Response) => {
     const session = await mongoose.startSession()
     try {
         let orderDoc: any = null
@@ -169,7 +170,7 @@ router.post('/orders', requireAuth, async (req: AuthRequest, res: Response) => {
 })
 
 // Cancel a futures order
-router.delete('/orders/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete('/orders/:id', requireAuth, tradeLimiter, async (req: AuthRequest, res: Response) => {
     const session = await mongoose.startSession()
     try {
         let canceledSymbol = ''
@@ -237,7 +238,7 @@ router.get('/history', requireAuth, async (req: AuthRequest, res: Response) => {
 })
 
 // Close a futures position
-router.post('/close-position', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/close-position', requireAuth, tradeLimiter, async (req: AuthRequest, res: Response) => {
     try {
         const userId = (req as any).user?.id
         const { symbol, quantity } = (req as any).body

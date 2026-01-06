@@ -3,7 +3,7 @@ import { FuturesAccount } from '../models/FuturesAccount';
 import { FuturesPosition } from '../models/FuturesPosition';
 import { priceService } from './priceService';
 
-export async function calculateTotalPortfolioUSD(userId: string): Promise<number> {
+export async function calculateSpotEquity(userId: string): Promise<number> {
     const positions = await SpotPosition.find({ userId }).lean();
     let totalUSD = 0;
 
@@ -23,14 +23,19 @@ export async function calculateTotalPortfolioUSD(userId: string): Promise<number
             }
         }
     }
+    return Math.round(totalUSD * 100) / 100;
+}
 
-    // 2. Add Futures Account Balances (Stablecoins)
+export async function calculateFuturesEquity(userId: string): Promise<number> {
+    let totalUSD = 0;
+
+    // 1. Add Futures Account Balances (Stablecoins)
     const futuresAccs = await FuturesAccount.find({ userId }).lean();
     for (const acc of futuresAccs) {
         totalUSD += (acc.available || 0) + (acc.reserved || 0);
     }
 
-    // 3. Add Futures Positions (Equity = Margin + Unrealized PnL)
+    // 2. Add Futures Positions (Equity = Margin + Unrealized PnL)
     const futuresPositions = await FuturesPosition.find({ userId }).lean();
     for (const pos of futuresPositions) {
         totalUSD += (pos.margin || 0);
@@ -49,4 +54,12 @@ export async function calculateTotalPortfolioUSD(userId: string): Promise<number
     }
 
     return Math.round(totalUSD * 100) / 100;
+}
+
+export async function calculateTotalPortfolioUSD(userId: string): Promise<number> {
+    const [spot, futures] = await Promise.all([
+        calculateSpotEquity(userId),
+        calculateFuturesEquity(userId)
+    ]);
+    return Math.round((spot + futures) * 100) / 100;
 }

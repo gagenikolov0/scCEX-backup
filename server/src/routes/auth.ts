@@ -5,6 +5,7 @@ import { User } from "../models/User";
 import { AddressGroup } from "../models/AddressGroup";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { authLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
@@ -13,7 +14,7 @@ const registerSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
-router.post("/register", async (req: Request, res: Response) => {
+router.post("/register", authLimiter, async (req: Request, res: Response) => {
   const parse = registerSchema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: "Invalid input" });
   const { email, password } = parse.data;
@@ -66,7 +67,7 @@ const loginSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
-router.post("/login", async (req: Request, res: Response) => {
+router.post("/login", authLimiter, async (req: Request, res: Response) => {
   const parse = loginSchema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: "Invalid input" });
   const { email, password } = parse.data;
@@ -124,7 +125,7 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
 
-router.post("/change-password", requireAuth, async (req: Request, res: Response) => {
+router.post("/change-password", requireAuth, authLimiter, async (req: Request, res: Response) => {
   const authReq = req as AuthRequest;
   const parse = changePasswordSchema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: "Invalid input" });

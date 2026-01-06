@@ -15,15 +15,19 @@ import {
     Center,
     ThemeIcon,
 } from '@mantine/core'
-import { IconHistory, IconTrendingUp, IconTrendingDown, IconWallet, IconCalendarTime, IconChartBar, IconHash } from '@tabler/icons-react'
+import { IconHistory, IconTrendingUp, IconTrendingDown, IconWallet, IconCalendarTime, IconChartBar, IconHash, IconTarget } from '@tabler/icons-react'
 import { API_BASE } from '../config/api'
 import { useAuth } from '../contexts/AuthContext'
+import { useAccount } from '../contexts/AccountContext'
 import { CountUp } from '../components/CountUp'
+import { PNLCalendar } from '../components/PNLCalendar'
 
 export default function UserInsight() {
     const { username } = useParams()
     const { accessToken } = useAuth()
+    const { pnl24h, roi24h, username: loggedInUsername } = useAccount()
     const [data, setData] = useState<any>(null)
+    const [pnlHistory, setPnlHistory] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -31,12 +35,24 @@ export default function UserInsight() {
         const fetchInsight = async () => {
             setLoading(true)
             try {
-                const res = await fetch(`${API_BASE}/api/user/insight/${username}`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                })
-                if (!res.ok) throw new Error('Trader not found or insight restricted')
-                const json = await res.json()
+                const [insightRes, pnlRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/user/insight/${username}`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    }),
+                    fetch(`${API_BASE}/api/user/futures-pnl/${username}`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    })
+                ])
+
+                if (!insightRes.ok) throw new Error('Trader not found or insight restricted')
+
+                const json = await insightRes.json()
                 setData(json)
+
+                if (pnlRes.ok) {
+                    const pnlJson = await pnlRes.json()
+                    setPnlHistory(pnlJson.history || [])
+                }
             } catch (e: any) {
                 setError(e.message)
             } finally {
@@ -70,19 +86,64 @@ export default function UserInsight() {
                             </Stack>
                         </Group>
 
-                        <Stack gap={0} align="flex-end">
-                            <Text size="xs" fw={700} c="dimmed" tt="uppercase">Estimated Net Worth</Text>
-                            <CountUp
-                                end={data.balances.totalPortfolioUSD}
-                                prefix="$"
-                                decimals={2}
-                                style={{ fontSize: 34 }}
-                                fw={950}
-                                className="text-glow"
-                            />
-                        </Stack>
+                        <Group gap="xl">
+                            {/* 24h Performance (Live if viewing own profile) */}
+                            <Stack gap={0} align="flex-end">
+                                <Text size="xs" fw={700} c="dimmed" tt="uppercase">24h Performance</Text>
+                                <Group gap={6}>
+                                    <Text size="sm" fw={800} color={(username === loggedInUsername ? pnl24h : (pnlHistory[0]?.pnl || 0)) >= 0 ? 'green' : 'red'}>
+                                        {(username === loggedInUsername ? pnl24h : (pnlHistory[0]?.pnl || 0)) >= 0 ? '+' : ''}
+                                        {(username === loggedInUsername ? pnl24h : (pnlHistory[0]?.pnl || 0)).toFixed(2)} USDT
+                                    </Text>
+                                    <Badge color={(username === loggedInUsername ? roi24h : (pnlHistory[0]?.roi || 0)) >= 0 ? 'green' : 'red'} variant="light">
+                                        {(username === loggedInUsername ? roi24h : (pnlHistory[0]?.roi || 0)) >= 0 ? '+' : ''}
+                                        {(username === loggedInUsername ? roi24h : (pnlHistory[0]?.roi || 0)).toFixed(2)}%
+                                    </Badge>
+                                </Group>
+                            </Stack>
+
+                            <Stack gap={0} align="flex-end">
+                                <Text size="xs" fw={700} c="dimmed" tt="uppercase">Estimated Net Worth</Text>
+                                <CountUp
+                                    end={data.balances.totalPortfolioUSD}
+                                    prefix="$"
+                                    decimals={2}
+                                    style={{ fontSize: 34 }}
+                                    fw={950}
+                                    className="text-glow"
+                                />
+                            </Stack>
+                        </Group>
                     </Group>
                 </Paper>
+
+                {/* Performance Stats Overlay */}
+                <Grid>
+                    <Grid.Col span={{ base: 12, md: 4 }}>
+                        <Paper p="md" radius="md" withBorder h="100%">
+                            <Group justify="space-between">
+                                <Text size="xs" fw={700} c="dimmed" tt="uppercase">Win Rate (Recent)</Text>
+                                <IconTarget size={16} color="var(--mantine-color-blue-6)" />
+                            </Group>
+                            <Text size="xl" fw={900}>
+                                {(() => {
+                                    const closed = data.history || [];
+                                    if (closed.length === 0) return '0%';
+                                    const wins = closed.filter((h: any) => h.realizedPnL > 0).length;
+                                    return `${Math.round((wins / closed.length) * 100)}%`;
+                                })()}
+                            </Text>
+                            <Text size="xs" c="dimmed">Based on last {data.history?.length || 0} trades</Text>
+                        </Paper>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 8 }}>
+                        <PNLCalendar
+                            data={pnlHistory}
+                            livePNL={username === loggedInUsername ? pnl24h : undefined}
+                            liveROI={username === loggedInUsername ? roi24h : undefined}
+                        />
+                    </Grid.Col>
+                </Grid>
 
                 <Grid gutter="md">
                     {/* Left Column: Balances & History */}

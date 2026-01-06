@@ -1,0 +1,27 @@
+home page
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Date:      Sun Jan 4 22:10:06 2026 +0100
+#
+# On branch master
+# Your branch is up to date with 'origin/master'.
+#
+# Changes to be committed:
+#	deleted:    web/public/Dog-Cool-PFP.png
+#	modified:   web/public/icon.png
+#	modified:   web/src/components/AssetSelector.tsx
+#	modified:   web/src/components/DataTable.tsx
+#	modified:   web/src/components/FuturesTradeForm.tsx
+#	modified:   web/src/components/Header.tsx
+#	modified:   web/src/components/SharePNLModal.tsx
+#	new file:   web/src/components/SocialTradingVisual.module.css
+#	new file:   web/src/components/SocialTradingVisual.tsx
+#	modified:   web/src/contexts/AccountContext.tsx
+#	modified:   web/src/routes/Futures.tsx
+#	modified:   web/src/routes/Home.tsx
+#	modified:   web/src/routes/Markets.tsx
+#	modified:   web/src/routes/Spot.tsx
+#	modified:   web/src/routes/Wallet.tsx
+#

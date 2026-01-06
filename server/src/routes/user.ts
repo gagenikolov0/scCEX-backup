@@ -7,13 +7,16 @@ import { FuturesPosition } from '../models/FuturesPosition'
 import { AddressGroup } from '../models/AddressGroup'
 import { moveMoney } from '../utils/moneyMovement'
 import { syncStableBalances, syncFuturesBalances } from '../utils/emitters'
-import { calculateTotalPortfolioUSD } from '../utils/portfolio'
+import { calculateTotalPortfolioUSD, calculateSpotEquity } from '../utils/portfolio'
 import { FuturesPositionHistory } from '../models/FuturesPositionHistory'
 import mongoose from "mongoose";
+import { profileLimiter, discoveryLimiter, financeLimiter } from '../middleware/rateLimiter'
+import { FuturesActivity } from '../models/FuturesActivity'
+import { futuresPnlService } from '../utils/pnlService';
 
 const router = Router();
 
-router.patch("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
+router.patch("/profile", requireAuth, profileLimiter, async (req: AuthRequest, res: Response) => {
   const { username, profilePicture } = req.body || {}
   const updates: any = {}
 
@@ -41,11 +44,41 @@ router.patch("/profile", requireAuth, async (req: AuthRequest, res: Response) =>
 
   try {
     const userId = req.user!.id
+    const user = await User.findById(userId)
+
     if (updates.username) {
+      if (user?.lastUsernameChange) {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        if (user.lastUsernameChange > sevenDaysAgo) {
+          const nextAvailable = new Date(user.lastUsernameChange)
+          nextAvailable.setDate(nextAvailable.getDate() + 7)
+          return res.status(429).json({
+            error: `Username can only be changed once every week. Next available: ${nextAvailable.toLocaleDateString()}`
+          })
+        }
+      }
+
       const existing = await User.findOne({ username: updates.username, _id: { $ne: userId } }).lean()
       if (existing) {
         return res.status(409).json({ error: "Username already taken" })
       }
+      updates.lastUsernameChange = new Date()
+    }
+
+    if (updates.profilePicture !== undefined) {
+      if (user?.lastPfpChange) {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        if (user.lastPfpChange > sevenDaysAgo) {
+          const nextAvailable = new Date(user.lastPfpChange)
+          nextAvailable.setDate(nextAvailable.getDate() + 7)
+          return res.status(429).json({
+            error: `Profile picture can only be changed once every week. Next available: ${nextAvailable.toLocaleDateString()}`
+          })
+        }
+      }
+      updates.lastPfpChange = new Date()
     }
 
     await User.updateOne({ _id: userId }, { $set: updates })
@@ -90,8 +123,12 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
       addressGroup = await AddressGroup.findById(user.addressGroupId).lean()
     }
 
-    // Calculate Portfolio USD Value
-    const totalPortfolioUSD = await calculateTotalPortfolioUSD(String(user._id));
+    // Calculate Portfolio USD Value and real-time PNL
+    const [totalPortfolioUSD, spotEquity, futuresPnl] = await Promise.all([
+      calculateTotalPortfolioUSD(String(user._id)),
+      calculateSpotEquity(String(user._id)),
+      futuresPnlService.calculateRealTimePNL(String(user._id))
+    ])
 
     return res.json({
       user: {
@@ -105,14 +142,23 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
         updatedAt: user.updatedAt
       },
       balances: {
-        spotAvailableUSDT: usdtPosition?.available?.toString() ?? '0',
-        spotAvailableUSDC: usdcPosition?.available?.toString() ?? '0',
-        futuresAvailableUSDT: usdtFutures?.available?.toString() ?? '0',
-        futuresAvailableUSDC: usdcFutures?.available?.toString() ?? '0',
         totalPortfolioUSD: Math.round(totalPortfolioUSD * 100) / 100,
+        spotEquity,
+        futuresEquity: futuresPnl.equity,
+        pnl24h: futuresPnl.pnl,
+        roi24h: futuresPnl.roi,
+        spotAvailableUSDT: usdtPosition?.available?.toString() ?? '0',
+        spotReservedUSDT: usdtPosition?.reserved?.toString() ?? '0',
+        spotAvailableUSDC: usdcPosition?.available?.toString() ?? '0',
+        spotReservedUSDC: usdcPosition?.reserved?.toString() ?? '0',
+        futuresAvailableUSDT: usdtFutures?.available?.toString() ?? '0',
+        futuresReservedUSDT: usdtFutures?.reserved?.toString() ?? '0',
+        futuresAvailableUSDC: usdcFutures?.available?.toString() ?? '0',
+        futuresReservedUSDC: usdcFutures?.reserved?.toString() ?? '0',
         positions: positions.map(p => ({
           asset: p.asset,
-          available: p.available?.toString() ?? '0'
+          available: p.available?.toString() ?? '0',
+          reserved: p.reserved?.toString() ?? '0'
         })),
         futuresPositions
       },
@@ -123,7 +169,7 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res: Response) => {
   }
 })
 
-router.get("/search", requireAuth, async (req: AuthRequest, res: Response) => {
+router.get("/search", requireAuth, discoveryLimiter, async (req: AuthRequest, res: Response) => {
   const { q } = req.query
   if (!q || typeof q !== 'string') return res.json({ users: [] })
 
@@ -158,12 +204,16 @@ router.get("/insight/:username", requireAuth, async (req: AuthRequest, res: Resp
       spotPositions,
       futuresAccs,
       futuresPositions,
-      totalPortfolioUSD
+      totalPortfolioUSD,
+      spotEquity,
+      futuresPnl
     ] = await Promise.all([
       SpotPosition.find({ userId }).lean(),
       FuturesAccount.find({ userId }).lean(),
       FuturesPosition.find({ userId }).lean(),
-      calculateTotalPortfolioUSD(userId)
+      calculateTotalPortfolioUSD(userId),
+      calculateSpotEquity(userId),
+      futuresPnlService.calculateRealTimePNL(userId)
     ])
 
     // Get Trade History (Futures)
@@ -177,13 +227,19 @@ router.get("/insight/:username", requireAuth, async (req: AuthRequest, res: Resp
       },
       balances: {
         totalPortfolioUSD: Math.round(totalPortfolioUSD * 100) / 100,
-        spot: spotPositions.map(p => ({
+        spotEquity,
+        futuresEquity: futuresPnl.equity,
+        pnl24h: futuresPnl.pnl,
+        roi24h: futuresPnl.roi,
+        spot: spotPositions.map((p: any) => ({
           asset: p.asset,
-          available: p.available?.toString() ?? '0'
+          available: p.available?.toString() ?? '0',
+          reserved: p.reserved?.toString() ?? '0'
         })),
-        futures: futuresAccs.map(a => ({
+        futures: futuresAccs.map((a: any) => ({
           asset: a.asset,
-          available: a.available?.toString() ?? '0'
+          available: a.available?.toString() ?? '0',
+          reserved: a.reserved?.toString() ?? '0'
         }))
       },
       activePositions: futuresPositions,
@@ -192,6 +248,26 @@ router.get("/insight/:username", requireAuth, async (req: AuthRequest, res: Resp
   } catch (error) {
     console.error('Insight error:', error)
     return res.status(500).json({ error: "Failed to load user insights" })
+  }
+})
+
+router.get("/futures-pnl/:username", requireAuth, async (req: AuthRequest, res: Response) => {
+  const { username } = req.params
+  try {
+    const user = await User.findOne({ username }).lean()
+    if (!user) return res.status(404).json({ error: "User not found" })
+
+    const history = await futuresPnlService.getHistoricalPNL(String(user._id), 180)
+    return res.json({
+      history: history.map((h: any) => ({
+        date: h.date,
+        pnl: h.pnlAmount,
+        roi: h.roi,
+        equity: h.futuresEquity
+      }))
+    })
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch PNL history" })
   }
 })
 
@@ -210,7 +286,7 @@ router.get("/address-group", requireAuth, async (req: AuthRequest, res: Response
   });
 });
 
-router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/transfer', requireAuth, financeLimiter, async (req: AuthRequest, res: Response) => {
   const { asset, from, to, amount } = req.body || {}
   if (!['USDT', 'USDC'].includes(asset)) return res.status(400).json({ error: 'Invalid asset' })
   if (!['spot', 'futures'].includes(from) || !['spot', 'futures'].includes(to) || from === to) return res.status(400).json({ error: 'Invalid direction' })
@@ -236,6 +312,14 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
         await futAcc.save({ session })
         await moveMoney(session, userId, asset, amtNum, 'RECEIVE')
       }
+
+      // Log Futures Activity for PNL accuracy
+      await FuturesActivity.create([{
+        userId,
+        type: from === 'spot' ? 'TRANSFER_IN' : 'TRANSFER_OUT',
+        asset,
+        amount: amtNum
+      }], { session })
     })
 
       // Sync UI
@@ -255,7 +339,7 @@ router.post('/transfer', requireAuth, async (req: AuthRequest, res: Response) =>
   }
 })
 
-router.post('/withdraw', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/withdraw', requireAuth, financeLimiter, async (req: AuthRequest, res: Response) => {
   const { asset, amount, address, network } = req.body || {}
 
   // Basic Validation

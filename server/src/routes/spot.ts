@@ -8,6 +8,7 @@ import { emitAccountEvent } from "../ws/streams/account";
 import { moveMoney } from "../utils/moneyMovement";
 import { priceService } from "../utils/priceService";
 import { syncStableBalances, syncSpotPosition, syncOrder } from "../utils/emitters";
+import { tradeLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
@@ -16,7 +17,7 @@ const router = Router();
 // 4. MAIN ROUTE
 // ==========================================
 
-router.post("/orders", requireAuth, async (req: AuthRequest, res: Response) => {
+router.post("/orders", requireAuth, tradeLimiter, async (req: AuthRequest, res: Response) => {
   const { symbol, side, quantity, price: limitPrice, orderType = "market" } = req.body || {};
 
   // VALIDATION
@@ -146,7 +147,7 @@ router.get("/history", requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // DELETE /api/spot/orders/:id
-router.delete("/orders/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete("/orders/:id", requireAuth, tradeLimiter, async (req: AuthRequest, res: Response) => {
   const orderId = req.params.id;
   if (!orderId) return res.status(400).json({ error: "ID required" });
 

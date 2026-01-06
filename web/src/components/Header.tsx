@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { IconUser, IconSun, IconMoon, IconCurrencyDollar, IconCoin, IconSearch, IconHash, IconWallet, IconArrowUpRight, IconArrowUp } from '@tabler/icons-react'
+import { IconUser, IconSun, IconMoon, IconCurrencyDollar, IconCoin, IconSearch, IconHash, IconWallet, IconArrowUpRight, IconArrowUp, IconActivity } from '@tabler/icons-react'
 import { useEffect, useState, useRef, useMemo } from 'react'
 import {
   Box,
@@ -89,9 +89,7 @@ function MobileNavItem({ title, description, icon, to, onClick }: any) {
 }
 
 function WalletDropdownContent() {
-  const { totalPortfolioUSD, futuresAvailable } = useAccount()
-  const totalFutures = parseFloat(futuresAvailable.USDT) + parseFloat(futuresAvailable.USDC)
-  const totalSpot = totalPortfolioUSD - totalFutures
+  const { totalPortfolioUSD, spotEquity, futuresEquity } = useAccount()
 
   return (
     <Stack gap="md">
@@ -107,8 +105,8 @@ function WalletDropdownContent() {
             className="text-glow"
           />
           <Group gap="xs" mt={4}>
-            <Badge size="xs" variant="dot" color="cyan">Spot: ${totalSpot.toFixed(2)}</Badge>
-            <Badge size="xs" variant="dot" color="blue">Fut: ${totalFutures.toFixed(2)}</Badge>
+            <Badge size="xs" variant="dot" color="cyan">Spot: ${spotEquity.toFixed(2)}</Badge>
+            <Badge size="xs" variant="dot" color="blue">Fut: ${futuresEquity.toFixed(2)}</Badge>
           </Group>
         </Box>
       </UnstyledButton>
@@ -131,15 +129,8 @@ function WalletDropdownContent() {
   )
 }
 
-// Pre-defined asset list
-const ASSETS = [
-  { value: '/futures?base=BTC&quote=USDT', label: 'BTCUSDT Futures', category: 'Futures Assets' },
-  { value: '/futures?base=ETH&quote=USDT', label: 'ETHUSDT Futures', category: 'Futures Assets' },
-  { value: '/futures?base=SOL&quote=USDT', label: 'SOLUSDT Futures', category: 'Futures Assets' },
-  { value: '/futures?base=BNB&quote=USDT', label: 'BNBUSDT Futures', category: 'Futures Assets' },
-  { value: '/spot?base=BTC&quote=USDT', label: 'BTC/USDT Spot', category: 'Spot Assets' },
-  { value: '/spot?base=ETH&quote=USDT', label: 'ETH/USDT Spot', category: 'Spot Assets' },
-];
+// Pre-defined asset list - REMOVED hardcoded BTC references
+const ASSETS: any[] = [];
 
 export default function Header() {
   const navigate = useNavigate()
@@ -148,10 +139,12 @@ export default function Header() {
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300)
   const [userResults, setUserResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const hasRefreshedRef = useRef(false)
 
   const { colorScheme, setColorScheme } = useMantineColorScheme()
   const toggleTheme = () => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')
   const { isAuthed, accessToken } = useAuth()
+  const { username, refreshBalances } = useAccount()
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] = useDisclosure(false)
   const [futuresOpen, { toggle: toggleFutures }] = useDisclosure(false)
   const [spotOpen, { toggle: toggleSpot }] = useDisclosure(false)
@@ -387,7 +380,20 @@ export default function Header() {
                   }}
                 >
                   <Menu.Target>
-                    <UnstyledButton component={Link} to="/wallet" className={classes.trigger}>
+                    <UnstyledButton
+                      component={Link}
+                      to="/wallet"
+                      className={classes.trigger}
+                      onMouseEnter={() => {
+                        if (!hasRefreshedRef.current) {
+                          refreshBalances()
+                          hasRefreshedRef.current = true
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        hasRefreshedRef.current = false
+                      }}
+                    >
                       <Center inline>
                         <Box component="span" mr={5}>Wallet</Box>
                       </Center>
@@ -398,9 +404,22 @@ export default function Header() {
                   </Menu.Dropdown>
                 </Menu>
 
-                <ActionIcon component={Link} to="/settings" variant="subtle" radius="xl" size="lg" aria-label="User settings">
-                  <IconUser size={18} />
-                </ActionIcon>
+                <Menu trigger="hover" openDelay={50} closeDelay={50} width={200} position="bottom-end" radius="md" shadow="md" withinPortal>
+                  <Menu.Target>
+                    <ActionIcon variant="subtle" radius="xl" size="lg" aria-label="User settings">
+                      <IconUser size={18} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Label>Account</Menu.Label>
+                    <Menu.Item component={Link} to="/settings" leftSection={<IconUser size={16} />}>
+                      Settings
+                    </Menu.Item>
+                    <Menu.Item component={Link} to={`/trader/${username}`} leftSection={<IconActivity size={16} />}>
+                      Public Profile (PNL)
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
               </>
             ) : (
               <Group gap="xs" wrap="nowrap">
