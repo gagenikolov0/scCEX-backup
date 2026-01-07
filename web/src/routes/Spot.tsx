@@ -1,5 +1,6 @@
 import { Card, TextInput, Button, Grid, Text, Loader, Tabs, Flex, Box, Group, Stack, SegmentedControl, rem } from '@mantine/core'
 import { IconWallet } from '@tabler/icons-react'
+import { CryptoIcon } from '../components/CryptoIcon'
 import { notifications } from '@mantine/notifications'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
@@ -315,7 +316,16 @@ export default function Spot() {
                   data={positions}
                   emptyMessage="No assets"
                   columns={[
-                    { label: 'Asset', key: 'asset' },
+                    {
+                      label: 'Asset',
+                      key: 'asset',
+                      render: (item) => (
+                        <Group gap="xs">
+                          <CryptoIcon symbol={item.asset} size={24} />
+                          <Text size="sm" fw={700}>{item.asset}</Text>
+                        </Group>
+                      )
+                    },
                     { label: 'Available', key: 'available', render: (item) => getVal(item.available) },
                     { label: 'Reserved', key: 'reserved', render: (item) => getVal(item.reserved) },
                     {

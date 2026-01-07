@@ -12,6 +12,7 @@ import { FuturesPositionHistory } from '../models/FuturesPositionHistory'
 import mongoose from "mongoose";
 import { profileLimiter, discoveryLimiter, financeLimiter } from '../middleware/rateLimiter'
 import { FuturesActivity } from '../models/FuturesActivity'
+import { Withdrawal } from '../models/Withdrawal'
 import { futuresPnlService } from '../utils/pnlService';
 
 const router = Router();
@@ -333,8 +334,12 @@ router.post('/transfer', requireAuth, financeLimiter, async (req: AuthRequest, r
 
     return res.json({ ok: true })
   } catch (e: any) {
-    console.error('Transfer error:', e);
-    return res.status(500).json({ error: e.message || 'Transfer failed', stack: e.stack, details: JSON.stringify(e) })
+    console.error(`[Transfer Error] User: ${req.user?.id}`, {
+      asset, from, to, amount,
+      msg: e.message,
+      stack: e.stack
+    });
+    return res.status(500).json({ error: e.message || 'Transfer failed' })
   } finally {
     await session.endSession()
   }
@@ -348,16 +353,37 @@ router.post('/withdraw', requireAuth, financeLimiter, async (req: AuthRequest, r
   if (!address || typeof address !== 'string' || address.length < 10) return res.status(400).json({ error: 'Invalid address' })
   if (!asset) return res.status(400).json({ error: 'Missing asset' })
 
+  // Fee Calculation (Matching Frontend 10x reduction)
+  let fee = 0
+  switch (asset) {
+    case 'USDT': fee = 0.1; break;
+    case 'USDC': fee = 0.1; break;
+    case 'BTC': fee = 0.00005; break;
+    case 'ETH': fee = 0.0005; break;
+    case 'SOL': fee = 0.001; break;
+    default: fee = 0;
+  }
+
+  const amtNum = parseFloat(amount)
+  if (amtNum <= fee) return res.status(400).json({ error: 'Amount must be greater than fee' })
+
   const session = await mongoose.startSession()
   try {
     const userId = req.user!.id
     await session.withTransaction(async () => {
       // Logic: moveMoney SPEND attempts to deduct from Spot position.
-      // If insufficient funds, it throws Error('Insufficient balance')
-      await moveMoney(session, userId, asset, parseFloat(amount), 'SPEND')
+      await moveMoney(session, userId, asset, amtNum, 'SPEND')
 
-      // TODO: Create a Withdrawal Record to track this request
-      // await Withdrawal.create([...])
+      // Create Withdrawal Record
+      await Withdrawal.create([{
+        userId,
+        asset,
+        network,
+        address,
+        amount: amtNum,
+        fee,
+        status: 'pending' // Simulated
+      }], { session })
     })
 
     // Update Clients
@@ -369,6 +395,20 @@ router.post('/withdraw', requireAuth, financeLimiter, async (req: AuthRequest, r
     return res.status(400).json({ error: e.message || 'Withdrawal failed' })
   } finally {
     await session.endSession()
+  }
+})
+
+router.get('/withdrawals', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id
+    const withdrawals = await Withdrawal.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean()
+
+    return res.json({ withdrawals })
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch withdrawals" })
   }
 })
 

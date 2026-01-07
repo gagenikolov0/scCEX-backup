@@ -289,7 +289,7 @@ export default function Header() {
             aria-label="Home"
             style={{ display: 'flex', alignItems: 'center', marginTop: '-4px' }}
           >
-            <Group gap={6} align="center" wrap="nowrap">
+            <Group gap={4} align="center" wrap="nowrap">
               <HomeIcon size={24} style={{ marginTop: 4 }} />
               <Text
                 visibleFrom="sm"
@@ -422,7 +422,7 @@ export default function Header() {
 
                 <Menu trigger="hover" openDelay={50} closeDelay={50} width={200} position="bottom-end" radius="md" shadow="md" withinPortal zIndex={1005}>
                   <Menu.Target>
-                    <ActionIcon variant="subtle" radius="xl" size="lg" aria-label="User settings">
+                    <ActionIcon variant="subtle" color="gray" radius="xl" size="lg" aria-label="User settings">
                       <IconUser size={18} />
                     </ActionIcon>
                   </Menu.Target>
@@ -444,7 +444,7 @@ export default function Header() {
               </Group>
             )}
 
-            <ActionIcon onClick={toggleTheme} variant="subtle" radius="xl" size="lg" aria-label="Toggle theme">
+            <ActionIcon onClick={toggleTheme} color="gray" variant="subtle" radius="xl" size="lg" aria-label="Toggle theme">
               {colorScheme === 'dark' ? <IconMoon size={18} /> : <IconSun size={18} />}
             </ActionIcon>
           </Group>

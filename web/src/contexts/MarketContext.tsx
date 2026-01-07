@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { API_BASE } from '../config/api'
 
 type SpotStats = {
@@ -35,14 +35,14 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
   const [spotListenerCount, setSpotListenerCount] = useState(0)
   const [futuresListenerCount, setFuturesListenerCount] = useState(0)
 
-  const listen = (type: 'spot' | 'futures') => {
+  const listen = useCallback((type: 'spot' | 'futures') => {
     if (type === 'spot') setSpotListenerCount(c => c + 1)
     else setFuturesListenerCount(c => c + 1)
-  }
-  const unlisten = (type: 'spot' | 'futures') => {
+  }, [])
+  const unlisten = useCallback((type: 'spot' | 'futures') => {
     if (type === 'spot') setSpotListenerCount(c => Math.max(0, c - 1))
     else setFuturesListenerCount(c => Math.max(0, c - 1))
-  }
+  }, [])
 
   // initial load (REST) - The Snapshot for the list in asset selector
   useEffect(() => {

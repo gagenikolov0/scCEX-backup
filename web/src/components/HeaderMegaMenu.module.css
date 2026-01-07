@@ -1,6 +1,6 @@
 .header {
   height: rem(60px);
-  padding-left: var(--mantine-spacing-md);
+  padding-left: var(--mantine-spacing-lg);
   padding-right: var(--mantine-spacing-md);
   border-bottom: 1px solid var(--border-1);
 }

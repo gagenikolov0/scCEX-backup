@@ -238,11 +238,6 @@ export default function AuthHub() {
                     </form>
                   </Box>
                 </SpotlightCard>
-
-                <Group justify="center" gap="xs">
-                  <IconShieldLock size={14} color="gray" />
-                  <Text size="xs" c="dimmed">Quantum-Resistant Encryption Active</Text>
-                </Group>
               </Stack>
             </Box>
           </SimpleGrid>

@@ -14,7 +14,8 @@ export async function moveMoney(
 
   if (action === 'SPEND') {
     const pos = await SpotPosition.findOne({ userId, asset }).session(session);
-    if (!pos || Number(pos.available) < numAmount) {
+    // Add a tiny epsilon (1e-10) to the balance check to prevent strict floating point failure
+    if (!pos || (Number(pos.available) + 1e-10) < numAmount) {
       throw new Error(`Insufficient ${asset} balance`);
     }
     inc = { available: -numAmount };
@@ -24,7 +25,8 @@ export async function moveMoney(
   }
   else if (action === 'RESERVE') {
     const pos = await SpotPosition.findOne({ userId, asset }).session(session);
-    if (!pos || Number(pos.available) < numAmount) {
+    // Add identical epsilon here
+    if (!pos || (Number(pos.available) + 1e-10) < numAmount) {
       throw new Error(`Insufficient ${asset} balance`);
     }
     inc = { available: -numAmount, reserved: numAmount };

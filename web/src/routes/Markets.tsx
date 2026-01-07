@@ -1,11 +1,12 @@
 import { useMemo, useState, useEffect, memo, useRef } from 'react'
-import { ActionIcon, TextInput, Anchor, Box, Flex, Group, Text, Stack, Tabs, Pagination, Container, Title, ThemeIcon, Badge, Paper, SimpleGrid } from '@mantine/core'
+import { ActionIcon, TextInput, Anchor, Box, Flex, Group, Text, Stack, Tabs, Pagination, Container, Title, ThemeIcon, Badge, Paper, SimpleGrid, rem } from '@mantine/core'
 import { Link } from 'react-router-dom'
 import { useMarket } from '../contexts/MarketContext'
 import { ParticlesBackground } from '../components/ParticlesBackground'
 import { SpotlightCard } from '../components/SpotlightCard'
 import { CountUp } from '../components/CountUp'
 import { IconSearch, IconTrendingUp, IconTrendingDown, IconFlame, IconBolt, IconActivity, IconX } from '@tabler/icons-react'
+import { CryptoIcon } from '../components/CryptoIcon'
 
 function splitSymbol(sym: string): { base: string; quote: string } {
   const clean = sym.replace('_', '')
@@ -25,6 +26,7 @@ const FeaturedMarket = memo(({ item, type }: { item: any; type: 'spot' | 'future
         <Stack gap="xs">
           <Group justify="space-between" wrap="nowrap">
             <Group gap={8} wrap="nowrap" style={{ overflow: 'hidden', flex: 1 }}>
+              <CryptoIcon symbol={baseInfo.base} size={24} />
               <Text size="sm" fw={700} truncate>{baseInfo.base}</Text>
               <Badge size="xs" variant="light" color="cyan" style={{ flexShrink: 0 }}>{baseInfo.quote}</Badge>
             </Group>
@@ -34,13 +36,13 @@ const FeaturedMarket = memo(({ item, type }: { item: any; type: 'spot' | 'future
           </Group>
 
           <Box style={{ overflow: 'hidden' }}>
-            <Title order={3} size="h4" ff="monospace" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Title order={3} fz={{ base: 'xl', sm: '24px' }} ff="monospace" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               <CountUp
                 end={parseFloat(String(item.lastPrice || '0'))}
                 decimals={parseFloat(String(item.lastPrice || '0')) < 0.01 ? 8 : 4}
               />
             </Title>
-            <Text size="xs" c={isUp ? 'green' : 'red'} fw={700}>
+            <Text size="xs" c={isUp ? 'green' : 'red'} fw={900}>
               {isUp ? '+' : ''}{change.toFixed(2)}%
             </Text>
           </Box>
@@ -65,45 +67,50 @@ const MarketRow = memo(({ item, type, base, quote }: { item: any, type: 'spot' |
   return (
     <Anchor component={Link} to={`/${type}?base=${base}&quote=${quote}`} underline="never" c="inherit">
       <Flex
-        px={{ base: 'xs', md: 'xl' }}
+        px={{ base: 'md', md: 'xl' }}
         py="md"
         align="center"
         justify="space-between"
         className="market-row-hover no-move"
         style={{
-          borderBottom: '1px solid var(--glass-border)',
+          borderBottom: '1px solid var(--border-1)',
           transition: 'all 0.2s ease',
           cursor: 'pointer'
         }}
       >
-        <Group gap="xs" grow flex={1}>
-          <Group gap={4} wrap="nowrap" style={{ overflow: 'hidden', flex: 1, minWidth: '80px' }}>
-            <Text fw={700} size="sm" truncate>{base}</Text>
-            <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>{quote}</Text>
+        <Group gap="xs" grow flex={1} wrap="nowrap">
+          <Group gap="sm" style={{ flex: '0 0 35%', minWidth: 0 }}>
+            <CryptoIcon symbol={base} size={32} />
+            <Group gap={4} wrap="nowrap">
+              <Text fw={800} size="sm" truncate>{base}</Text>
+              <Text size="10px" c="dimmed" fw={700}>{quote}</Text>
+            </Group>
           </Group>
 
-          <Text ff="monospace" fw={600} ta="right" size="sm">
-            {price}
-          </Text>
+          <Box style={{ flex: 1, textAlign: 'right' }}>
+            <Text ff="monospace" fw={700} size="sm">
+              {price}
+            </Text>
+          </Box>
 
-          <Box ta="right">
+          <Box style={{ flex: '0 0 90px', textAlign: 'right' }}>
             <Badge
               variant="light"
               color={changeColor}
               radius="sm"
               size="sm"
-              style={{ minWidth: '60px', fontVariantNumeric: 'tabular-nums' }}
+              style={{ width: '80px', fontVariantNumeric: 'tabular-nums' }}
             >
               {isUp ? '+' : ''}{changeNum.toFixed(2)}%
             </Badge>
           </Box>
 
-          <Stack gap={0} ta="right" visibleFrom="md">
+          <Stack gap={0} ta="right" style={{ flex: '0 0 120px' }}>
             <Text size="xs" c="dimmed" ff="monospace">H: {high}</Text>
             <Text size="xs" c="dimmed" ff="monospace">L: {low}</Text>
           </Stack>
 
-          <Box ta="right" visibleFrom="lg">
+          <Box ta="right" style={{ flex: '0 0 120px' }}>
             <Text size="sm" ff="monospace" c="dimmed">{vol}</Text>
           </Box>
         </Group>
@@ -126,34 +133,38 @@ const MarketTable = memo(({ data, type }: { data: any[], type: 'spot' | 'futures
 
   return (
     <Box>
-      <Paper radius="lg" className="glass-card no-move" style={{ overflow: 'hidden' }}>
-        {/* Table Header */}
-        <Flex px={{ base: 'xs', md: 'xl' }} py="md" bg="var(--mantine-color-default-hover)" style={{ borderBottom: '1px solid var(--glass-border)' }}>
-          <Group gap="xs" grow flex={1}>
-            <Text size="xs" fw={700} c="dimmed" tt="uppercase">Market</Text>
-            <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right">Price</Text>
-            <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right">24h Change</Text>
-            <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right" visibleFrom="md">High / Low</Text>
-            <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right" visibleFrom="lg">Volume</Text>
-          </Group>
-        </Flex>
-
-        <Box style={{ minHeight: '400px' }}>
-          {pageData.length > 0 ? (
-            pageData.map(item => {
-              const baseInfo = splitSymbol(item.symbol)
-              return <MarketRow key={`${type}-${item.symbol}`} item={item} type={type} base={baseInfo.base} quote={baseInfo.quote} />
-            })
-          ) : (
-            <Flex justify="center" align="center" h={200}>
-              <Text c="dimmed" size="sm">No assets found</Text>
+      <Paper radius="lg" style={{ overflow: 'hidden', background: 'var(--bg-1)', border: '1px solid var(--border-1)' }}>
+        <Box style={{ overflowX: 'auto' }}>
+          <Box style={{ minWidth: '800px' }}>
+            {/* Table Header */}
+            <Flex px={{ base: 'md', md: 'xl' }} py="md" bg="var(--bg-2)" style={{ borderBottom: '1px solid var(--border-1)' }}>
+              <Group gap="xs" grow flex={1} wrap="nowrap">
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ flex: '0 0 35%' }}>Market</Text>
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right" style={{ flex: 1 }}>Price</Text>
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right" style={{ flex: '0 0 90px' }}>Change</Text>
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right" style={{ flex: '0 0 120px' }}>High / Low</Text>
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" ta="right" style={{ flex: '0 0 120px' }}>Volume</Text>
+              </Group>
             </Flex>
-          )}
+
+            <Box style={{ minHeight: '400px' }}>
+              {pageData.length > 0 ? (
+                pageData.map(item => {
+                  const baseInfo = splitSymbol(item.symbol)
+                  return <MarketRow key={`${type}-${item.symbol}`} item={item} type={type} base={baseInfo.base} quote={baseInfo.quote} />
+                })
+              ) : (
+                <Flex justify="center" align="center" h={200}>
+                  <Text c="dimmed" size="sm">No assets found</Text>
+                </Flex>
+              )}
+            </Box>
+          </Box>
         </Box>
 
         {totalPages > 1 && (
-          <Flex justify="center" p="xl" bg="var(--mantine-color-default-hover)" style={{ borderTop: '1px solid var(--glass-border)' }}>
-            <Pagination total={totalPages} value={page} onChange={setPage} color="cyan" radius="xl" />
+          <Flex justify="center" p="xl" bg="var(--bg-2)" style={{ borderTop: '1px solid var(--border-1)' }}>
+            <Pagination total={totalPages} value={page} onChange={setPage} color="blue" radius="xl" />
           </Flex>
         )}
       </Paper>
@@ -215,13 +226,22 @@ export default function Markets() {
     <Box style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 60px)' }}>
       <ParticlesBackground />
 
-      <Container size="xl" py="xl" px={{ base: 'md', md: 'md' }} style={{ position: 'relative', zIndex: 1 }}>
-        <Stack gap={40}>
+      <Container size="xl" py={{ base: 'md', md: 'xl' }} px={{ base: 'xs', sm: 'md' }} style={{ position: 'relative', zIndex: 1 }}>
+        <Stack gap="xl">
           {/* Header & Search */}
-          <Group justify="space-between" align="flex-end">
-            <Stack gap={4}>
-              <Title order={1} size={42}>Market Explorer</Title>
-              <Text c="dimmed" size="lg">Real-time data for over 1000+ trading pairs</Text>
+          <Box
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              gap: rem(20),
+              flexWrap: 'wrap'
+            }}
+          >
+            <Stack gap={4} style={{ flex: 1, minWidth: rem(300) }}>
+              <Title order={1} fz={{ base: 32, md: 42 }} lh={1.1} fw={900}>Market Explorer</Title>
+              <Text c="dimmed" size="lg" fz={{ base: 'md', md: 'lg' }}>Real-time data for over 1000+ trading pairs</Text>
             </Stack>
             <TextInput
               ref={searchRef}
@@ -255,7 +275,7 @@ export default function Markets() {
               rightSectionWidth={110}
               value={q}
               onChange={e => setQ(e.currentTarget.value)}
-              maw={450}
+              maw={{ base: '100%', md: 450 }}
               w="100%"
               radius="md"
               size="lg"
@@ -274,7 +294,7 @@ export default function Markets() {
                 }
               }}
             />
-          </Group>
+          </Box>
 
           {/* Featured Row */}
           <Box>
@@ -283,9 +303,24 @@ export default function Markets() {
               <Text fw={700} tt="uppercase" size="sm" c="dimmed">Featured Markets</Text>
             </Group>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
-              {hotMarkets.map(item => (
-                <FeaturedMarket key={item.symbol} item={item} type={spotStats.some(s => s.symbol === item.symbol) ? 'spot' : 'futures'} />
-              ))}
+              {hotMarkets.length > 0 ? (
+                hotMarkets.map(item => (
+                  <FeaturedMarket key={item.symbol} item={item} type={spotStats.some(s => s.symbol === item.symbol) ? 'spot' : 'futures'} />
+                ))
+              ) : (
+                Array(4).fill(0).map((_, i) => (
+                  <Paper key={i} radius="md" p="md" style={{ background: 'var(--bg-1)', border: '1px solid var(--border-1)', height: rem(100) }}>
+                    <Stack gap="xs">
+                      <Group justify="space-between">
+                        <Box h={14} w={60} bg="var(--bg-2)" style={{ borderRadius: 4 }} />
+                        <Box h={18} w={18} bg="var(--bg-2)" style={{ borderRadius: 4 }} />
+                      </Group>
+                      <Box h={24} w="80%" bg="var(--bg-2)" style={{ borderRadius: 4 }} />
+                      <Box h={12} w="30%" bg="var(--bg-2)" style={{ borderRadius: 4 }} />
+                    </Stack>
+                  </Paper>
+                ))
+              )}
             </SimpleGrid>
           </Box>
 
@@ -293,16 +328,24 @@ export default function Markets() {
           <Box>
             <Tabs value={activeTab} onChange={setActiveTab} variant="unstyled">
               <Box
-                className="glass-card"
-                p={4}
+                className="market-tabs-container"
                 mb="lg"
                 style={{
+                  maxWidth: '100vw',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  WebkitOverflowScrolling: 'touch',
+                  padding: '4px',
                   borderRadius: '16px',
-                  display: 'inline-block',
-                  border: '1px solid var(--glass-border)'
+                  border: '1px solid var(--border-1)',
+                  background: 'var(--bg-1)',
+                  marginRight: rem(-16),
+                  marginLeft: rem(-16),
+                  paddingRight: rem(16),
+                  paddingLeft: rem(16),
                 }}
               >
-                <Tabs.List style={{ gap: '4px', border: 'none' }}>
+                <Tabs.List style={{ gap: '4px', border: 'none', flexWrap: 'nowrap', width: 'max-content' }}>
                   {[
                     { val: 'spot-usdt', label: 'Spot', quote: 'USDT', icon: IconBolt, count: spotUSDT.length },
                     { val: 'spot-usdc', label: 'Spot', quote: 'USDC', icon: IconBolt, count: spotUSDC.length },

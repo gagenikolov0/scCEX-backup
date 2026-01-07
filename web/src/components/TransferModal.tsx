@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Modal, Button, TextInput, Group, Text, Stack, Box, ActionIcon, UnstyledButton, Menu } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { API_BASE } from '../config/api'
 import { useAccount } from '../contexts/AccountContext'
 import TradeSlider from './TradeSlider'
@@ -57,12 +58,21 @@ export default function TransferModal({ opened, onClose, currentSide, initialAss
     setPercent(0)
   }
 
+  const floorToFixed = (num: number, fixed: number) => {
+    const re = new RegExp('^-?\\d+(?:\\.\\d{0,' + (fixed || -1) + '})?')
+    const match = num.toString().match(re)
+    return match ? match[0] : num.toFixed(fixed)
+  }
+
   const handleSliderChange = (val: number) => {
     setPercent(val)
     if (val === 100) {
-      setAmount(maxAmount.toFixed(8).replace(/\.?0+$/, ''))
+      // Use raw maxAmount string representation if possible to avoid rounding
+      setAmount(maxAmount.toString().replace(/\.?0+$/, ''))
     } else {
-      setAmount(((maxAmount * val) / 100).toFixed(8).replace(/\.?0+$/, ''))
+      // Floor the calculation to avoid "Insufficient balance" due to 0.00000001 overages
+      const calculated = (maxAmount * val) / 100
+      setAmount(floorToFixed(calculated, 8).replace(/\.?0+$/, ''))
     }
   }
 
@@ -80,9 +90,30 @@ export default function TransferModal({ opened, onClose, currentSide, initialAss
         credentials: 'include',
         body: JSON.stringify({ asset, from: fromWallet, to: toWallet, amount })
       })
-      if (!res.ok) return
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Transfer failed' }))
+        notifications.show({
+          title: 'Transfer Failed',
+          message: errorData.error || 'Something went wrong',
+          color: 'red'
+        })
+        return
+      }
+
+      notifications.show({
+        title: 'Transfer Successful',
+        message: `Successfully transferred ${amount} ${asset} from ${fromWallet} to ${toWallet}.`,
+        color: 'green'
+      })
+
       onTransferred && onTransferred()
       onClose()
+    } catch (err: any) {
+      notifications.show({
+        title: 'Transfer Error',
+        message: err.message || 'Network error occurred',
+        color: 'red'
+      })
     } finally {
       setSubmitting(false)
     }

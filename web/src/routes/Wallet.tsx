@@ -1,4 +1,4 @@
-import { Group, Text, Stack, Badge, Paper, Box, Flex, SimpleGrid, ThemeIcon, Progress, RingProgress, Center, Table, Container, Loader, Divider, Button } from '@mantine/core'
+import { Group, Text, Stack, Badge, Paper, Box, Flex, SimpleGrid, Progress, RingProgress, Center, Table, Container, Loader, Divider, Button, Menu, SegmentedControl } from '@mantine/core'
 import { useAccount } from '../contexts/AccountContext'
 import { useAuth } from '../contexts/AuthContext'
 import { API_BASE } from '../config/api'
@@ -6,28 +6,13 @@ import { PNLCalendar } from '../components/PNLCalendar'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { formatBalance } from '../lib/utils'
 import { ParticlesBackground } from '../components/ParticlesBackground'
-import { IconWallet, IconChartPie, IconActivity, IconBrandTether, IconCurrencyBitcoin, IconCurrencyEthereum, IconCurrencySolana, IconCircle, IconArrowUpRight, IconArrowsLeftRight } from '@tabler/icons-react'
+import { IconWallet, IconChartPie, IconActivity, IconArrowUpRight, IconArrowsLeftRight, IconChevronDown } from '@tabler/icons-react'
+import { CryptoIcon } from '../components/CryptoIcon'
 import TransferModal from '../components/TransferModal'
 import { useEffect, useState } from 'react'
 import { useMarket } from '../contexts/MarketContext'
 
-// Helper to map assets to icons
-const getAssetIcon = (asset: string) => {
-  if (asset === 'USDT' || asset === 'USDC') return IconBrandTether;
-  if (asset === 'BTC') return IconCurrencyBitcoin;
-  if (asset === 'ETH') return IconCurrencyEthereum;
-  if (asset === 'SOL') return IconCurrencySolana;
-  return IconCircle; // Generic
-}
-
-const getAssetColor = (asset: string) => {
-  if (asset === 'USDT') return 'green';
-  if (asset === 'USDC') return 'blue';
-  if (asset === 'BTC') return 'orange';
-  if (asset === 'ETH') return 'grape';
-  if (asset === 'SOL') return 'cyan';
-  return 'gray';
-}
+// Wallet assets display
 
 export default function Wallet() {
   const { spotAvailable, futuresAvailable, positions, username, pnl24h, roi24h, spotEquity, futuresEquity, totalPortfolioUSD: contextTotalPortfolioUSD } = useAccount()
@@ -99,7 +84,7 @@ export default function Wallet() {
         return (
           <Stack gap="xl">
             {/* Hero Balance Card */}
-            <Paper className="glass-card no-move" style={{ padding: 'var(--wallet-hero-p)', position: 'relative', overflow: 'hidden' }} radius="lg">
+            <Paper className="glass-card no-move" style={{ padding: '40px', position: 'relative', overflow: 'hidden' }} radius="lg">
               <Box style={{
                 position: 'absolute', top: '-20%', right: '-10%', width: '300px', height: '300px',
                 background: 'radial-gradient(circle, rgba(50, 255, 100, 0.15) 0%, transparent 70%)',
@@ -111,7 +96,7 @@ export default function Wallet() {
                   <Text c="dimmed" size="lg" fw={500}>Estimated Total Value</Text>
                   <Flex align="center" gap="sm">
                     <Text
-                      fz={38}
+                      size="32px"
                       fw={900}
                       lh={1}
                       className="text-glow"
@@ -215,12 +200,12 @@ export default function Wallet() {
         return (
           <Stack gap="xl">
             {/* Tab Hero Balance */}
-            <Paper className="glass-card no-move" p="xl" radius="lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <Paper className="glass-card no-move" p="40px" radius="lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
               <Group justify="space-between" align="center">
-                <Stack gap={0}>
-                  <Text size="xs" c="dimmed" fw={700} tt="uppercase" mb="xs">Total Balance</Text>
+                <Stack gap="xs">
+                  <Text size="lg" c="dimmed" fw={500}>Total Balance</Text>
                   <Group gap="xs" align="flex-baseline">
-                    <Text size="32px" fw={900} className="text-glow">
+                    <Text size="32px" fw={900} className="text-glow" style={{ letterSpacing: '-0.02em', lineHeight: 1 }}>
                       ${tabTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
                     <Text size="sm" c="dimmed" fw={600}>USDT</Text>
@@ -275,16 +260,11 @@ export default function Wallet() {
                     const total = parseFloat(available || '0') + parseFloat(reserved || '0')
                     const isStable = ['USDT', 'USDC'].includes(asset)
 
-                    const AssetIcon = getAssetIcon(asset)
-                    const color = getAssetColor(asset)
-
                     return (
                       <Table.Tr key={asset} className="glass-card-hover" style={{ borderRadius: '12px', background: 'rgba(255,255,255,0.01)' }}>
                         <Table.Td style={{ border: 'none', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>
                           <Group gap="sm">
-                            <ThemeIcon size={32} radius="xl" variant="light" color={color}>
-                              <AssetIcon size={18} />
-                            </ThemeIcon>
+                            <CryptoIcon symbol={asset} size={32} />
                             <Box>
                               <Text fw={700} size="sm">{asset}</Text>
                               <Text size="xs" c="dimmed">{isStable ? 'Stablecoin' : 'Digital Asset'}</Text>
@@ -303,15 +283,72 @@ export default function Wallet() {
                           </Text>
                         </Table.Td>
                         <Table.Td style={{ border: 'none', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }} ta="right">
-                          <Button
-                            variant="subtle"
-                            color="blue"
-                            size="compact-xs"
-                            fw={700}
-                            onClick={() => navigate(isSpot ? `/trade/${asset}_USDT` : `/futures/${asset}_USDT`)}
-                          >
-                            Trade
-                          </Button>
+                          {!isSpot ? (
+                            <Button
+                              variant="subtle"
+                              color="blue"
+                              size="compact-xs"
+                              fw={700}
+                              onClick={() => {
+                                // Futures: Always go to BTC/[Quote] for now, or if it's a base asset, to that asset.
+                                // Assuming wallet mostly shows Quotes (USDT/USDC).
+                                const quote = asset === 'USDC' ? 'USDC' : 'USDT'
+                                const base = (asset !== 'USDT' && asset !== 'USDC') ? asset : 'BTC'
+                                navigate(`/futures?base=${base}&quote=${quote}`)
+                              }}
+                            >
+                              Trade
+                            </Button>
+                          ) : asset === 'USDT' ? (
+                            <Button
+                              variant="subtle"
+                              color="gray"
+                              size="compact-xs"
+                              fw={700}
+                              component={Link}
+                              to="/deposit"
+                            >
+                              Deposit
+                            </Button>
+                          ) : asset === 'USDC' ? (
+                            <Button
+                              variant="subtle"
+                              color="blue"
+                              size="compact-xs"
+                              fw={700}
+                              onClick={() => navigate(`/spot?base=USDC&quote=USDT`)}
+                            >
+                              Trade
+                            </Button>
+                          ) : (
+                            <Menu shadow="md" width={140} position="bottom-end">
+                              <Menu.Target>
+                                <Button
+                                  variant="subtle"
+                                  color="blue"
+                                  size="compact-xs"
+                                  fw={700}
+                                  rightSection={<IconChevronDown size={12} />}
+                                >
+                                  Trade
+                                </Button>
+                              </Menu.Target>
+
+                              <Menu.Dropdown>
+                                <Menu.Label>Select Market</Menu.Label>
+                                <Menu.Item
+                                  onClick={() => navigate(`/spot?base=${asset}&quote=USDT`)}
+                                >
+                                  {asset} / USDT
+                                </Menu.Item>
+                                <Menu.Item
+                                  onClick={() => navigate(`/spot?base=${asset}&quote=USDC`)}
+                                >
+                                  {asset} / USDC
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          )}
                         </Table.Td>
                       </Table.Tr>
                     )
@@ -366,6 +403,18 @@ export default function Wallet() {
         {/* Main Content */}
         <Box flex={1} p={{ base: 'md', md: 'xl' }}>
           <Container size="xl" px={{ base: 0, md: 'md' }}>
+            <Box hiddenFrom="sm" mb="md">
+              <SegmentedControl
+                fullWidth
+                value={activeTab}
+                onChange={setActiveTab}
+                data={[
+                  { label: 'Overview', value: 'overview' },
+                  { label: 'Spot', value: 'spot' },
+                  { label: 'Futures', value: 'futures' }
+                ]}
+              />
+            </Box>
             {renderContent()}
           </Container>
         </Box>

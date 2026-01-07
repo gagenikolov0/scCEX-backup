@@ -4,18 +4,16 @@ import {
     Text,
     TextInput,
     Group,
-    UnstyledButton,
-    ThemeIcon
+    UnstyledButton
 } from '@mantine/core'
 import {
     IconSearch,
     IconX,
-    IconActivity,
     IconChevronDown,
-    IconChevronUp,
-    IconBolt
+    IconChevronUp
 } from '@tabler/icons-react'
 import { Virtuoso } from 'react-virtuoso'
+import { CryptoIcon } from './CryptoIcon'
 
 interface AssetSelectorProps {
     currentSymbol: string
@@ -56,9 +54,7 @@ const AssetRow = React.memo(({
         >
             <Group justify="space-between" wrap="nowrap">
                 <Group gap="xs" wrap="nowrap">
-                    <ThemeIcon color="gray" variant="light" size="sm" radius="xl">
-                        <IconActivity size={12} />
-                    </ThemeIcon>
+                    <CryptoIcon symbol={base} size={24} />
                     <Box>
                         <Group gap={4}>
                             <Text size="sm" fw={700}>{base}</Text>
@@ -148,23 +144,16 @@ export const AssetSelector = React.memo(({ currentSymbol, currentQuote, market, 
                     transition: 'all 0.2s ease'
                 }}
             >
-                <Group gap="md">
-                    <ThemeIcon
-                        variant="light"
-                        color={market === 'futures' ? 'orange' : 'blue'}
-                        size="md"
-                        radius="md"
-                    >
-                        {market === 'futures' ? <IconActivity size={18} /> : <IconBolt size={18} />}
-                    </ThemeIcon>
-                    <Box>
-                        <Group gap={4}>
-                            <Text fw={700} size="xl" c="var(--mantine-color-text)">{currentSymbol}{currentQuote}</Text>
-                            <Box style={{ color: 'var(--mantine-color-dimmed)' }}>
+                <Group gap="md" align="center">
+                    <CryptoIcon symbol={currentSymbol} size={32} />
+                    <Box style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <Group gap={4} align="center">
+                            <Text fw={700} size="xl" c="var(--mantine-color-text)" style={{ lineHeight: 1 }}>{currentSymbol}{currentQuote}</Text>
+                            <Box style={{ color: 'var(--mantine-color-dimmed)', display: 'flex', alignItems: 'center' }}>
                                 {isOpen ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
                             </Box>
                         </Group>
-                        <Text size="10px" c="dimmed" tt="uppercase" fw={700} style={{ letterSpacing: '1px' }}>
+                        <Text size="10px" c="dimmed" tt="uppercase" fw={700} style={{ letterSpacing: '1px', marginTop: '2px', lineHeight: 1 }}>
                             {market === 'futures' ? 'Perpetual' : 'Spot Market'}
                         </Text>
                     </Box>

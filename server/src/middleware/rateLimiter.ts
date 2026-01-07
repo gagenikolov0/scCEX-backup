@@ -3,9 +3,9 @@ import { type Request, type Response } from 'express';
 import { AuthRequest } from './auth';
 
 // Helper to get user ID for rate limiting if authenticated, otherwise fallback to IP
-const keyGenerator = (req: Request) => {
+const keyGenerator = (req: Request): string => {
     const authReq = req as AuthRequest;
-    return authReq.user?.id || req.ip || 'anonymous';
+    return (authReq.user?.id || req.ip || 'anonymous').toString();
 };
 
 /**
@@ -18,7 +18,8 @@ export const authLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
-    keyGenerator: (req) => req.ip || 'anonymous'
+    keyGenerator: (req) => req.ip || 'anonymous',
+    validate: { ip: false }
 });
 
 /**
@@ -31,7 +32,8 @@ export const profileLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Profile update limit reached. Please try again tomorrow.' },
-    keyGenerator
+    keyGenerator,
+    validate: { ip: false }
 });
 
 /**
@@ -44,7 +46,8 @@ export const financeLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Financial operation limit reached. Please try again in an hour.' },
-    keyGenerator
+    keyGenerator,
+    validate: { ip: false }
 });
 
 /**
@@ -57,7 +60,8 @@ export const tradeLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Trading rate limit exceeded. Please slow down.' },
-    keyGenerator
+    keyGenerator,
+    validate: { ip: false }
 });
 
 /**
@@ -70,5 +74,6 @@ export const discoveryLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Search rate limit reached.' },
-    keyGenerator
+    keyGenerator,
+    validate: { ip: false }
 });

@@ -318,17 +318,22 @@ export default function Futures() {
                     {
                       label: 'Trading Pair',
                       key: 'symbol',
-                      render: (item) => (
-                        <Flex direction="column" lh={1.2} gap={0}>
-                          <Text size="sm" fw={700}>{cleanSymbol(item.symbol)}</Text>
-                          <Group gap={2}>
-                            <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
-                            <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
-                              {item.side}
-                            </Text>
+                      render: (item) => {
+                        const base = cleanSymbol(item.symbol)
+                        return (
+                          <Group gap="sm" wrap="nowrap">
+                            <Flex direction="column" lh={1.2} gap={0}>
+                              <Text size="sm" fw={700}>{base}</Text>
+                              <Group gap={2}>
+                                <Text size="xxs" c="dimmed" fw={500}>{item.leverage}x</Text>
+                                <Text size="xxs" color={item.side === 'long' ? 'var(--green)' : 'var(--red)'} fw={700} tt="uppercase">
+                                  {item.side}
+                                </Text>
+                              </Group>
+                            </Flex>
                           </Group>
-                        </Flex>
-                      )
+                        )
+                      }
                     },
                     { label: 'Size (Qty)', key: 'quantity', render: (item) => Number(item.quantity).toFixed(4) },
                     {
