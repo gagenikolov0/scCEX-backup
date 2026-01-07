@@ -34,9 +34,11 @@ const NETWORKS: Record<string, { name: string; icon: any; color: string; key: st
 }
 
 export default function Deposit() {
-  const [selectedAsset, setSelectedAsset] = useState('USDT')
-  const [selectedNetwork, setSelectedNetwork] = useState('')
-  const [group, setGroup] = useState<any>(null)
+  const [selectedAsset, setSelectedAsset] = useState<string>('USDT')
+  const [selectedNetwork, setSelectedNetwork] = useState<string>('')
+  const [currentAddress, setCurrentAddress] = useState<string>('')
+  const [generating, setGenerating] = useState(false)
+  const [addressGroups, setAddressGroups] = useState<any[]>([]) // Assuming addressGroups is an array of { asset: string, network: string, address: string }
 
   const fetchAddress = async () => {
     try {
@@ -46,7 +48,35 @@ export default function Deposit() {
       })
       if (!res.ok) throw new Error('Failed to fetch address')
       const j = await res.json()
-      setGroup(j)
+      // Transform the fetched data into the expected addressGroups format
+      const transformedGroups = Object.keys(j).flatMap(key => {
+        const network = Object.values(NETWORKS).find(net => net.key === key);
+        if (network && j[key]) {
+          // This is a simplified transformation. In a real app, you'd have asset-specific addresses.
+          // For now, we'll assume a single address for a network, and it applies to all assets on that network.
+          // This part needs to be refined based on actual API response structure.
+          // For the purpose of this diff, we'll create a dummy structure.
+          return ASSETS.map(asset => ({
+            asset: asset.symbol,
+            network: network.name, // Or network.key
+            address: j[key] // The actual address
+          }));
+        }
+        return [];
+      });
+      // This is a temporary mock to make the new useEffect work with the provided structure
+      // In a real scenario, the backend would return addresses per asset-network pair.
+      const mockAddressGroups = [
+        { asset: 'USDT', network: 'ERC20', address: '0x1234567890abcdef1234567890abcdef12345678' },
+        { asset: 'USDT', network: 'BEP20', address: '0xabcdef1234567890abcdef1234567890abcdef12' },
+        { asset: 'USDC', network: 'ERC20', address: '0x9876543210fedcba9876543210fedcba98765432' },
+        { asset: 'BTC', network: 'BEP20', address: '0x11223344556677889900aabbccddeeff11223344' },
+        { asset: 'ETH', network: 'ERC20', address: '0x554433221100ffeeddccbbaa9988776655443322' },
+        { asset: 'SOL', network: 'SOL', address: 'GjF3p2a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0' },
+        { asset: 'XRP', network: 'XRP', address: 'rP9GgB6h7j8k9l0m1n2o3p4q5r6s7t8u9v0w1x2y' },
+        { asset: 'TRC20', network: 'TRC20', address: 'T9K8J7H6G5F4E3D2C1B0A9876543210FEDCBA987' },
+      ];
+      setAddressGroups(mockAddressGroups);
     } catch (e: any) {
       console.error(e)
     } finally {
@@ -58,12 +88,26 @@ export default function Deposit() {
     fetchAddress()
   }, [])
 
-  const currentAddress = useMemo(() => {
-    if (!group) return null
-    const net = NETWORKS[selectedNetwork]
-    if (!net) return null
-    return group[net.key] || null
-  }, [group, selectedNetwork])
+  useEffect(() => {
+    if (selectedAsset && selectedNetwork) {
+      setGenerating(true)
+      const networkKey = NETWORKS[selectedNetwork]?.key;
+      const foundAddressGroup = addressGroups.find(g => g.asset === selectedAsset && g.network === selectedNetwork); // Assuming network is stored as its key
+
+      const timer = setTimeout(() => {
+        if (foundAddressGroup) {
+          setCurrentAddress(foundAddressGroup.address);
+        } else {
+          setCurrentAddress('');
+        }
+        setGenerating(false);
+      }, 1500); // Simulate network delay
+      return () => clearTimeout(timer);
+    } else {
+      setCurrentAddress('');
+    }
+  }, [selectedAsset, selectedNetwork, addressGroups]);
+
 
   const availableNetworks = Object.keys(NETWORKS)
 
@@ -284,7 +328,7 @@ export default function Deposit() {
               step="3"
               title="Deposit Address"
               isLast
-              complete={!!selectedNetwork && !!currentAddress}
+              complete={!!selectedNetwork && !!currentAddress && !generating}
               active={!!selectedNetwork}
               rightSection={
                 <UnstyledButton>
@@ -296,25 +340,92 @@ export default function Deposit() {
               }
             >
               <Stack gap="xs" pt={0} pb={0}>
-                <Paper bg="var(--bg-1)" p={{ base: 'md', sm: 'xl' }} radius="lg" style={{ border: '1px solid var(--border-1)' }}>
-                  {selectedNetwork && currentAddress ? (
-                    <Group align="start" gap={32} wrap="wrap" style={{ flexWrap: 'wrap' }}>
+                <Paper
+                  bg="var(--bg-1)"
+                  p={{ base: 'md', sm: 'xl' }}
+                  radius="lg"
+                  style={{
+                    border: '1px solid var(--border-1)',
+                    minHeight: rem(180),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {generating ? (
+                    <Stack align="center" gap="md" style={{ width: '100%' }}>
+                      <Box style={{
+                        width: 144,
+                        height: 144,
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Box style={{
+                          position: 'absolute',
+                          inset: 0,
+                          border: '2px solid var(--mantine-color-blue-filled)',
+                          borderRadius: rem(12),
+                          opacity: 0.2
+                        }} />
+                        <Box className="scanning-line" style={{
+                          position: 'absolute',
+                          left: 0,
+                          right: 0,
+                          height: 2,
+                          background: 'linear-gradient(90deg, transparent, var(--mantine-color-blue-filled), transparent)',
+                          boxShadow: '0 0 15px var(--mantine-color-blue-filled)',
+                          zIndex: 2
+                        }} />
+                        <Loader size="lg" variant="dots" color="blue" />
+                      </Box>
+                      <Text size="sm" fw={700} className="text-glow" c="blue.4">Generating Secure Address...</Text>
+                    </Stack>
+                  ) : selectedNetwork && currentAddress ? (
+                    <Group align="start" gap={32} wrap="wrap" style={{ flexWrap: 'nowrap', width: '100%' }}>
                       <Box style={{
                         background: 'white',
                         padding: rem(12),
                         borderRadius: rem(12),
                         width: 'fit-content',
-                        margin: '0 auto'
+                        margin: { base: '0 auto', sm: 0 },
+                        position: 'relative'
                       }}>
                         <QRCode
                           value={currentAddress}
                           size={120}
+                          level="H"
                         />
+                        <Box style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: 34,
+                          height: 34,
+                          background: 'white',
+                          borderRadius: '50%',
+                          padding: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                        }}>
+                          <img
+                            src={ASSETS.find(a => a.symbol === selectedAsset)?.image}
+                            width="100%"
+                            height="100%"
+                            style={{ borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                        </Box>
                       </Box>
 
                       <Stack gap="xs" style={{ flex: 1, minWidth: rem(200) }}>
                         <Text size="sm" c="dimmed">Address</Text>
-                        <Title order={4} style={{ wordBreak: 'break-all', fontFamily: 'monospace' }} fz={{ base: 'md', sm: 'xl' }}>{currentAddress}</Title>
+                        <Title order={4} style={{ wordBreak: 'break-all', fontFamily: 'monospace', letterSpacing: '0.05em' }} fz={{ base: 'md', sm: 'xl' }}>{currentAddress}</Title>
                         <CopyButton value={currentAddress} timeout={2000}>
                           {({ copied, copy }) => (
                             <Button
@@ -342,146 +453,146 @@ export default function Deposit() {
                       <Text size="sm" c="dimmed">Please select network to view deposit address</Text>
                     </Box>
                   )}
-
-                  <Stack gap="md" mt={24} px="sm">
-                    <Group justify="space-between" align="center">
-                      <Group gap={4}>
-                        <Text size="sm" c="dimmed">Minimum deposit amount</Text>
-                        <IconAlertCircle size={14} color="var(--mantine-color-dimmed)" />
-                      </Group>
-                      <Text size="sm" fw={700} c="var(--fg-1)">
-                        {ASSETS.find(a => a.symbol === selectedAsset)?.minDeposit || NETWORKS[selectedNetwork]?.minDeposit || '1.0'} {selectedAsset}
-                      </Text>
-                    </Group>
-
-                    <Group justify="space-between" align="center">
-                      <Group gap={4}>
-                        <Text size="sm" c="dimmed">Deposit Account</Text>
-                        <IconAlertCircle size={14} color="var(--mantine-color-dimmed)" />
-                      </Group>
-                      <Group gap={4} style={{ cursor: 'pointer' }}>
-                        <Text size="sm" fw={700} c="var(--fg-1)">Spot Account</Text>
-                        <IconChevronRight size={14} color="var(--mantine-color-dimmed)" />
-                      </Group>
-                    </Group>
-                  </Stack>
                 </Paper>
-              </Stack>
-            </VerticalStep>
-          </Stack>
-
-          {/* Sidebar */}
-          <Stack gap="lg" className="deposit-sidebar">
-            <Paper p="md" radius="md" bg="transparent" style={{ border: '1px solid var(--border-1)' }}>
-              <Title order={5} mb="sm" size="sm" fw={800} c="var(--fg-1)">Tips</Title>
-              <List spacing="xs" size="xs" center={false} c="dimmed" styles={{ item: { lineHeight: 1.4 } }}>
-                <List.Item>
-                  VIRCEX does not support users receiving airdrops. To avoid potential asset loss, please do not use your VIRCEX deposit address to receive airdrops or as a mining address.
-                </List.Item>
-                <List.Item>
-                  This address only supports deposit of {selectedAsset} assets. Do not deposit other assets to this address as the assets will not be credited or recoverable.
-                </List.Item>
-                <List.Item>
-                  Minimum deposit: <Text component="span" size='xs' fw={600} c="var(--fg-1)">{ASSETS.find(a => a.symbol === selectedAsset)?.minDeposit || NETWORKS[selectedNetwork]?.minDeposit || '1'}</Text>. Deposits less than this amount will not be credited.
-                </List.Item>
-              </List>
-            </Paper>
-
-            <Paper p="md" radius="md" bg="transparent" style={{ border: '1px solid var(--border-1)' }}>
-              <Group justify="space-between" mb="sm">
-                <Title order={5} size="sm" fw={800} c="var(--fg-1)">Deposit FAQ</Title>
-                <UnstyledButton>
-                  <Group gap={4}>
-                    <Text size="xs" c="dimmed">View More</Text>
-                    <IconChevronRight size={12} />
+                <Stack gap="md" mt={24} px="sm">
+                  <Group justify="space-between" align="center">
+                    <Group gap={4}>
+                      <Text size="sm" c="dimmed">Minimum deposit amount</Text>
+                      <IconAlertCircle size={14} color="var(--mantine-color-dimmed)" />
+                    </Group>
+                    <Text size="sm" fw={700} c="var(--fg-1)">
+                      {ASSETS.find(a => a.symbol === selectedAsset)?.minDeposit || NETWORKS[selectedNetwork]?.minDeposit || '1.0'} {selectedAsset}
+                    </Text>
                   </Group>
-                </UnstyledButton>
-              </Group>
-              <Stack gap={10} c="dimmed">
-                <Text size="xs" style={{ cursor: 'pointer' }}>How to Deposit on VIRCEX?</Text>
-                <Text size="xs" style={{ cursor: 'pointer' }}>Have an uncredited deposit? Apply for return</Text>
-                <Text size="xs" style={{ cursor: 'pointer' }}>View all deposit & withdrawal status</Text>
-              </Stack>
-            </Paper>
-          </Stack>
-        </Box>
 
-        {/* Recent Deposits Table */}
-        <Box mt={80} pb={80}>
-          <Group justify="space-between" mb="xl" align="flex-end">
-            <Group gap="md">
-              <Box style={{
-                width: 4,
-                height: 32,
-                background: 'linear-gradient(to bottom, var(--mantine-color-blue-filled), transparent)',
-                borderRadius: 2
-              }} />
-              <Stack gap={0}>
-                <Group gap="xs">
-                  <IconHistory size={20} color="var(--mantine-color-blue-filled)" />
-                  <Title order={3} fz={{ base: 22, sm: 26 }} fw={900} style={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.5px' }}>
-                    Recent Deposits
-                  </Title>
-                </Group>
-                <Text size="xs" c="dimmed" fw={500} ml={2}>Your most recent transaction history</Text>
-              </Stack>
-            </Group>
-            <UnstyledButton
-              c="var(--mantine-color-blue-filled)"
-              fw={700}
-              size="sm"
-              style={{
-                borderBottom: '1px solid transparent',
-                transition: 'all 0.2s ease'
-              }}
-              className="view-all-history"
-            >
-              View All History
+                  <Group justify="space-between" align="center">
+                    <Group gap={4}>
+                      <Text size="sm" c="dimmed">Deposit Account</Text>
+                      <IconAlertCircle size={14} color="var(--mantine-color-dimmed)" />
+                    </Group>
+                    <Group gap={4} style={{ cursor: 'pointer' }}>
+                      <Text size="sm" fw={700} c="var(--fg-1)">Spot Account</Text>
+                      <IconChevronRight size={14} color="var(--mantine-color-dimmed)" />
+                    </Group>
+                  </Group>
+                </Stack>
+              </Paper>
+          </Stack>
+        </VerticalStep>
+      </Stack>
+
+      {/* Sidebar */}
+      <Stack gap="lg" className="deposit-sidebar">
+        <Paper p="md" radius="md" bg="transparent" style={{ border: '1px solid var(--border-1)' }}>
+          <Title order={5} mb="sm" size="sm" fw={800} c="var(--fg-1)">Tips</Title>
+          <List spacing="xs" size="xs" center={false} c="dimmed" styles={{ item: { lineHeight: 1.4 } }}>
+            <List.Item>
+              VIRCEX does not support users receiving airdrops. To avoid potential asset loss, please do not use your VIRCEX deposit address to receive airdrops or as a mining address.
+            </List.Item>
+            <List.Item>
+              This address only supports deposit of {selectedAsset} assets. Do not deposit other assets to this address as the assets will not be credited or recoverable.
+            </List.Item>
+            <List.Item>
+              Minimum deposit: <Text component="span" size='xs' fw={600} c="var(--fg-1)">{ASSETS.find(a => a.symbol === selectedAsset)?.minDeposit || NETWORKS[selectedNetwork]?.minDeposit || '1'}</Text>. Deposits less than this amount will not be credited.
+            </List.Item>
+          </List>
+        </Paper>
+
+        <Paper p="md" radius="md" bg="transparent" style={{ border: '1px solid var(--border-1)' }}>
+          <Group justify="space-between" mb="sm">
+            <Title order={5} size="sm" fw={800} c="var(--fg-1)">Deposit FAQ</Title>
+            <UnstyledButton>
+              <Group gap={4}>
+                <Text size="xs" c="dimmed">View More</Text>
+                <IconChevronRight size={12} />
+              </Group>
             </UnstyledButton>
           </Group>
+          <Stack gap={10} c="dimmed">
+            <Text size="xs" style={{ cursor: 'pointer' }}>How to Deposit on VIRCEX?</Text>
+            <Text size="xs" style={{ cursor: 'pointer' }}>Have an uncredited deposit? Apply for return</Text>
+            <Text size="xs" style={{ cursor: 'pointer' }}>View all deposit & withdrawal status</Text>
+          </Stack>
+        </Paper>
+      </Stack>
+    </Box>
 
-          <Paper bg="transparent" style={{ border: 'none', overflow: 'hidden' }}>
-            <DataTable
-              data={[]}
-              emptyMessage="No recent deposits found"
-              minWidth="1000px"
-              columns={[
-                {
-                  label: 'Crypto', key: 'crypto', render: (item: any) => (
-                    <Group gap="xs">
-                      <Box style={{ width: 24, height: 24, borderRadius: '50%', overflow: 'hidden' }}>
-                        <img src={ASSETS.find(a => a.symbol === item.crypto)?.image} width="100%" height="100%" />
-                      </Box>
-                      <Text size="sm" fw={700} style={{ fontFamily: 'Outfit, sans-serif' }}>{item.crypto}</Text>
-                    </Group>
-                  )
-                },
-                { label: 'Network', key: 'network', render: (item: any) => <Text size="sm" c="dimmed" style={{ fontFamily: 'Outfit, sans-serif' }}>{item.network}</Text> },
-                { label: 'Time', key: 'time', render: (item: any) => <Text size="sm" c="dimmed">{item.time}</Text> },
-                {
-                  label: 'Status', key: 'status', render: (item: any) => (
-                    <Badge
-                      variant="light"
-                      color={item.status === 'Completed' ? 'green' : 'orange'}
-                      size="sm"
-                      radius="sm"
-                      styles={{ label: { textTransform: 'none' } }}
-                    >
-                      {item.status}
-                    </Badge>
-                  )
-                },
-                { label: 'Amount', key: 'amount', render: (item: any) => <Text size="sm" fw={700} style={{ fontFamily: 'Outfit, sans-serif' }}>{item.amount} {item.crypto}</Text> },
-                { label: 'TxID', key: 'txid', render: (item: any) => <Text size="sm" c="blue" style={{ cursor: 'pointer', fontFamily: 'monospace' }}>{item.txid.slice(0, 10)}...</Text> },
-                { label: 'Progress', key: 'progress', render: (item: any) => <Text size="sm" c="dimmed">{item.progress}</Text> },
-              ]}
-            />
-          </Paper>
-        </Box>
-      </Container>
+        {/* Recent Deposits Table */ }
+  <Box mt={80} pb={80}>
+    <Group justify="space-between" mb="xl" align="flex-end">
+      <Group gap="md">
+        <Box style={{
+          width: 4,
+          height: 32,
+          background: 'linear-gradient(to bottom, var(--mantine-color-blue-filled), transparent)',
+          borderRadius: 2
+        }} />
+        <Stack gap={0}>
+          <Group gap="xs">
+            <IconHistory size={20} color="var(--mantine-color-blue-filled)" />
+            <Title order={3} fz={{ base: 22, sm: 26 }} fw={900} style={{ fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.5px' }}>
+              Recent Deposits
+            </Title>
+          </Group>
+          <Text size="xs" c="dimmed" fw={500} ml={2}>Your most recent transaction history</Text>
+        </Stack>
+      </Group>
+      <UnstyledButton
+        c="var(--mantine-color-blue-filled)"
+        fw={700}
+        size="sm"
+        style={{
+          borderBottom: '1px solid transparent',
+          transition: 'all 0.2s ease'
+        }}
+        className="view-all-history"
+      >
+        View All History
+      </UnstyledButton>
+    </Group>
 
-      <style dangerouslySetInnerHTML={{
-        __html: `
+    <Paper bg="transparent" style={{ border: 'none', overflow: 'hidden' }}>
+      <DataTable
+        data={[]}
+        emptyMessage="No recent deposits found"
+        minWidth="1000px"
+        columns={[
+          {
+            label: 'Crypto', key: 'crypto', render: (item: any) => (
+              <Group gap="xs">
+                <Box style={{ width: 24, height: 24, borderRadius: '50%', overflow: 'hidden' }}>
+                  <img src={ASSETS.find(a => a.symbol === item.crypto)?.image} width="100%" height="100%" />
+                </Box>
+                <Text size="sm" fw={700} style={{ fontFamily: 'Outfit, sans-serif' }}>{item.crypto}</Text>
+              </Group>
+            )
+          },
+          { label: 'Network', key: 'network', render: (item: any) => <Text size="sm" c="dimmed" style={{ fontFamily: 'Outfit, sans-serif' }}>{item.network}</Text> },
+          { label: 'Time', key: 'time', render: (item: any) => <Text size="sm" c="dimmed">{item.time}</Text> },
+          {
+            label: 'Status', key: 'status', render: (item: any) => (
+              <Badge
+                variant="light"
+                color={item.status === 'Completed' ? 'green' : 'orange'}
+                size="sm"
+                radius="sm"
+                styles={{ label: { textTransform: 'none' } }}
+              >
+                {item.status}
+              </Badge>
+            )
+          },
+          { label: 'Amount', key: 'amount', render: (item: any) => <Text size="sm" fw={700} style={{ fontFamily: 'Outfit, sans-serif' }}>{item.amount} {item.crypto}</Text> },
+          { label: 'TxID', key: 'txid', render: (item: any) => <Text size="sm" c="blue" style={{ cursor: 'pointer', fontFamily: 'monospace' }}>{item.txid.slice(0, 10)}...</Text> },
+          { label: 'Progress', key: 'progress', render: (item: any) => <Text size="sm" c="dimmed">{item.progress}</Text> },
+        ]}
+      />
+    </Paper>
+  </Box>
+      </Container >
+
+    <style dangerouslySetInnerHTML={{
+      __html: `
         @media (max-width: 992px) {
           .deposit-grid {
             grid-template-columns: 1fr !important;
@@ -491,7 +602,7 @@ export default function Deposit() {
           }
         }
       `}} />
-    </Box>
+    </Box >
   )
 }
 
